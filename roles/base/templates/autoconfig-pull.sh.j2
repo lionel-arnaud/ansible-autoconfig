@@ -23,7 +23,13 @@ else
   # username, and this runs as root.
   git -C "$repo_dir" remote set-url origin "$repo_url"
   git -C "$repo_dir" fetch --prune origin
-  git -C "$repo_dir" checkout -f "$branch"
+  # -q, because this runs between the fetch and the reset below. At that
+  # instant the local branch really is behind the freshly fetched remote, so
+  # git helpfully prints "Your branch is behind 'origin/main' by N commits"
+  # and suggests git pull. The next line is what resolves it. Printing a
+  # warning about a state that exists for one millisecond, every run, taught
+  # the operator to distrust a log that was in fact healthy.
+  git -C "$repo_dir" checkout -q -f "$branch"
   git -C "$repo_dir" reset --hard "origin/$branch"
   git -C "$repo_dir" clean -fd
 fi

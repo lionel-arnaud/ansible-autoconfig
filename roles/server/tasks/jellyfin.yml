@@ -292,7 +292,10 @@
     validate_certs: false
     timeout: 10
   register: jellyfin_access_resp
-  changed_when: jellyfin_access_resp.status | default(0) == 200
+  # Authenticating is a read: it fetches a token for the seeding tasks below,
+  # which report their own changes. Reporting success as a change made every
+  # run look like it had reconfigured the media server.
+  changed_when: false
   no_log: true
   when: jellyfin_wizard_complete | bool
 

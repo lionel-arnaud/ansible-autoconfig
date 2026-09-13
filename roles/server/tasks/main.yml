@@ -53,13 +53,54 @@
     - server_docker
     - firewall
 
-- name: Enable and run Docker LAN-only published port guard service
+# Asked before it is re-applied. "state: restarted" reports changed on every
+# run by definition, so this task claimed to alter the firewall nightly while
+# the guard script — which flushes and rebuilds its own chain, and tests with
+# -C before inserting a jump — was already idempotent. The rules still get
+# reasserted whenever they are genuinely missing, which is the case this
+# guards against: Docker rewrites DOCKER-USER when it restarts.
+- name: Check whether every Docker LAN guard rule is in place
+  ansible.builtin.shell:
+    cmd: |
+      missing=0
+      for port in {{ server_lan_only_published_ports | join(' ') }}; do
+        for proto in {{ server_lan_only_protocols | join(' ') }}; do
+          iptables -C DOCKER-USER -p "$proto" -m conntrack \
+            --ctorigdstport "$port" -j AUTOCONFIG-LAN-ONLY 2>/dev/null \
+            || missing=$((missing + 1))
+        done
+      done
+      # A jump into a chain that does not exist protects nothing.
+      iptables -S AUTOCONFIG-LAN-ONLY >/dev/null 2>&1 || missing=$((missing + 1))
+      echo "$missing"
+  register: server_lan_guard_missing
+  changed_when: false
+  check_mode: false
+  when: server_lan_only_published_ports | length > 0
+  tags:
+    - server
+    - server_docker
+    - firewall
+
+- name: Enable the Docker LAN-only published port guard service
   ansible.builtin.systemd:
     name: autoconfig-docker-lan-guard.service
     enabled: true
-    state: restarted
     daemon_reload: "{{ server_lan_guard_unit.changed }}"
   when: server_lan_only_published_ports | length > 0
+  tags:
+    - server
+    - server_docker
+    - firewall
+
+- name: Re-apply the Docker LAN-only published port guard
+  ansible.builtin.systemd:
+    name: autoconfig-docker-lan-guard.service
+    state: restarted
+  when:
+    - server_lan_only_published_ports | length > 0
+    - server_lan_guard_unit is changed
+      or (server_lan_guard_missing.stdout | default('1') | trim | int) > 0
   tags:
     - server
     - server_docker
