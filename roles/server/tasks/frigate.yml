@@ -135,6 +135,16 @@
             wanted = yaml.safe_load(staged.read_text())
             current = yaml.safe_load(live.read_text()) if live.exists() else None
 
+            # "version" is Frigate's own config-schema marker: it rewrites the
+            # key to match whatever version is running. Comparing it meant the
+            # image moving from 0.17 to 0.18 under the "stable" tag made every
+            # run see a difference, replace the file, restart the recorder, and
+            # be overwritten again before the next run. Neither side owns it,
+            # so neither side compares it.
+            for doc in (wanted, current):
+                if isinstance(doc, dict):
+                    doc.pop("version", None)
+
             # Exit 0 means "already correct", 9 means "config replaced", so the
             # restart handler below only fires on a real configuration change.
             if current == wanted:

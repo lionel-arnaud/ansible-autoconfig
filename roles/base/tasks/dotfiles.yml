@@ -41,12 +41,38 @@
       user). This usually means ansible-pull checked the repo out under /root. Run
       it against a shared, readable path, e.g. add: -d /opt/ansible-pull
 
+# Checked before it is applied. "file" with recurse:true reports changed on
+# every run whether or not it altered anything, so this task made "changed" a
+# permanent fixture of the recap on every host — which is how a real change
+# hides. find answers the only question that matters: is anything in the tree
+# owned by someone other than the desktop user?
+- name: Check whether any dotfile source path has the wrong owner
+  ansible.builtin.command:
+    argv:
+      - find
+      - "{{ dotfiles_source_dir }}"
+      - "("
+      - "!"
+      - -user
+      - "{{ dotfiles_user }}"
+      - -o
+      - "!"
+      - -group
+      - "{{ dotfiles_user }}"
+      - ")"
+      - -print
+      - -quit
+  register: dotfiles_wrong_owner
+  changed_when: false
+  check_mode: false
+
 - name: Ensure stowed dotfile targets remain writable by the desktop user
   ansible.builtin.file:
     path: "{{ dotfiles_source_dir }}"
     owner: "{{ dotfiles_user }}"
     group: "{{ dotfiles_user }}"
     recurse: true
+  when: dotfiles_wrong_owner.stdout | trim | length > 0
 
 # NOTE: The bash and starship tasks below are legacy per-file tasks kept for
 # readable git history. The generic shell loop further down covers all newer

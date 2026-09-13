@@ -344,7 +344,6 @@ frigate_record_retain_days: 1
 frigate_record_continuous_days: "{{ frigate_record_retain_days }}"
 frigate_record_motion_days: "{{ frigate_record_retain_days }}"
 # Schema version Frigate stamps into config.yml. Bump alongside frigate_image.
-frigate_config_version: 0.17-0
 frigate_alerts_retain_days: 2
 frigate_detections_retain_days: 2
 frigate_snapshots_retain_days: 1
