@@ -73,6 +73,25 @@
     group: "{{ dotfiles_user }}"
     recurse: true
   when: dotfiles_wrong_owner.stdout | trim | length > 0
+  register: dotfiles_chown
+
+# Without this the chown and the pull fight each other forever. chown changes
+# every file's ctime; git's index caches stat information, so the next
+# "git checkout -f" in the pull script sees a stat mismatch on all of them and
+# re-materialises the files as root, which the next run chowns back. Measured
+# on serverannah: 57 files re-rooted by one checkout after a chown, and none at
+# all once the index is refreshed. Refreshing tells git the working tree is
+# unchanged, which it is — the contents never differed, only the ownership.
+- name: Refresh the git index after changing ownership in the checkout
+  ansible.builtin.command:
+    argv: [git, -C, "{{ playbook_dir }}", update-index, --refresh]
+  when:
+    - dotfiles_chown is changed
+    - (playbook_dir ~ "/.git") is exists
+  changed_when: false
+  # Exits non-zero when a tracked file genuinely differs, which is not this
+  # task's business: the refresh still happens for every file that matches.
+  failed_when: false
 
 # NOTE: The bash and starship tasks below are legacy per-file tasks kept for
 # readable git history. The generic shell loop further down covers all newer
