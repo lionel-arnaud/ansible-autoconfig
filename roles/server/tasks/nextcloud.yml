@@ -301,6 +301,30 @@
   delay: 2
   until: nextcloud_occ_status.stdout is search('"installed":true')
 
+# occ status can report installed:true while the container's own bundled apps
+# (theming among them) are still being reconciled against a newly pulled image
+# in the background -- on 2026-09-13 an ordinary occ config:system:set call
+# landed in that window and crashed with a PHP fatal error in theming, failing
+# the whole play. occ upgrade runs that reconciliation synchronously and is a
+# no-op ("Nextcloud is already latest version") when there is nothing to do,
+# so only gate it on the image actually having changed to avoid a needless
+# call on every other run.
+- name: Run the Nextcloud upgrade routine after an image update
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - -u
+      - www-data
+      - "{{ nextcloud_container_name }}"
+      - php
+      - occ
+      - upgrade
+      - --no-interaction
+  register: nextcloud_upgrade
+  changed_when: "'Nextcloud is already latest version' not in nextcloud_upgrade.stdout"
+  when: nextcloud_image_pull.changed
+
 # Keep the reverse-proxy-specific system config idempotent with occ instead of
 # editing PHP arrays by hand.
 - name: Set Nextcloud trusted domains
