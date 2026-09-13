@@ -1,0 +1,61 @@
+---
+# Push this host's agent state to the server's backup inbox. See
+# roles/server/tasks/backup_inbox.yml for the receiving end.
+- name: Install sqlite3 for consistent database snapshots
+  ansible.builtin.package:
+    name: sqlite3
+    state: present
+
+- name: Install the backup push key
+  ansible.builtin.copy:
+    content: "{{ vault_trading_agent_backup_ssh_key }}"
+    dest: "{{ trading_agent_backup_key }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+# Pinned rather than accepted on first use: a backup push authenticates to the
+# server, and trusting whatever answers on that address is how it would end up
+# authenticating to something else.
+- name: Pin the backup server host key
+  ansible.builtin.copy:
+    content: "{{ trading_agent_backup_host_key }}\n"
+    dest: "{{ trading_agent_backup_known_hosts }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install the backup push script
+  ansible.builtin.template:
+    src: trading-agent-backup.sh.j2
+    dest: /usr/local/sbin/trading-agent-backup
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the backup push unit
+  ansible.builtin.template:
+    src: trading-agent-backup.service.j2
+    dest: /etc/systemd/system/trading-agent-backup.service
+    owner: root
+    group: root
+    mode: "0644"
+  register: trading_agent_backup_unit
+
+- name: Install the backup push timer
+  ansible.builtin.template:
+    src: trading-agent-backup.timer.j2
+    dest: /etc/systemd/system/trading-agent-backup.timer
+    owner: root
+    group: root
+    mode: "0644"
+  register: trading_agent_backup_timer
+
+- name: Enable the backup push timer
+  ansible.builtin.systemd:
+    name: trading-agent-backup.timer
+    enabled: true
+    state: started
+    daemon_reload: "{{ (trading_agent_backup_unit is changed)
+                       or (trading_agent_backup_timer is changed) }}"

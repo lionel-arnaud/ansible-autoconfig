@@ -36,3 +36,15 @@ trading_agent_approval_ttl_seconds: 3600
 # altered by a typo or a copied file and two cannot be altered by accident.
 trading_agent_mode: paper
 trading_agent_live_confirmed: "no"
+
+# Off-host backup. This machine runs from an SD card and nothing else copies
+# views.db, which holds the operator's recorded judgment and the scoreboard
+# built from it. The server's Borg job already handles retention, pruning and
+# the off-site sync, so this only has to get the data there.
+trading_agent_backup_enabled: false
+trading_agent_backup_target: "backup-inbox@192.168.1.100:."
+trading_agent_backup_key: /etc/trading-agent/backup_key
+trading_agent_backup_known_hosts: /etc/trading-agent/backup_known_hosts
+trading_agent_backup_host_key: ""
+# 23:30 UTC, half an hour before the server's Borg run at midnight.
+trading_agent_backup_oncalendar: "*-*-* 23:30:00 UTC"

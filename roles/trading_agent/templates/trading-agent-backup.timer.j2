@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily push of trading agent state to the backup inbox
+
+[Timer]
+# Before the server's Borg run at 00:00 UTC, so each night's Borg archive
+# contains that day's state rather than the previous day's.
+OnCalendar={{ trading_agent_backup_oncalendar }}
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

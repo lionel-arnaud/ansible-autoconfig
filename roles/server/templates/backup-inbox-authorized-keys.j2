@@ -1,0 +1,6 @@
+# Managed by Ansible (roles/server/tasks/backup_inbox.yml). Do not edit here.
+# Each key is confined by rrsync to a single directory, write-only, with every
+# other channel SSH offers switched off.
+{% for client in backup_inbox_clients %}
+command="{{ backup_inbox_rrsync }} -wo {{ backup_inbox_dir }}/{{ client.name }}",restrict {{ lookup('file', client.public_key) }}
+{% endfor %}

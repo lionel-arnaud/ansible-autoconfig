@@ -49,3 +49,10 @@ trading_agent_enabled: true
 # never leaves the house and needs no second password through Caddy.
 trading_agent_opencode_url: http://192.168.1.100:4096
 trading_agent_opencode_user: lion
+
+# Nightly push of the agent's state to serverannah's backup inbox, where the
+# existing Borg job takes it off-site. This host runs from an SD card and
+# views.db — the operator's recorded judgment and the scoreboard built from it
+# — exists nowhere else.
+trading_agent_backup_enabled: true
+trading_agent_backup_host_key: "192.168.1.100 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMX9G6OI23dVKAGOGQzdnhYCtUfqfI1w28spHCW2IPcs"

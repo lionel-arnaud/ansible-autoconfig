@@ -1,0 +1,43 @@
+#!/bin/sh
+# Managed by Ansible (roles/trading_agent). Do not edit on the host.
+#
+# Pushes the agent's durable state to the backup inbox on the server, where the
+# existing Borg job picks it up. This machine runs from an SD card and has no
+# backup of its own, and views.db holds the operator's recorded judgment and the
+# scoreboard built from it, which exists nowhere else.
+set -eu
+
+root="{{ trading_agent_root }}"
+staging="$root/.backup-staging"
+remote="{{ trading_agent_backup_target }}"
+
+mkdir -p "$staging"
+chmod 0700 "$staging"
+
+# sqlite3 .backup, not cp: the databases are in WAL mode and are written by a
+# running process, so copying the file can capture a torn page or miss the log
+# entirely. .backup takes a consistent snapshot of a live database.
+for db in state views; do
+  if [ -f "$root/$db.db" ]; then
+    rm -f "$staging/$db.db"
+    sqlite3 "$root/$db.db" ".backup '$staging/$db.db'"
+  fi
+done
+
+# The universe cache and the audit log are plain files; a copy is enough. The
+# audit log is the "why" behind every trade, so it travels with the databases.
+[ -f "$root/universe.json" ] && cp -p "$root/universe.json" "$staging/"
+if [ -d "{{ trading_agent_log_dir }}" ]; then
+  mkdir -p "$staging/logs"
+  cp -p "{{ trading_agent_log_dir }}"/*.log "$staging/logs/" 2>/dev/null || true
+fi
+
+# --delete so the copy is a mirror rather than an ever-growing pile, and the
+# remote key is confined to this one directory by rrsync at the far end.
+rsync --archive --delete --timeout=120 \
+  -e "ssh -i {{ trading_agent_backup_key }} -o BatchMode=yes -o ConnectTimeout=15 \
+      -o UserKnownHostsFile={{ trading_agent_backup_known_hosts }} \
+      -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes" \
+  "$staging/" "$remote"
+
+echo "pushed $(du -sh "$staging" | cut -f1) to $remote"

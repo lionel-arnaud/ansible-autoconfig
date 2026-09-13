@@ -410,12 +410,23 @@ backup_timer_on_calendar: daily
 backup_retention_keep_daily: 7
 backup_retention_keep_weekly: 4
 backup_retention_keep_monthly: 6
+# Backups pushed here by other hosts (see tasks/backup_inbox.yml).
+backup_inbox_enabled: false
+backup_inbox_user: backup-inbox
+backup_inbox_dir: /var/lib/backup-inbox
+backup_inbox_rrsync: /usr/bin/rrsync
+backup_inbox_clients:
+  - name: raspi
+    public_key: files/backup/raspi-trading-agent.pub
+
 backup_paths:
   - /opt/aumenuilya
   - /opt/nextcloud
   - /opt/pihole
   - /opt/homepage/config
   - /opt/reverse-proxy
+  # State pushed from other hosts. Nothing else backs the Pi up.
+  - /var/lib/backup-inbox
 backup_database_dumps:
   - name: aumenuilya
     container: "{{ aumenuilya_db_container_name }}"

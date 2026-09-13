@@ -32,13 +32,21 @@ from jinja2 import Environment, StrictUndefined
 
 REPO = Path(__file__).resolve().parent.parent
 
-# Templates that produce shell, mapped to the role whose defaults feed them.
-SHELL_TEMPLATES = {
-    "roles/base/templates/autoconfig-notify.sh.j2": "base",
-    "roles/base/templates/autoconfig-heartbeat.sh.j2": "base",
-    "roles/base/templates/autoconfig-pull.sh.j2": "base",
-    "roles/server/templates/autoconfig-docker-lan-guard.sh.j2": "server",
-}
+def discover_shell_templates():
+    """Every *.sh.j2 under every role, mapped to the role whose defaults feed it.
+
+    Discovered rather than listed. The list used to be hardcoded, so a new
+    shell template shipped unchecked — which is the same shape of bug as a
+    collaborator that is never wired up: nothing fails, so nothing says so.
+    """
+    found = {}
+    for path in sorted((REPO / "roles").glob("*/templates/**/*.sh.j2")):
+        rel = path.relative_to(REPO).as_posix()
+        found[rel] = path.relative_to(REPO / "roles").parts[0]
+    return found
+
+
+SHELL_TEMPLATES = discover_shell_templates()
 
 # Only what the role defaults do not already define.
 EXTRA_VARS = {

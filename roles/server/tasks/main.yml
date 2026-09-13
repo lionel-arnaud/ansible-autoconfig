@@ -106,6 +106,13 @@
     - server_docker
     - firewall
 
+- name: Provide a backup inbox for pushes from other hosts
+  ansible.builtin.import_tasks: backup_inbox.yml
+  when: backup_inbox_enabled | default(false)
+  tags:
+    - server
+    - backup
+
 - name: Configure Timeshift system snapshots
   ansible.builtin.import_tasks: timeshift.yml
   when: server_timeshift_enabled | default(false)

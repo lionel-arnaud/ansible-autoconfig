@@ -1,0 +1,52 @@
+---
+# An inbox for backups pushed by other hosts in this repo.
+#
+# The Raspberry Pi holds the trading agent's state: its SQLite databases carry
+# the operator's recorded views and the scoreboard built from them, which is the
+# accumulated output of the whole project and exists nowhere else. The Pi runs
+# from an SD card and has no backup of its own, so it pushes here and Borg —
+# already proven, already pruned, already synced off-site — picks it up.
+#
+# Push rather than pull, and a dedicated unprivileged account rather than root:
+# the key lives on the machine holding the broker credentials, so it is the one
+# most worth assuming could leak. What it can do if it does is append to one
+# directory owned by a user with no shell access to anything else.
+- name: Create the backup inbox group
+  ansible.builtin.group:
+    name: "{{ backup_inbox_user }}"
+    system: true
+    state: present
+
+- name: Create the backup inbox user
+  ansible.builtin.user:
+    name: "{{ backup_inbox_user }}"
+    group: "{{ backup_inbox_user }}"
+    home: "{{ backup_inbox_dir }}"
+    shell: /bin/sh
+    system: true
+    create_home: true
+    password: "!"
+    password_lock: true
+
+- name: Ensure the backup inbox directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ backup_inbox_user }}"
+    group: "{{ backup_inbox_user }}"
+    mode: "0750"
+  loop:
+    - "{{ backup_inbox_dir }}"
+    - "{{ backup_inbox_dir }}/.ssh"
+    - "{{ backup_inbox_dir }}/raspi"
+
+# rrsync confines the key to one directory and to rsync alone: no shell, no
+# port forwarding, no reading anything else on this machine. "-wo" is
+# write-only, so a compromised Pi cannot read back what other hosts have sent.
+- name: Authorise the raspi trading agent backup key
+  ansible.builtin.template:
+    src: backup-inbox-authorized-keys.j2
+    dest: "{{ backup_inbox_dir }}/.ssh/authorized_keys"
+    owner: "{{ backup_inbox_user }}"
+    group: "{{ backup_inbox_user }}"
+    mode: "0600"

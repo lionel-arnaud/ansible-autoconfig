@@ -1,0 +1,12 @@
+[Unit]
+Description=Push trading agent state to the backup inbox
+After=network-online.target
+Wants=network-online.target
+{% if notify_enabled | default(false) %}
+# A backup that stops running silently is not a backup.
+OnFailure=autoconfig-notify@%n.service
+{% endif %}
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/trading-agent-backup

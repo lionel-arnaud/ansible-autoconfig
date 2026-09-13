@@ -348,3 +348,7 @@ jellyfin_libraries:
     collection_type: homevideos
     paths:
       - /data/Pictures
+
+# Receive state pushed by other hosts (currently raspi's trading agent) so the
+# existing Borg job carries it off-site. See roles/server/tasks/backup_inbox.yml.
+backup_inbox_enabled: true

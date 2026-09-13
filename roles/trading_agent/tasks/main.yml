@@ -120,3 +120,7 @@
     enabled: true
     state: started
     daemon_reload: true
+
+- name: Push agent state to the server backup inbox
+  ansible.builtin.import_tasks: backup.yml
+  when: trading_agent_backup_enabled | default(false)
