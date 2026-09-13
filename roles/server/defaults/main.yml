@@ -235,7 +235,14 @@ nextcloud_secret_dir: /etc/ansible/secrets
 nextcloud_db_container_name: nextcloud-db
 nextcloud_db_image: mariadb:11
 nextcloud_container_name: nextcloud
-nextcloud_image: nextcloud:latest
+# Pinned to the major version only, not :latest. An unpinned tag jumped a full
+# major version (33 -> 34) on an ordinary nightly pull on 2026-09-13: the app
+# container was recreated mid-run and one of its own bundled apps (theming)
+# threw a PHP fatal error before the upgrade routine had reconciled it, failing
+# the whole play. Pinning the major means patch/minor bumps still apply
+# automatically, but a major jump (the kind that carries this class of
+# app-compat break) now requires deliberately bumping this value.
+nextcloud_image: nextcloud:34
 nextcloud_db_name: nextcloud
 nextcloud_db_user: nextclouduser
 nextcloud_db_password_file: "{{ nextcloud_secret_dir }}/nextcloud-db-password"

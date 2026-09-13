@@ -234,6 +234,79 @@
   when:
     - item.path not in ['.bashrc', '.config/starship.toml']
 
+# A host can hold more than one checkout of this repo (ansible-pull's own clone
+# under /opt/ansible-pull, and an operator's working tree under $HOME) and both
+# stow the same packages. The "Preserve unmanaged..." loop above already learned
+# to recognise a symlink from either checkout by its repo-relative tail instead
+# of its full path, so it no longer destructively removes one just because this
+# run's checkout differs from the one that created it (see the comment there).
+#
+# But that leniency stops at the Ansible layer: Stow itself does its own, separate
+# ownership check when --restow runs, comparing the symlink's literal target
+# against what THIS run's chdir (dotfiles_source_dir) says it should be. A
+# symlink that correctly points at the other checkout still makes Stow abort the
+# WHOLE package with "existing target is not owned by stow" — this has hit every
+# package at least once since July (bash, git, nvim, hypr, ssh, systemd, scripts,
+# espanso, claude, opencode, gh, lazygit, omarchy), and on 2026-09-11 it is what
+# left ~/.bashrc deleted-and-never-recreated after the pre-step removed it.
+#
+# It also cannot be fully patched by extending dotfiles_managed_paths: that list
+# only has ONE directory-level entry for packages like nvim/wireplumber, so the
+# individual per-file symlinks Stow creates inside those directories (lazy-lock
+# .json, init.lua, ...) are never enumerated or checked there at all.
+#
+# So repoint at the Stow layer instead: for each package, walk THIS run's own
+# source tree (bounded by the package's file count, never the whole home dir —
+# no need to worry about slow FUSE mounts like rclone's Google Drive or sshfs
+# living under dotfiles_home, because this never descends into dotfiles_home at
+# all until it has a specific target in hand) and for every file, compute the
+# target Stow would manage. If that target is already a symlink resolving (by
+# repo-relative tail, same match as the Preserve step) into files/dotfiles/
+# <package>/ of ANY checkout, re-point it at THIS run's dotfiles_source_dir.
+# This only ever rewrites a symlink's target, never touches content, and only
+# fires once the resolved path is already confirmed to be the same repo file —
+# so it cannot lose or overwrite anything, unlike --adopt. Walking the source
+# tree instead of dotfiles_home also means it can only ever touch a path Stow
+# itself would manage, never an unrelated symlink that happens to resolve into
+# the repo (e.g. a hand-made *.bak marker pointing at an old checkout).
+#
+# `ln -sfr`, not a plain `ln -sfn`, to relink: Stow's own ownership check does
+# not merely compare resolved paths, it distrusts absolute symlinks outright
+# ("Ignoring an absolute symlink") and treats the target as still unmanaged.
+# Confirmed by testing this against the actual conflicts in the log before
+# writing it up — an absolute-target relink here left every `stow --restow`
+# aborting exactly as before. Stow's own links are always relative, so this
+# must create a relative link too, computed from the link's own directory.
+- name: Repoint dotfile symlinks that belong to a different checkout of this repo
+  ansible.builtin.shell: |
+    set -eu
+    package='{{ item }}'
+    source_dir='{{ dotfiles_source_dir }}'
+    home='{{ dotfiles_home }}'
+    find "$source_dir/$package" -type f 2>/dev/null | while read -r src; do
+      rel="${src#"$source_dir"/"$package"/}"
+      link="$home/$rel"
+      [ -L "$link" ] || continue
+      resolved=$(readlink -f "$link") || continue
+      case "$resolved" in
+        */files/dotfiles/"$package"/"$rel")
+          desired="$source_dir/$package/$rel"
+          desired_rel=$(realpath --relative-to="$(dirname "$link")" "$desired")
+          if [ "$(readlink "$link")" != "$desired_rel" ]; then
+            ln -sfr "$desired" "$link"
+            echo "CHANGED: $link"
+          fi
+          ;;
+      esac
+    done
+  args:
+    executable: /bin/bash
+  loop: "{{ dotfiles_stow_packages }}"
+  become: true
+  become_user: "{{ dotfiles_user }}"
+  register: dotfiles_repoint
+  changed_when: "'CHANGED' in dotfiles_repoint.stdout"
+
 # Stow remains the symlink engine, while Ansible decides which packages are safe
 # to apply on this host.
 #
