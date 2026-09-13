@@ -7,7 +7,9 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("[workspace 3 silent] " .. o.launch("beeper"))
   hl.exec_cmd("[workspace 4 silent] " .. o.launch("alacritty"))
   hl.exec_cmd("[workspace 6 silent] " .. o.launch("nautilus"))
-  hl.exec_cmd(o.launch('bash "$HOME/rclone_mount.sh"'))
+  -- Google Drive is mounted by the rclone-gdrive-mount systemd user service
+  -- (roles/workstation/tasks/rclone_gdrive.yml), not launched here. Running
+  -- both raced for the same mountpoint and crash-looped the systemd unit.
   hl.exec_cmd(o.launch('bash "$HOME/serverannah_mount.sh"'))
   -- Only the tray indicator is launched here. kdeconnectd is already started by
   -- /etc/xdg/autostart/org.kde.kdeconnect.daemon.desktop (uwsm turns XDG
