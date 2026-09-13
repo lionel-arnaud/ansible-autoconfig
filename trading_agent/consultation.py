@@ -32,8 +32,9 @@ class Reply:
 
 def build_question(event: Event, *, digest: str = "") -> str:
     """One message, everything needed to answer it, no follow-up required."""
+    who = f"{event.company} ({event.symbol})" if event.company else event.symbol
     lines = [
-        f"**{event.symbol}** — {event.title}",
+        f"**{who}** — {event.title}",
         f"trial: {event.trial_id}" if event.trial_id else "",
         f"expected: {event.date}" if event.date else "",
         "",

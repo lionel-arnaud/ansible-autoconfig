@@ -141,12 +141,14 @@ def consultation_loop(config: Config, paths: dict) -> None:
     parts = build_worker(config, paths)
     state, views, audit = parts["state"], parts["views"], parts["audit"]
     reasoner, feed, tg = parts["reasoner"], parts["feed"], parts["telegram"]
+    universe = parts["universe"]
 
     while not _stop.is_set():
         cid = new_correlation_id()
         try:
             catalysts = feed.upcoming_trials() + feed.recent_news()
-            ask_next(to_events(catalysts), views=views, state=state,
+            ask_next(to_events(catalysts, universe=universe),
+                     views=views, state=state,
                      telegram=tg, reasoner=reasoner, audit=audit,
                      now=dt.datetime.now(dt.timezone.utc), correlation_id=cid)
         except Exception as exc:  # noqa: BLE001 — a failed question must not

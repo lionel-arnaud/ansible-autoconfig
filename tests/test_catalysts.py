@@ -1,6 +1,8 @@
 """Catalyst discovery must degrade, never raise into the loop."""
 from __future__ import annotations
 
+import datetime as dt
+
 from trading_agent.catalysts import CatalystFeed, _parse_study
 from trading_agent.sources import RateLimited
 from trading_agent.universe import Universe
@@ -190,3 +192,59 @@ def test_one_throttled_symbol_does_not_end_the_sweep():
     feed = CatalystFeed(_Uni(), http=http, clock=_Clock(), sleep=lambda _s: None)
     feed.upcoming_trials()
     assert "ModernaTX" in calls and "Vertex Pharmaceuticals" in calls
+
+
+# --- a catalyst is an event that has NOT happened yet ------------------------
+
+def _study(date, date_type="ESTIMATED", phase="PHASE3", nct="NCT1"):
+    return {"protocolSection": {
+        "identificationModule": {"briefTitle": "A pivotal readout", "nctId": nct},
+        "designModule": {"phases": [phase]},
+        "statusModule": {"primaryCompletionDateStruct": {"date": date,
+                                                         "type": date_type}},
+    }}
+
+
+def _sweep(study):
+    class U:
+        def symbols(self):
+            return {"ABBV"}
+
+        def company_name(self, symbol):
+            return "AbbVie"
+
+    return CatalystFeed(U(), http=lambda u, p: [study],
+                        sleep=lambda _s: None).upcoming_trials(within_days=30)
+
+
+def test_a_readout_that_already_happened_is_not_a_catalyst():
+    """VIALE-A completed in 2021 and has been FDA-approved for five years. The
+    filter tested only the upper bound, so it and nearly every other historical
+    trial qualified, and the operator was asked to judge them."""
+    past = (dt.date.today() - dt.timedelta(days=1500)).isoformat()
+    assert _sweep(_study(past, "ACTUAL")) == []
+
+
+def test_an_actual_date_is_never_a_catalyst_even_when_it_is_near():
+    """ACTUAL means the registry is recording what happened, not forecasting."""
+    yesterday = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+    assert _sweep(_study(yesterday, "ACTUAL")) == []
+
+
+def test_a_readout_inside_the_window_is_a_catalyst():
+    soon = (dt.date.today() + dt.timedelta(days=10)).isoformat()
+    found = _sweep(_study(soon))
+    assert len(found) == 1 and found[0].symbol == "ABBV"
+
+
+def test_a_readout_beyond_the_window_waits_its_turn():
+    later = (dt.date.today() + dt.timedelta(days=200)).isoformat()
+    assert _sweep(_study(later)) == []
+
+
+def test_a_year_month_date_is_padded_rather_than_dropped():
+    """The registry gives YYYY-MM for many trials; comparing it unpadded
+    against a full date is a string comparison that quietly misbehaves."""
+    nxt = dt.date.today().replace(day=1) + dt.timedelta(days=32)
+    found = _sweep(_study(nxt.strftime("%Y-%m")))
+    assert len(found) == 1 and found[0].date.count("-") == 2

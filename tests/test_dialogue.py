@@ -202,3 +202,25 @@ def test_the_reasoner_the_dialogue_needs_is_the_one_production_builds():
     from trading_agent.reasoning import ReasoningClient
 
     assert hasattr(ReasoningClient, "ask")
+
+
+def test_the_question_names_the_company_not_only_the_ticker():
+    """"ABBV" is not a company to anyone reading this on a phone."""
+    from trading_agent.consultation import build_question
+
+    class U:
+        def company_name(self, symbol):
+            return "AbbVie"
+
+    event = to_events([TRIAL], universe=U())[0]
+    assert event.company == "AbbVie"
+    assert "AbbVie (BMRN)" in build_question(event) or "AbbVie" in build_question(event)
+
+
+def test_a_universe_that_cannot_name_the_company_still_produces_a_question():
+    class U:
+        def company_name(self, symbol):
+            raise OSError("offline")
+
+    event = to_events([TRIAL], universe=U())[0]
+    assert event.company == "" and event.symbol == "BMRN"

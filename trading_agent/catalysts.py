@@ -27,6 +27,10 @@ class Catalyst:
     source: str
     url: str = ""
     phase: str = ""
+    # ClinicalTrials.gov marks a primary completion date ESTIMATED or ACTUAL.
+    # ACTUAL means it already happened, which is the difference between a
+    # catalyst and a history lesson.
+    date_type: str = ""
 
     def summary(self) -> str:
         bits = [self.symbol, self.phase, self.title]
@@ -84,7 +88,8 @@ class CatalystFeed:
         now = self._clock()
         if self._trials_at is not None and now - self._trials_at < self._ttl_now:
             return list(self._trials_cache)
-        cutoff = dt.date.today() + dt.timedelta(days=within_days)
+        today = dt.date.today()
+        cutoff = today + dt.timedelta(days=within_days)
         out: list[Catalyst] = []
         degraded = False
         throttled_in_a_row = 0
@@ -107,7 +112,7 @@ class CatalystFeed:
                     c = _parse_study(symbol, study)
                 except Exception:  # noqa: BLE001
                     continue
-                if c and c.date and c.date <= cutoff.isoformat():
+                if c and _is_upcoming(c, today, cutoff):
                     out.append(c)
         if degraded:
             # Merge rather than replace. A sweep that stopped at the letter B
@@ -168,6 +173,22 @@ class CatalystFeed:
         ]
 
 
+def _is_upcoming(c: Catalyst, today: dt.date, cutoff: dt.date) -> bool:
+    """A catalyst is an event that has not happened yet.
+
+    The filter used to test only the upper bound, so every trial whose primary
+    completion lay in the past also qualified — which is nearly all of them.
+    That is how the agent came to ask the operator to judge VIALE-A, a readout
+    from 2020 that has been FDA-approved for five years.
+    """
+    if not c.date:
+        return False
+    # ACTUAL means the registry is recording what happened, not forecasting it.
+    if c.date_type == "ACTUAL":
+        return False
+    return today.isoformat() <= c.date <= cutoff.isoformat()
+
+
 def _parse_study(symbol: str, study: dict) -> Catalyst | None:
     protocol = study.get("protocolSection", {})
     ident = protocol.get("identificationModule", {})
@@ -176,12 +197,20 @@ def _parse_study(symbol: str, study: dict) -> Catalyst | None:
     phases = design.get("phases", []) or []
     if not any(p in ("PHASE2", "PHASE3") for p in phases):
         return None
-    completion = (status.get("primaryCompletionDateStruct", {}) or {}).get("date", "")
+    primary = status.get("primaryCompletionDateStruct", {}) or {}
     return Catalyst(
         symbol=symbol,
         title=ident.get("briefTitle", ""),
-        date=completion,
+        date=_full_date(primary.get("date", "")),
         source="clinicaltrials.gov",
         url=f"https://clinicaltrials.gov/study/{ident.get('nctId','')}",
         phase="/".join(phases),
+        date_type=(primary.get("type") or "").upper(),
     )
+
+
+def _full_date(raw: str) -> str:
+    """Registry dates come as YYYY-MM-DD or just YYYY-MM. Pad the short form so
+    string comparison against a real date stays valid."""
+    raw = (raw or "").strip()
+    return f"{raw}-01" if len(raw) == 7 else raw

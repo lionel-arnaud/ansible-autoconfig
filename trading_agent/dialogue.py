@@ -29,7 +29,7 @@ from trading_agent.views import View
 VIEW_TTL_DAYS = 90
 
 
-def to_events(catalysts) -> list[Event]:
+def to_events(catalysts, *, universe=None) -> list[Event]:
     """Catalysts as the consultation layer understands them.
 
     The source decides the kind, because it decides what the item actually is:
@@ -45,8 +45,15 @@ def to_events(catalysts) -> list[Event]:
         else:
             kind = EventKind.NEWS
             trial_id = ""
+        company = ""
+        if universe is not None:
+            try:
+                company = universe.company_name(c.symbol)
+            except Exception:  # noqa: BLE001 — a missing name is cosmetic
+                company = ""
         events.append(Event(symbol=c.symbol, kind=kind, title=c.title,
-                            trial_id=trial_id, date=c.date, url=c.url))
+                            trial_id=trial_id, date=c.date, url=c.url,
+                            company=company))
     return events
 
 

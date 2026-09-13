@@ -76,6 +76,8 @@ class Event:
     trial_id: str = ""
     date: str = ""
     url: str = ""
+    # "ABBV" is not a company to anyone reading this on a phone.
+    company: str = ""
 
     @property
     def materiality(self) -> Materiality:
