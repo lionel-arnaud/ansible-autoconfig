@@ -17,3 +17,7 @@ secret.txt
 
 # Omarchy manages this nvim theme pointer locally (machine-specific symlink)
 files/dotfiles/nvim/.config/nvim/lua/plugins/theme.lua
+
+# Python bytecode: build output, never source.
+__pycache__/
+*.py[cod]

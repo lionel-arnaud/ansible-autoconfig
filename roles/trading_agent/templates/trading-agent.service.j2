@@ -1,0 +1,38 @@
+[Unit]
+Description=Catalyst-driven biotech trading agent
+After=network-online.target
+Wants=network-online.target
+{% if notify_enabled | default(false) %}
+# A trading process failing silently is the whole problem this repo already
+# solved once for the nightly pull.
+OnFailure=autoconfig-notify@%n.service
+{% endif %}
+
+# StartLimit* belong to [Unit], not [Service]. systemd ignores them silently in
+# the wrong section — "Unknown key, ignoring" in the journal and no rate limit
+# at all, which is precisely the case where you need one.
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+[Service]
+Type=simple
+User={{ trading_agent_user }}
+WorkingDirectory={{ trading_agent_src_dir }}
+EnvironmentFile={{ trading_agent_env_file }}
+ExecStart={{ trading_agent_venv }}/bin/python -m trading_agent.main
+
+# Restart, but rate-limited. An agent that crash-loops against a broker is worse
+# than one that stays down and says so: five failures in five minutes stops it
+# and lets OnFailure= raise the alarm (see StartLimit* in [Unit] above).
+Restart=on-failure
+RestartSec=30
+
+# The blast radius of a bug in this process should stop at its own directory.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths={{ trading_agent_root }}
+
+[Install]
+WantedBy=multi-user.target

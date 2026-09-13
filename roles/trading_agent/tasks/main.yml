@@ -1,0 +1,122 @@
+---
+# Deploys the trading agent. The source is not copied: it already arrived with
+# the ansible-pull checkout, so the running code always matches what is
+# committed and there is no second path to drift out of sync.
+- name: Ensure the trading agent directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ trading_agent_user }}"
+    group: "{{ trading_agent_user }}"
+    mode: "0750"
+  loop:
+    - "{{ trading_agent_root }}"
+    - "{{ trading_agent_log_dir }}"
+    - "{{ trading_agent_stage_dir }}"
+
+- name: Ensure the trading agent secret directory exists
+  ansible.builtin.file:
+    path: "{{ trading_agent_env_file | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install the Python toolchain
+  ansible.builtin.package:
+    name:
+      - python3-venv
+      - python3-pip
+    state: present
+
+- name: Create the virtualenv
+  ansible.builtin.command:
+    cmd: "python3 -m venv {{ trading_agent_venv }}"
+    creates: "{{ trading_agent_venv }}/bin/python"
+  become: true
+  become_user: "{{ trading_agent_user }}"
+
+# rsync rather than copy: --delete means a module deleted upstream also leaves
+# the staging directory, so a file that no longer exists in git can never stay
+# importable on the host.
+- name: Install rsync
+  ansible.builtin.package:
+    name: rsync
+    state: present
+
+- name: Mirror the agent source out of the managed checkout
+  ansible.builtin.command:
+    argv:
+      - rsync
+      - --recursive
+      - --links
+      - --perms
+      - --times
+      - --delete
+      - --itemize-changes
+      - --exclude=__pycache__
+      - "{{ trading_agent_src_dir | dirname }}/pyproject.toml"
+      - "{{ trading_agent_src_dir }}"
+      - "{{ trading_agent_stage_dir }}/"
+  become: true
+  become_user: "{{ trading_agent_user }}"
+  register: trading_agent_stage
+  # Itemized output lists one line per transferred path, so an unchanged
+  # mirror prints nothing. That is what keeps the nightly pull idempotent.
+  changed_when: trading_agent_stage.stdout | trim | length > 0
+  notify: Restart trading agent
+
+# Pinned exactly in pyproject.toml. This handles money on a host that
+# dist-upgrades itself nightly, so a silent minor bump in an order-placing
+# library is not a risk worth taking.
+- name: Check whether the agent is already importable in the venv
+  ansible.builtin.command:
+    argv: ["{{ trading_agent_venv }}/bin/python", "-c", "import trading_agent"]
+  become: true
+  become_user: "{{ trading_agent_user }}"
+  register: trading_agent_import
+  changed_when: false
+  failed_when: false
+
+# Reinstalled only when the source actually moved or the venv is empty.
+# "pip install --upgrade <dir>" rebuilds unconditionally and reports success
+# every time, which would make the nightly pull permanently "changed".
+- name: Install the agent and its pinned dependencies
+  ansible.builtin.pip:
+    name: "{{ trading_agent_stage_dir }}"
+    virtualenv: "{{ trading_agent_venv }}"
+    state: present
+    extra_args: --upgrade
+  become: true
+  become_user: "{{ trading_agent_user }}"
+  when: trading_agent_stage is changed or trading_agent_import.rc != 0
+  notify: Restart trading agent
+
+# 0600 root: it holds the broker keys and the bot token. The agent reads it via
+# systemd's EnvironmentFile, which is read as root before dropping privileges,
+# so the service user never needs access to the file itself.
+- name: Render the environment file from the vault
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ trading_agent_env_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart trading agent
+
+- name: Install the trading agent service
+  ansible.builtin.template:
+    src: trading-agent.service.j2
+    dest: /etc/systemd/system/trading-agent.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart trading agent
+
+- name: Enable the trading agent service
+  ansible.builtin.systemd:
+    name: trading-agent.service
+    enabled: true
+    state: started
+    daemon_reload: true

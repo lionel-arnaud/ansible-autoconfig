@@ -34,4 +34,15 @@ else
   echo "SKIP: shellcheck not installed (pacman -S shellcheck / apt install shellcheck)"
 fi
 
+# The trading agent handles money; its tests are part of the gate, not an
+# optional extra. Skipped cleanly when the package is not present.
+if [ -d "$repo_dir/trading_agent" ]; then
+  echo "== trading agent tests =="
+  if "$venv_dir/bin/python" -c "import pytest" 2>/dev/null; then
+    "$venv_dir/bin/python" -m pytest "$repo_dir/tests" -q
+  else
+    echo "SKIP: pytest not in .lint-venv (pip install pytest)"
+  fi
+fi
+
 echo "== lint OK =="

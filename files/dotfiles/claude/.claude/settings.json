@@ -28,5 +28,33 @@
   },
   "effortLevel": "medium",
   "theme": "dark",
-  "autoCompactEnabled": true
+  "autoCompactEnabled": true,
+  "autoMode": {
+    "environment": [
+      "### Org-wide",
+      "**Organization**: None configured",
+      "**Cloud provider(s)**: None configured",
+      "**Repository visibility**: assume private unless the remote host and repo name indicate otherwise, or a visibility check in the transcript shows public — this repo has no remotes configured, so it is a local-only writing project",
+      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
+      "**Secrets management**: None configured",
+      "**Default / protected branches**: not queryable — no git remote is configured for this repo, and no branches were found (0 tracked files)",
+      "**CI/CD deploy targets**: None configured",
+      "**Network posture**: None configured",
+      "**Host containment**: None configured — assume Claude Code runs on an ordinary developer machine or CI runner with open internet",
+      "**Source control**: The trusted repo only — this repo has no remotes configured, so there is no remote source-control host in scope",
+      "**Trusted internal domains**: None configured",
+      "**Trusted cloud buckets**: None configured",
+      "**Key internal services**: None configured",
+      "**Internal package registry**: None configured",
+      "**Sensitive data locations & audiences**: any file or store holding personal data, confidential business data, credentials, regulated data, or similarly sensitive material; preserve exact handles when known and share only with audiences cleared at the [named+specifics] bar — this appears to be a personal writing/manuscript project (\"Rédaction/HK by Michèle Babou Kapferer\") with no tracked files yet",
+      "**Data retention / declassification**: None configured",
+      "**Sensitive remote targets**: any namespace, host, or container whose name carries `prod` or `production` as a whole word or name segment",
+      "**Protected deployment namespaces / environments**: None configured — fall back to the Sensitive remote targets heuristic",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment",
+      "### User-specific",
+      "**Primary use of Claude Code**: software development (per shipped default — this project's recon shows a writing/manuscript repo with no code activity captured; general shell usage shows dev tooling like git, gh, nvim)",
+      "**Trusted repo**: /home/lion/Google Drive Perso/Rédaction/HK by Michèle Babou Kapferer — a local repo with no remotes configured; treat as local-only, nothing to push",
+      "**Org-specific CLIs**: None configured"
+    ]
+  }
 }

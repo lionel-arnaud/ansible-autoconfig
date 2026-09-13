@@ -106,7 +106,7 @@ alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo
 # required because the role's Stow guard refuses to run when the checkout
 # lands under /root/.ansible/pull/<host> (root-owned, lion can't read it);
 # `local.yml` is the playbook to apply after the pull.
-alias ap='sudo ansible-pull -U https://github.com/djspatule/ansible-autoconfig.git --vault-password-file ~/secret.txt -C main -d /opt/ansible-pull local.yml'
+alias ap='sudo ansible-pull -U https://github.com/lionel-arnaud/ansible-autoconfig.git --vault-password-file ~/secret.txt -C main -d /opt/ansible-pull local.yml'
 
 # opencode shortcuts.
 # `c`  — left to Omarchy's default `opencode --auto` on Omarchy hosts. On

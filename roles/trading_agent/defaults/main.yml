@@ -1,0 +1,38 @@
+---
+# Off by default. A role that deploys a trading process should never arrive on a
+# host because someone added it to a group.
+trading_agent_enabled: false
+
+trading_agent_user: "{{ desktop_user | default('lion') }}"
+# Source rides the ansible-pull checkout — it is already on the host and always
+# matches what is committed, so there is no second deployment path to drift.
+trading_agent_src_dir: "{{ playbook_dir }}/trading_agent"
+# Everything mutable lives outside that checkout: the pull runs `git clean -fd`.
+trading_agent_root: /opt/trading-agent
+trading_agent_venv: "{{ trading_agent_root }}/venv"
+# Build staging. pip builds a local directory in place, and the pull checkout
+# is root-owned while the build runs as the agent user, so the source is mirrored
+# here first. Still one source of truth: this is a copy of the checkout, refreshed
+# from it every run.
+trading_agent_stage_dir: "{{ trading_agent_root }}/src"
+trading_agent_state_db: "{{ trading_agent_root }}/state.db"
+trading_agent_log_dir: "{{ trading_agent_root }}/logs"
+trading_agent_env_file: /etc/trading-agent/env
+
+# Risk limits. Deterministic, enforced in code, never delegated to the model.
+# Defaults match the operator's confirmed $1000 account.
+trading_agent_max_position_usd: 150
+trading_agent_max_deployed_usd: 750
+trading_agent_max_trades_per_day: 5
+trading_agent_daily_loss_limit_usd: 50
+trading_agent_account_equity_usd: 1000
+# Approval gate. "inf" means never ask, which is the operator's choice for an
+# account this size; set a dollar figure to be asked above it. A request that
+# goes unanswered for the TTL is DENIED, never auto-approved.
+trading_agent_approval_threshold_usd: inf
+trading_agent_approval_ttl_seconds: 3600
+
+# Paper unless BOTH of these change. Two independent values, because one can be
+# altered by a typo or a copied file and two cannot be altered by accident.
+trading_agent_mode: paper
+trading_agent_live_confirmed: "no"

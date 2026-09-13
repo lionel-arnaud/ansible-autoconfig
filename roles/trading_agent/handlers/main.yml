@@ -1,0 +1,8 @@
+---
+# A handler, not an unconditional restart: bouncing a process that may hold
+# positions should happen because something it depends on actually changed.
+- name: Restart trading agent
+  ansible.builtin.systemd:
+    name: trading-agent.service
+    state: restarted
+    daemon_reload: true

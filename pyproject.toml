@@ -1,0 +1,32 @@
+[project]
+name = "trading-agent"
+version = "0.1.0"
+description = "Catalyst-driven biotech trading agent"
+requires-python = ">=3.11"
+
+# Pinned on purpose. This handles money on a box that dist-upgrades itself
+# nightly; a silent minor bump in an order-placing library is not a risk worth
+# taking for novelty.
+# Two, and only because neither job is reasonable to hand-roll. Telegram and
+# the config loader use the standard library: urllib and os.environ are enough
+# for a bot API and an EnvironmentFile, and every pinned package is another
+# thing to audit on a host that places orders.
+dependencies = [
+  "alpaca-py==0.33.1",
+  "httpx==0.27.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.3.4", "pytest-asyncio==0.24.0", "freezegun==1.5.1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Unit tests must never reach the network. Anything needing it is marked and
+# excluded by default, so a broken guardrail cannot hide behind a timeout.
+addopts = "-q --strict-markers"
+markers = [
+  "network: needs real network/credentials (excluded from the default run)",
+]
+
+[tool.setuptools.packages.find]
+include = ["trading_agent*"]

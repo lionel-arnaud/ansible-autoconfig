@@ -52,6 +52,16 @@
   roles:
     - workstation
 
+# Gated on its own flag rather than a group: a role that deploys a trading
+# process must never arrive on a host because someone edited the inventory.
+- name: Apply the trading agent role
+  hosts: all
+  tags: trading_agent
+  become: true
+  roles:
+    - role: trading_agent
+      when: trading_agent_enabled | default(false)
+
 - name: Apply the kids role
   hosts: kids
   tags: kids
