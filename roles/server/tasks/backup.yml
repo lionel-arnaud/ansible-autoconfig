@@ -131,13 +131,28 @@
       fi
 
       archive="{{ inventory_hostname }}-$(date +%Y-%m-%dT%H-%M-%S)"
-      borg create --stats --compression zstd,6 "$BORG_REPO::$archive" \
+
+      # Borg exit codes: 0 success, 1 warning, 2 or more error. A warning still
+      # writes a complete archive. Under set -e it used to end the script right
+      # here, which skipped prune, compact and the off-site sync, so one file
+      # changing mid-read cost that night the off-site copy. Only a real error
+      # stops the run now; a warning is reported at the end, after the work.
+      set +e
+      borg create --stats --compression zstd,6 \
+      {% for path in backup_exclude_paths | default([]) %}
+        --exclude '{{ path }}' \
+      {% endfor %}
+        "$BORG_REPO::$archive" \
       {% for path in backup_paths %}
-        {% if not loop.last %}'{{ path }}' \
-        {% else %}'{{ path }}' \
-        {% endif %}
+        '{{ path }}' \
       {% endfor %}
         "$dump_dir"
+      create_rc=$?
+      set -e
+      if [ "$create_rc" -ge 2 ]; then
+        echo "FATAL: borg create failed with exit code $create_rc" >&2
+        exit "$create_rc"
+      fi
 
       borg prune --list "$BORG_REPO" \
         --keep-daily={{ backup_retention_keep_daily }} \
@@ -174,6 +189,11 @@
         echo "WARNING: off-site sync skipped, no readable rclone config at {{ backup_offsite_rclone_config }}" >&2
       fi
       {% endif %}
+
+      if [ "$create_rc" -ne 0 ]; then
+        echo "WARNING: borg create reported warnings (exit $create_rc); the archive, prune, compact and off-site sync all completed" >&2
+        exit "$create_rc"
+      fi
 
 - name: Install Borg backup systemd service
   ansible.builtin.copy:

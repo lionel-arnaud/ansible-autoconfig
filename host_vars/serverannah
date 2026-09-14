@@ -124,7 +124,6 @@ server_lan_only_published_ports:
   - 8555
   - 32400
   - 8096
-  - 8920
 server_netplan_enabled: true
 server_netplan_config: |
   # Managed by ansible-autoconfig.

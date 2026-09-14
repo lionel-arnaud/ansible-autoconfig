@@ -32,5 +32,23 @@ iptables -A AUTOCONFIG-LAN-ONLY -j DROP
 iptables -C DOCKER-USER -p {{ proto }} -m conntrack --ctorigdstport {{ port }} -j AUTOCONFIG-LAN-ONLY 2>/dev/null || iptables -I DOCKER-USER 1 -p {{ proto }} -m conntrack --ctorigdstport {{ port }} -j AUTOCONFIG-LAN-ONLY
 {% endfor %}
 {% endfor %}
+# Drop jumps for any port or protocol no longer in the list. The loop above
+# only ever adds, so removing a port from the configuration used to leave its
+# rules in place indefinitely.
+wanted="{% for port in server_lan_only_published_ports %}{% for proto in server_lan_only_protocols %} {{ port }}/{{ proto }}{% endfor %}{% endfor %} "
+iptables -S DOCKER-USER | grep -- '-j AUTOCONFIG-LAN-ONLY' | while read -r rule; do
+  port=$(printf '%s\n' "$rule" | sed -n 's/.*--ctorigdstport \([0-9]*\).*/\1/p')
+  proto=$(printf '%s\n' "$rule" | sed -n 's/.* -p \([a-z]*\) .*/\1/p')
+  case "$wanted" in
+    *" $port/$proto "*) ;;
+    *)
+      # The rule text comes straight from iptables -S, so splitting it back
+      # into arguments is exactly the intended round trip.
+      # shellcheck disable=SC2046
+      iptables $(printf '%s\n' "$rule" | sed 's/^-A /-D /')
+      ;;
+  esac
+done
+
 # Keep Docker's own RETURN terminator at the end of DOCKER-USER.
 iptables -C DOCKER-USER -j RETURN 2>/dev/null || iptables -A DOCKER-USER -j RETURN

@@ -168,9 +168,12 @@ jellyfin_admin_username: lion
 jellyfin_timezone: Europe/Paris
 jellyfin_puid: "{{ (lookup('pipe', 'id -u ' ~ (dotfiles_user | default('lion'))) | trim | int) }}"
 jellyfin_pgid: "{{ (lookup('pipe', 'id -g ' ~ (dotfiles_user | default('lion'))) | trim | int) }}"
+# 8096 only. 8920 is the HTTPS port inside the container, but HTTPS is disabled
+# in Jellyfin itself (EnableHttps=false): Caddy terminates TLS for the public
+# name and LAN clients use 8096. Publishing 8920 exposed a port that answered
+# nothing.
 jellyfin_published_ports:
   - "192.168.1.100:8096:8096"
-  - "192.168.1.100:8920:8920"
 jellyfin_api_key_file: "{{ jellyfin_config_dir }}/data/jellyfin-api.key"
 
 # Libraries to create on first run (or to add idempotently on every run).
@@ -427,6 +430,13 @@ backup_paths:
   - /opt/reverse-proxy
   # State pushed from other hosts. Nothing else backs the Pi up.
   - /var/lib/backup-inbox
+# Live database files are skipped: a running MariaDB rewrites them while Borg
+# reads, so a raw copy is never consistent, and Borg exits with a warning
+# ("file changed while we backed it up"). Each one is already captured
+# consistently by its dump in backup_database_dumps below.
+backup_exclude_paths:
+  - "{{ nextcloud_db_data_dir }}"
+  - "{{ aumenuilya_db_data_dir }}"
 backup_database_dumps:
   - name: aumenuilya
     container: "{{ aumenuilya_db_container_name }}"

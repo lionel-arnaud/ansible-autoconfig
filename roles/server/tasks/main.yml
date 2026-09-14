@@ -61,7 +61,9 @@
 # guards against: Docker rewrites DOCKER-USER when it restarts.
 - name: Check whether every Docker LAN guard rule is in place
   ansible.builtin.shell:
+    executable: /bin/bash
     cmd: |
+      set -o pipefail
       missing=0
       for port in {{ server_lan_only_published_ports | join(' ') }}; do
         for proto in {{ server_lan_only_protocols | join(' ') }}; do
@@ -72,6 +74,11 @@
       done
       # A jump into a chain that does not exist protects nothing.
       iptables -S AUTOCONFIG-LAN-ONLY >/dev/null 2>&1 || missing=$((missing + 1))
+      # And nothing beyond what is wanted: a port removed from the list must
+      # trigger a re-apply, or its old rule is never cleaned up.
+      expected={{ (server_lan_only_published_ports | length) * (server_lan_only_protocols | length) }}
+      actual=$(iptables -S DOCKER-USER 2>/dev/null | grep -c -- '-j AUTOCONFIG-LAN-ONLY' || true)
+      [ "$actual" -eq "$expected" ] || missing=$((missing + 1))
       echo "$missing"
   register: server_lan_guard_missing
   changed_when: false

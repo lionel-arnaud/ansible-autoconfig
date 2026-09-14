@@ -77,7 +77,7 @@
   register: jellyfin_image_pull
 
 # Jellyfin Honors the standard HTTP creds header for the Web UI. We bind
-# 8096/8920 to the LAN address so the family can hit Jellyfin from the home
+# 8096 to the LAN address so the family can hit Jellyfin from the home
 # network without going through the public DNS. Public access for the Jellyfin
 # web client goes through Caddy on 443 (jelly.dinnizer.com), which proxies to
 # jellyfin:8096 inside the docker network — Jellyfin clients then authenticate
