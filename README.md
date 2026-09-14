@@ -37,6 +37,14 @@ two small businesses.
 | 🎨 | **Excalidraw** | Self-hosted collaborative whiteboard for sketching ideas. |
 | 📄 | **BentoPDF** | Private PDF toolkit — merge, split and convert without uploading confidential files to a random website. |
 
+### 🧪 A research lab on a Raspberry Pi
+
+| | Service | What it does |
+|---|---|---|
+| 🧬 | **Biotech research assistant** | An AI analyst that follows upcoming clinical-trial results, briefs me on each one — teaching the vocabulary as it goes — asks for my call over Telegram, and keeps score of how often I am right. |
+| 📈 | **Practice trading account** | Acts on those calls in a paper-money account, inside hard limits written in code that the AI cannot change. |
+| 📋 | **Daily report** | A private page with positions, open questions, my past calls and the scoreboard, refreshed every night. |
+
 ### 🔧 Keeping it all alive
 
 | | Service | What it does |
@@ -56,7 +64,7 @@ two small businesses.
 |---|---|
 | 🗄️ **Server** | Headless Ubuntu box. Runs every service above in Docker. |
 | 💻 **Laptop** | Arch Linux / Hyprland daily driver — desktop, dotfiles and dev tooling. |
-| 🍓 **Raspberry Pi** | Small always-on dev and test bench. |
+| 🍓 **Raspberry Pi** | Always-on bench, and home of the biotech research assistant. |
 | 👧 **Kids' laptop** | Old MacBook given a second life with Linux Mint and strict screen-time limits. |
 
 Each machine checks this repository **every night** and reconfigures itself to
@@ -77,6 +85,12 @@ match. Config drift fixes itself while I sleep.
 - **♻️ Reliability** — backups are encrypted, pruned on a schedule, and the
   restore path has been rehearsed end to end on a clean machine. Failures page a
   phone instead of dying silently in a log.
+- **🤖 AI with guardrails** — the research assistant reasons and proposes, but
+  every order passes deterministic limits written in plain code: position size,
+  total exposure, trades per day and a daily loss breaker. A kill switch works
+  even when the AI is stuck, every order can be traced back to the news and the
+  human call that produced it, and moving to real money takes two separate,
+  deliberate settings. Over 250 automated tests keep those promises in place.
 - **✅ Testing & automation** — linting and a custom test harness run on every
   commit, catching the class of bug that generic linters miss.
 - **📝 Documentation** — every non-obvious decision is written down with the
@@ -204,6 +218,15 @@ tells me when one of them stops".
 - [ ] **Docker log rotation is capped; disk usage is not monitored.** A simple
       hourly disk-percentage check wired to the new notifier would have flagged
       the 94%-full disk long before it became urgent.
+
+- [ ] **Trading agent: act on a changed call.** Changing an answer from yes to
+      no stops new purchases, but does not yet sell a position already held:
+      the model is not shown current holdings. Pass holdings in, and propose an
+      exit when the call behind a position flips.
+- [ ] **Trading agent: wire the registry-change detector.** `trial_watch.py` is
+      built and tested: it snapshots a trial's registry entry and flags changes
+      to its main goal, status, planned size, dates or phase. Connect it so a
+      change triggers a message and a fresh question.
 
 *Considered and rejected, with reasons, in `docs/review/REVIEW-2026-09.md`:*
 Prometheus/Grafana/Loki (5-6 containers and unbounded disk to answer a question
@@ -1049,6 +1072,55 @@ Important host-specific values live in `host_vars/serverannah`, including:
 - Pi-hole mode
 - hardware-specific device paths
 - backup source paths still needed for migration
+
+### Trading Research Agent
+
+A biotech research assistant that runs on the Raspberry Pi: role
+`roles/trading_agent`, package `trading_agent/`, enabled per host with
+`trading_agent_enabled` (on for the Pi only). Design notes, the acceptance
+checklist and every decision with its reasoning live in
+`docs/orchestrator/trading-agent/`.
+
+**What it does.** It watches upcoming results for late-stage clinical trials run
+by companies in the XBI and IBB biotech fund holdings, using ClinicalTrials.gov
+and a market news feed. For each material one, a language model (reached through
+opencode, so the model is interchangeable) researches a brief, and the operator is
+asked for a call over Telegram: yes, no or skip, a confidence from 1 to 5, and
+free-text reasoning. The brief explains the field's vocabulary as it goes, and
+calls are scored against real results, measured against the base rate for that
+phase.
+
+**How a trade happens.** Catalyst → model proposal → *view gate* (no opening
+position without a recorded human call) → *guardrails* → broker. The guardrails
+are pure, deterministic code with no model, network or clock inside them:
+position size, total deployed, trades per day, a latched daily loss breaker, and
+rejection of non-finite amounts. The broker refuses any order that did not pass
+through them.
+
+**Safety properties, each covered by tests:**
+
+- a Telegram `/stop` halts trading and cancels resting orders, and works while
+  the reasoning loop is hung, because commands run on their own thread and write
+  straight to SQLite; only `/resume` clears it;
+- live trading needs two independent settings changed; either one alone keeps
+  the paper account;
+- orders carry idempotency keys and the account is reconciled at start-up, with
+  the broker treated as the source of truth, so a restart cannot double-fill;
+- an optional human-approval gate above a dollar threshold is wired but off, and
+  an unanswered request expires as a denial, never an approval;
+- every step from catalyst to order is written to a correlated audit log, with
+  credential-shaped values redacted.
+
+**Talking to it.** `/status`, `/today` (what it did, and why), `/stop`,
+`/resume`, `/help`. Answer a question by replying `yes 3 reasoning…`; several at
+once, or a change of mind before results, by starting each line with the ticker.
+
+**Operations.** It runs as a systemd service with restart limits and
+failure notifications. Each night it snapshots its databases consistently and
+pushes them, write-only, to the server, where the existing Borg job takes them
+off-site. The same push carries a daily report page, rendered on the Pi and served
+by the server as a static file behind the reverse proxy's password. It is labelled
+as a daily snapshot, and warns when it is older than expected.
 
 ### Conventions For Future Changes
 
