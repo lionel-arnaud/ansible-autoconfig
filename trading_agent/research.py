@@ -26,43 +26,65 @@ PREFERRED_SOURCES = (
     "nytimes.com",
 )
 
-_BRIEF_PROMPT = """You are a biotech analyst briefing a colleague who will make
-the call. They are a CFO with deep biotech domain knowledge — write for someone
-who understands clinical development, not for a retail investor.
+_BRIEF_PROMPT = """You are briefing a colleague who will decide whether a
+clinical trial is likely to succeed. They work in finance and have a real
+interest in biotech, but they are not a clinician, and they read this on a
+phone. Write plainly.
 
-Research this event and produce a brief:
+Writing rules:
+- No unexplained jargon or acronyms. The first time a technical term is needed,
+  spell it out and say what it means in a few words, for example "overall
+  survival, meaning how long patients lived". Use the plain word when one exists.
+- Say what numbers mean, not only what they are: "patients lived about five
+  months longer on the drug (15 months against 10)", not "mOS 14.7 vs 9.6,
+  HR 0.66".
+- Short paragraphs. No tables.
 
-  Company: {symbol}
-  Event: {title}
-  Trial: {trial_id}
-  Expected: {date}
+Research this trial:
+
+  Company: {company} ({symbol})
+  Trial: {title}
+  Registry ID: {trial_id}
+  Results expected: {date}
 {amendments}
 
-Budget: at most six searches, then write. This runs on a schedule against a
-whole watchlist, so a good brief now beats an exhaustive one later.
+Budget: at most six searches, then write.
 
-Cover, briefly and only where you find real information:
+If this trial has already published its main results, say so in the first line
+and stop there: it is not a question anyone can still call.
 
-1. **The asset and its trial** — mechanism, what is novel, how derisked by
-   earlier phases, and the design: endpoints, powering, comparator. Flag
-   anything unusual, such as a soft primary endpoint or a comparator chosen
-   to flatter. Name the phase 2 numbers if they exist.
-2. **Registry history** — endpoint or enrolment changes, timeline slippage.
-   Amendments late in a pivotal trial are the single most informative signal
-   available from outside.
-3. **What would change your mind** — the two or three things that would most
-   move the probability either way.
+Otherwise use these headings, in this order:
 
-Then: **three links** the colleague can open and read. Prefer primary sources
+The company and the drug: what the company does, what the drug is and how it
+is meant to work, in two or three sentences. Say whether this drug is one of
+many for the company or its main hope.
+
+What this trial tests: which patients, what the drug is compared against, what
+counts as success, and whether that is a high or a low bar.
+
+Why it could work: two or three concrete reasons, based on earlier results.
+
+Why it could fail: two or three concrete reasons, such as a small or badly
+designed trial, weak earlier results, or changes the company made to the trial
+along the way. Registry changes late in a trial are among the most telling
+signs available from outside.
+
+Worth watching before the results: the two or three things that, if they happen
+before the results come out, should make your colleague reconsider their
+answer. Examples: the company changes the trial goals or delays it, a similar
+drug reports results, or the company raises money on unusual terms. Say where
+each would show up, such as the registry page, a press release or a filing.
+
+Then three links your colleague can open and read. Prefer primary sources
 (ClinicalTrials.gov, PubMed, FDA/EMA, SEC filings). Where secondary coverage
-helps, prefer lemonde.fr and nytimes.com — they hold subscriptions to both, so
-those are readable where other paywalls are not. Label each link with what it
-is and why it is worth the click.
+helps, prefer lemonde.fr and nytimes.com: they hold subscriptions to both, so
+those are readable where other paywalls are not. Say in plain words what each
+link is and why it is worth the click.
 
 Be honest about what you could not find. An admitted gap is useful; a confident
 guess is worse than silence, because it will be read as evidence.
 
-Keep it under 300 words plus links. It is read on a phone."""
+Keep it under 350 words plus links."""
 
 
 @dataclass(frozen=True)
@@ -81,6 +103,7 @@ def build_brief_prompt(event, amendments=()) -> str:
         amend_text = ("\nRegistry amendments already detected:\n"
                       + "\n".join(f"  - {a.describe()}" for a in amendments))
     return _BRIEF_PROMPT.format(
+        company=getattr(event, "company", "") or event.symbol,
         symbol=event.symbol,
         title=event.title,
         trial_id=event.trial_id or "(none)",

@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import datetime as dt
 
-from trading_agent.consultation import build_question, parse_reply, pending_questions
+from trading_agent.consultation import (build_question, is_answer, parse_reply,
+                                        pending_questions, split_answers)
 from trading_agent.events import Event, EventKind
 from trading_agent.followup import Thread, build_followup_prompt, route
 from trading_agent.research import research
@@ -98,58 +99,121 @@ def ask_next(events, *, views, state, telegram, reasoner, audit, now,
     return event.view_key
 
 
+_STANCE_WORDS = {"positive": "yes, it will succeed",
+                 "negative": "no, it will not",
+                 "no_opinion": "skip, no view"}
+
+_NO_OPEN_QUESTION = (
+    "There is no question waiting right now. To change an earlier answer, "
+    "start with the ticker, for example: IBRX: no 3 the new data changed my mind"
+)
+
+
 def handle_reply(text, *, views, state, telegram, reasoner, audit, now,
                  correlation_id: str = "") -> str:
     """Route one operator message that was not a command.
 
     Returns what it was treated as, for the caller to log: "question",
     "view", "unparsed" or "ignored".
-    """
-    open_thread = state.open_thread()
-    thread = (Thread(event_key=open_thread["event_key"],
-                     symbol=open_thread["symbol"])
-              if open_thread else None)
 
-    kind, payload = route(text, thread=thread)
-    if kind == "ignore":
+    Answers are recognised before questions. The other way round, a view whose
+    note ended in "...?" was treated as a question and never recorded.
+    """
+    if not (text or "").strip():
         return "ignored"
 
+    answers = [(symbol, body) for symbol, body in split_answers(text)
+               if is_answer(body)]
+    if answers:
+        outcomes = [
+            _record_answer(symbol, body, views=views, state=state,
+                           telegram=telegram, reasoner=reasoner, audit=audit,
+                           now=now, correlation_id=correlation_id)
+            for symbol, body in answers
+        ]
+        return "view" if "view" in outcomes else outcomes[0]
+
+    open_thread = state.open_thread()
+    if open_thread is None:
+        telegram.send(_NO_OPEN_QUESTION)
+        return "ignored"
+
+    thread = Thread(event_key=open_thread["event_key"], symbol=open_thread["symbol"])
+    kind, payload = route(text, thread=thread)
     if kind == "question":
         # Follow-ups do not close the thread: the operator is allowed to ask
         # several before forming a view, which is the entire point of having
         # them in the loop.
-        answer = reasoner.ask(
-            build_followup_prompt(thread, payload, open_thread["title"])
-        )
-        telegram.send(answer or "(no answer available right now)")
-        audit.record("followup", correlation_id,
-                     {"symbol": thread.symbol, "question": payload[:200]})
+        _answer_followup(thread, payload, open_thread["title"],
+                         telegram=telegram, reasoner=reasoner, audit=audit,
+                         correlation_id=correlation_id)
         return "question"
 
-    reply = parse_reply(payload)
-    if reply is None:
-        telegram.send(
-            "I could not read that as a view. Start with *yes*, *no* or "
-            "*skip*, then a confidence, then anything you like."
-        )
-        audit.record("reply_unparsed", correlation_id,
-                     {"symbol": thread.symbol, "text": payload[:200]})
-        return "unparsed"
+    telegram.send(
+        "I could not read that as an answer. Start with yes, no or skip, then "
+        "a confidence from 1 to 5, then anything you like."
+    )
+    audit.record("reply_unparsed", correlation_id,
+                 {"symbol": thread.symbol, "text": payload[:200]})
+    return "unparsed"
 
+
+def _record_answer(symbol, body, *, views, state, telegram, reasoner, audit,
+                   now, correlation_id) -> str:
+    reply = parse_reply(body)
+    thread = state.thread_for_symbol(symbol) if symbol else state.open_thread()
+    if thread is None:
+        telegram.send(f"There is no question about {symbol} to answer."
+                      if symbol else _NO_OPEN_QUESTION)
+        audit.record("reply_unmatched", correlation_id,
+                     {"symbol": symbol, "text": body[:200]})
+        return "ignored"
+
+    if views.has_outcome(thread["symbol"], thread["event_key"]):
+        telegram.send(f"The results for {thread['symbol']} are already known, "
+                      "so that answer can no longer change.")
+        return "ignored"
+
+    updating = not thread["open"]
     views.record(View(
-        symbol=thread.symbol,
-        event_id=thread.event_key,
+        symbol=thread["symbol"],
+        event_id=thread["event_key"],
         stance=reply.stance,
         confidence=reply.confidence,
         note=reply.note,
         recorded_at=now,
         expires_at=now + dt.timedelta(days=VIEW_TTL_DAYS),
     ))
-    state.close_thread()
-    audit.record("view_recorded", correlation_id, {
-        "symbol": thread.symbol, "event": thread.event_key,
+    if not updating:
+        state.close_thread()
+    audit.record("view_updated" if updating else "view_recorded", correlation_id, {
+        "symbol": thread["symbol"], "event": thread["event_key"],
         "stance": reply.stance, "confidence": reply.confidence,
     })
-    telegram.send(f"Noted: *{reply.stance}* {reply.confidence}/5 on "
-                  f"{thread.symbol}.")
+
+    verb = "Updated" if updating else "Recorded"
+    ack = [f"{verb} for {thread['symbol']}: {_STANCE_WORDS[reply.stance]}"
+           + (f", confidence {reply.confidence}/5." if reply.stance != "no_opinion"
+              else ".")]
+    if reply.note:
+        ack.append(f"Your note: {reply.note}")
+    ack.append(f"To change it before the results, reply starting with "
+               f"{thread['symbol']}:")
+    telegram.send("\n".join(ack))
+
+    # A question inside the note is still a question. It gets answered, after
+    # the view is safely on file.
+    if "?" in reply.note:
+        _answer_followup(Thread(event_key=thread["event_key"], symbol=thread["symbol"]),
+                         reply.note, thread["title"], telegram=telegram,
+                         reasoner=reasoner, audit=audit,
+                         correlation_id=correlation_id)
     return "view"
+
+
+def _answer_followup(thread, question, title, *, telegram, reasoner, audit,
+                     correlation_id) -> None:
+    answer = reasoner.ask(build_followup_prompt(thread, question, title))
+    telegram.send(answer or "(no answer available right now)")
+    audit.record("followup", correlation_id,
+                 {"symbol": thread.symbol, "question": question[:200]})

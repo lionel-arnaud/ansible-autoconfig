@@ -52,9 +52,39 @@ def test_detected_amendments_are_fed_into_the_brief():
     assert "primary_outcomes" in p and "PFS" in p
 
 
-def test_the_prompt_targets_an_expert_reader():
-    assert "not for a retail investor" in build_brief_prompt(ev())
+def test_the_prompt_writes_for_a_non_clinician_on_a_phone():
+    """The operator's verdict on the first briefs: "cryptic, full of acronyms,
+    not very reader friendly". The earlier instruction to write for an expert
+    produced "VEN+aza, 1L AML, mOS 14.7 vs 9.6, HR 0.66"."""
+    p = " ".join(build_brief_prompt(ev()).split())
+    assert "not a clinician" in p
+    assert "No unexplained jargon or acronyms" in p
+    assert "Say what numbers mean" in p
 
+
+def test_the_prompt_names_the_company_not_only_the_ticker():
+    from trading_agent.events import Event, EventKind
+
+    e = Event(symbol="IBRX", kind=EventKind.TRIAL_READOUT, title="t",
+              trial_id="NCT02138734", date="2026-09-30", company="ImmunityBio")
+    assert "ImmunityBio (IBRX)" in build_brief_prompt(e)
+
+
+def test_a_trial_that_already_reported_is_called_out_first():
+    """The feed once served VIALE-A, approved five years earlier. If one slips
+    through again, the brief must say so before anything else."""
+    p = " ".join(build_brief_prompt(ev()).split())
+    assert "already published its main results" in p
+    assert "first line" in p
+
+
+def test_the_watch_list_section_says_what_it_is_for():
+    """The operator could not tell whether "what would change your mind" was
+    meant to change their mind now, later, or was the news itself."""
+    p = " ".join(build_brief_prompt(ev()).split())
+    assert "Worth watching before the results" in p
+    assert "before the results come out" in p
+    assert "What would change your mind" not in p
 
 def test_research_failure_degrades_rather_than_raising():
     """A missing brief is survivable; a raised error would take down the whole

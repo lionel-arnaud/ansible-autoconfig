@@ -135,6 +135,14 @@ class ViewStore:
                         dt.datetime.fromisoformat(row[5]), expires)
         return None
 
+    def has_outcome(self, symbol: str, event_id: str) -> bool:
+        """Once the result is known a view is a prediction being scored, and
+        changing it afterwards would make the scoreboard meaningless."""
+        return self._db.execute(
+            "SELECT 1 FROM outcomes WHERE symbol=? AND event_id=?",
+            (symbol.upper(), event_id),
+        ).fetchone() is not None
+
     def record_outcome(self, symbol: str, event_id: str, outcome: str,
                        observed_at: dt.datetime, *, scoreable: bool = True) -> None:
         self._db.execute(

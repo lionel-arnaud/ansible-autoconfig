@@ -227,7 +227,21 @@ class State:
         if not row:
             return None
         return {"event_key": row[0], "symbol": row[1], "title": row[2],
-                "opened_at": row[3]}
+                "opened_at": row[3], "open": True}
+
+    def thread_for_symbol(self, symbol: str) -> dict | None:
+        """The question about this ticker: the open one if there is one,
+        otherwise the most recent answered one, which is what an operator
+        changing their mind is replying to."""
+        row = self._db.execute(
+            "SELECT event_key,symbol,title,opened_at,open FROM threads "
+            "WHERE symbol=? ORDER BY open DESC, opened_at DESC LIMIT 1",
+            ((symbol or "").upper(),),
+        ).fetchone()
+        if not row:
+            return None
+        return {"event_key": row[0], "symbol": row[1], "title": row[2],
+                "opened_at": row[3], "open": bool(row[4])}
 
     def close_thread(self) -> None:
         self._db.execute("UPDATE threads SET open=0 WHERE open=1")

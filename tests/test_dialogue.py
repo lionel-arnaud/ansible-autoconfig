@@ -224,3 +224,56 @@ def test_a_universe_that_cannot_name_the_company_still_produces_a_question():
 
     event = to_events([TRIAL], universe=U())[0]
     assert event.company == "" and event.symbol == "BMRN"
+
+
+# --- the operator's real two-trial reply, and changing an answer later ------
+
+def test_the_real_two_trial_reply_records_the_open_one_and_answers_its_question(tmp_path):
+    """Replays the shape of the message that recorded nothing: two prefixed
+    answers, the second ending in "...?". BMRN stands in for the open trial."""
+    kit = _kit(tmp_path)
+    ask_next(to_events([TRIAL]), **kit)
+    kit["reasoner"].answer = "The comparator is standard of care."
+
+    msg = ("MYGN : no, 2, distrust changes in CT protocol\n"
+           "BMRN : yes, 1, CT design is sound and inefficacious comparator...?")
+    assert handle_reply(msg, **_reply_kit(kit)) == "view"
+
+    view = kit["views"].for_symbol("BMRN", now=NOW)
+    assert view.stance == "positive" and view.confidence == 1
+    assert "inefficacious comparator" in view.note
+    assert kit["views"].for_symbol("MYGN", now=NOW) is None
+
+    sent = "\n".join(kit["telegram"].sent)
+    assert "no question about MYGN" in sent
+    assert "Recorded for BMRN" in sent
+    assert "The comparator is standard of care." in sent  # the "?" got answered
+
+
+def test_an_answer_can_be_changed_before_the_results(tmp_path):
+    kit = _kit(tmp_path)
+    ask_next(to_events([TRIAL]), **kit)
+    handle_reply("yes 4 strong mechanism", **_reply_kit(kit))
+
+    assert handle_reply("BMRN: no 2 the interim data worried me",
+                        **_reply_kit(kit)) == "view"
+    view = kit["views"].for_symbol("BMRN", now=NOW)
+    assert view.stance == "negative" and view.confidence == 2
+    assert "Updated for BMRN" in kit["telegram"].sent[-1]
+
+
+def test_an_answer_cannot_change_once_the_result_is_known(tmp_path):
+    """Otherwise the scoreboard measures hindsight."""
+    kit = _kit(tmp_path)
+    ask_next(to_events([TRIAL]), **kit)
+    handle_reply("yes 4", **_reply_kit(kit))
+    kit["views"].record_outcome("BMRN", "NCT04265651", "positive", NOW)
+
+    assert handle_reply("BMRN: no 5", **_reply_kit(kit)) == "ignored"
+    assert kit["views"].for_symbol("BMRN", now=NOW).stance == "positive"
+
+
+def test_an_answer_with_nothing_waiting_explains_how_to_change_one(tmp_path):
+    kit = _kit(tmp_path)
+    assert handle_reply("yes 3", **_reply_kit(kit)) == "ignored"
+    assert "start with the ticker" in kit["telegram"].sent[-1]

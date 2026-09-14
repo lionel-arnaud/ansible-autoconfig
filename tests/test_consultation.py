@@ -116,3 +116,81 @@ def test_a_long_dictated_reply_keeps_all_of_it():
 def test_rounding_is_half_up_not_bankers():
     assert parse_reply("yes 2.5 x").confidence == 3
     assert parse_reply("yes 3.5 x").confidence == 4
+
+
+# --- replies as the operator actually dictates them -------------------------
+
+def test_a_confidence_followed_by_a_comma_is_still_the_confidence():
+    """Dictation produces "no, 2, distrust the protocol change". The "2," used
+    to fail the match, fall back to 3 and bury the real number in the note."""
+    from trading_agent.consultation import parse_reply
+
+    r = parse_reply("no, 2, distrust changes in the trial protocol")
+    assert r.stance == "negative" and r.confidence == 2 and r.explicit_confidence
+    assert r.note == "distrust changes in the trial protocol"
+
+
+def test_a_confidence_out_of_five_is_understood():
+    from trading_agent.consultation import parse_reply
+
+    assert parse_reply("yes 4/5 good team").confidence == 4
+
+
+def test_a_view_whose_note_ends_in_a_question_mark_is_still_a_view():
+    """The operator's real reply: "yes, 1, design is sound and inefficacious
+    comparator...?" was routed as a question and never recorded."""
+    from trading_agent.consultation import is_answer
+
+    assert is_answer("yes, 1, CT design is sound and inefficacious comparator...?")
+
+
+def test_a_question_that_happens_to_start_with_no_is_not_a_view():
+    """"no idea what the endpoint is?" starts with a stance word. Without a
+    committed number it must stay a question."""
+    from trading_agent.consultation import is_answer
+
+    assert not is_answer("no idea what the endpoint is?")
+    assert is_answer("no 2")  # without a question mark, a bare answer stands
+
+
+def test_one_message_can_answer_two_trials():
+    from trading_agent.consultation import split_answers
+
+    msg = ("MYGN : no, 2, distrust changes in CT protocol\n"
+           "IBRX : yes, 1, CT design is sound and inefficacious comparator...?")
+    assert split_answers(msg) == [
+        ("MYGN", "no, 2, distrust changes in CT protocol"),
+        ("IBRX", "yes, 1, CT design is sound and inefficacious comparator...?"),
+    ]
+
+
+def test_a_wrapped_dictated_note_is_not_split_into_answers():
+    from trading_agent.consultation import split_answers
+
+    msg = "IBRX: yes 3 the earlier data were solid\nNote: the trial is small\nand old"
+    assert split_answers(msg) == [
+        ("IBRX", "yes 3 the earlier data were solid Note: the trial is small and old"),
+    ]
+
+
+def test_an_answer_without_a_ticker_is_kept_whole():
+    from trading_agent.consultation import split_answers
+
+    assert split_answers("yes 4 strong mechanism") == [(None, "yes 4 strong mechanism")]
+
+
+def test_the_question_is_readable():
+    """Company named, date in words, the registry link, and no markup the
+    fallback to plain text would print as stray asterisks."""
+    from trading_agent.consultation import build_question
+    from trading_agent.events import Event, EventKind
+
+    q = build_question(Event(symbol="IBRX", kind=EventKind.TRIAL_READOUT,
+                             title="BCG with ALT-803 in bladder cancer",
+                             trial_id="NCT02138734", date="2026-09-30",
+                             company="ImmunityBio"))
+    assert "ImmunityBio (IBRX)" in q
+    assert "30 September 2026" in q
+    assert "https://clinicaltrials.gov/study/NCT02138734" in q
+    assert "**" not in q
+    assert "IBRX: yes" in q  # the example shows the ticker-prefixed form
