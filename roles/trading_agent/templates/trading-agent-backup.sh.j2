@@ -50,7 +50,10 @@ PYTHONDONTWRITEBYTECODE=1 "{{ trading_agent_venv }}/bin/python" -m trading_agent
 
 # --delete so the copy is a mirror rather than an ever-growing pile, and the
 # remote key is confined to this one directory by rrsync at the far end.
-rsync --archive --delete --timeout=120 \
+# --chmod pins the modes the server expects. Without it the private 0700 mode
+# of the staging directory was copied onto the inbox directory every night,
+# and the server's next configuration run changed it back.
+rsync --archive --delete --timeout=120 --chmod=D0750,F0640 \
   -e "ssh -i {{ trading_agent_backup_key }} -o BatchMode=yes -o ConnectTimeout=15 \
       -o UserKnownHostsFile={{ trading_agent_backup_known_hosts }} \
       -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes" \

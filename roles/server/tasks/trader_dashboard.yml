@@ -16,7 +16,9 @@
     state: directory
     owner: "{{ backup_inbox_user }}"
     group: "{{ backup_inbox_user }}"
-    mode: "0755"
+    # Matches the modes the Pi's push sets, so neither side keeps undoing the
+    # other. The container reads it as root.
+    mode: "0750"
 
 - name: Ensure the trader dashboard network exists
   community.docker.docker_network:
