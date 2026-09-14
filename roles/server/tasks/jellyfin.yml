@@ -90,6 +90,12 @@
     recreate: "{{ jellyfin_image_pull.changed }}"
     restart_policy: unless-stopped
     published_ports: "{{ jellyfin_published_ports }}"
+    # Strict, stated rather than inherited. Removing 8920 from the list above
+    # did not recreate the container: the default comparison did not count a
+    # port that is published but no longer wanted as a difference, so the
+    # port stayed open while its LAN-only guard rule was correctly removed.
+    comparisons:
+      published_ports: strict
     networks:
       - name: "{{ jellyfin_network_name }}"
     env:
