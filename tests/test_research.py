@@ -52,15 +52,22 @@ def test_detected_amendments_are_fed_into_the_brief():
     assert "primary_outcomes" in p and "PFS" in p
 
 
-def test_the_prompt_writes_for_a_non_clinician_on_a_phone():
-    """The operator's verdict on the first briefs: "cryptic, full of acronyms,
-    not very reader friendly". The earlier instruction to write for an expert
-    produced "VEN+aza, 1L AML, mOS 14.7 vs 9.6, HR 0.66"."""
+def test_acronyms_are_taught_not_banned():
+    """The operator reads these to learn. Banning acronyms leaves them unable to
+    read the field; leaving them unexplained leaves them unable to follow the
+    brief. Both were tried; the rule is to use them and explain them once."""
     p = " ".join(build_brief_prompt(ev()).split())
     assert "not a clinician" in p
-    assert "No unexplained jargon or acronyms" in p
-    assert "Say what numbers mean" in p
+    assert "Use the real technical terms and acronyms" in p
+    assert "Explain each one the first time it appears" in p
+    assert "use the acronym freely" in p
+    assert "No unexplained jargon" not in p
 
+
+def test_every_brief_teaches_one_reusable_concept():
+    p = " ".join(build_brief_prompt(ev()).split())
+    assert "One thing worth learning" in p
+    assert "help again on future trials" in p
 
 def test_the_prompt_names_the_company_not_only_the_ticker():
     from trading_agent.events import Event, EventKind

@@ -29,15 +29,15 @@ PREFERRED_SOURCES = (
 _BRIEF_PROMPT = """You are briefing a colleague who will decide whether a
 clinical trial is likely to succeed. They work in finance and have a real
 interest in biotech, but they are not a clinician, and they read this on a
-phone. Write plainly.
+phone. They read these briefs to learn the field, so teach as you go:
 
-Writing rules:
-- No unexplained jargon or acronyms. The first time a technical term is needed,
-  spell it out and say what it means in a few words, for example "overall
-  survival, meaning how long patients lived". Use the plain word when one exists.
-- Say what numbers mean, not only what they are: "patients lived about five
-  months longer on the drug (15 months against 10)", not "mOS 14.7 vs 9.6,
-  HR 0.66".
+- Use the real technical terms and acronyms: learning them is the point. Explain
+  each one the first time it appears, as full name, then acronym, then what it
+  means in a few words, for example "overall survival (OS), meaning how long
+  patients lived". After that, use the acronym freely.
+- Give the numbers and say what they mean: "median OS was 14.7 months against
+  9.6, so patients lived about five months longer; a hazard ratio (HR) of 0.66
+  means a roughly one-third lower risk of dying at any given time".
 - Short paragraphs. No tables.
 
 Research this trial:
@@ -71,9 +71,14 @@ signs available from outside.
 
 Worth watching before the results: the two or three things that, if they happen
 before the results come out, should make your colleague reconsider their
-answer. Examples: the company changes the trial goals or delays it, a similar
+answer, and with it whether to keep holding the shares. Examples: the company changes the trial goals or delays it, a similar
 drug reports results, or the company raises money on unusual terms. Say where
 each would show up, such as the registry page, a press release or a filing.
+
+One thing worth learning: name one concept this trial is a good example of,
+then explain it in a short paragraph. Choose something that will help again on
+future trials: about the disease, the type of drug, how this kind of trial is
+designed and judged, or how investors tend to react to this kind of result.
 
 Then three links your colleague can open and read. Prefer primary sources
 (ClinicalTrials.gov, PubMed, FDA/EMA, SEC filings). Where secondary coverage
@@ -84,7 +89,7 @@ link is and why it is worth the click.
 Be honest about what you could not find. An admitted gap is useful; a confident
 guess is worse than silence, because it will be read as evidence.
 
-Keep it under 350 words plus links."""
+Keep it under 400 words plus links."""
 
 
 @dataclass(frozen=True)
