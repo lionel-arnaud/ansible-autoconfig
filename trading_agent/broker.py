@@ -40,7 +40,11 @@ class _FakeClient:
         return type("Order", (), {"id": f"fake-{len(self.submitted)}"})()
 
     def get_all_positions(self):
-        return []
+        return list(getattr(self, "positions", []) or [])
+
+    def get_account(self):
+        return type("Account", (), {"equity": "1000", "cash": "1000",
+                                    "buying_power": "2000"})()
 
     def get_orders(self):
         return list(getattr(self, "open_orders", []) or [])
@@ -89,6 +93,45 @@ class Broker:
             client_order_id=intent.idempotency_key,
         )
         return str(order.id)
+
+    def account_summary(self) -> dict:
+        """A read-only picture of the account, for the operator's daily page.
+
+        Never raises. The page is rendered by the nightly backup push, and a
+        broker that is down must cost the page its portfolio section, not the
+        backup its run. The error text is kept for logs but is not meant to be
+        displayed: a broker's error message is not a string to publish.
+        """
+        try:
+            account = self._client.get_account()
+            positions = self._client.get_all_positions()
+        except Exception as exc:  # noqa: BLE001
+            return {"available": False, "error": str(exc)}
+
+        def num(obj, name):
+            try:
+                return float(getattr(obj, name, 0) or 0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        return {
+            "available": True,
+            "paper": self.paper,
+            "equity": num(account, "equity"),
+            "cash": num(account, "cash"),
+            "buying_power": num(account, "buying_power"),
+            "positions": [
+                {
+                    "symbol": str(getattr(p, "symbol", "")),
+                    "qty": num(p, "qty"),
+                    "market_value": num(p, "market_value"),
+                    "cost_basis": num(p, "cost_basis"),
+                    "unrealized_pl": num(p, "unrealized_pl"),
+                    "unrealized_plpc": num(p, "unrealized_plpc"),
+                }
+                for p in positions or []
+            ],
+        }
 
     def cancel_all_orders(self) -> dict:
         """Cancel every open order. Best effort, reporting per order.

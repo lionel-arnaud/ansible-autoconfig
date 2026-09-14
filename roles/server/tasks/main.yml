@@ -120,6 +120,13 @@
     - server
     - backup
 
+- name: Serve the trading agent daily page
+  ansible.builtin.import_tasks: trader_dashboard.yml
+  when: server_trader_dashboard_enabled | default(false)
+  tags:
+    - server
+    - trader_dashboard
+
 - name: Configure Timeshift system snapshots
   ansible.builtin.import_tasks: timeshift.yml
   when: server_timeshift_enabled | default(false)

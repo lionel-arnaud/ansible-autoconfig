@@ -1,0 +1,50 @@
+---
+# Serves the trading agent's daily page.
+#
+# The page is rendered on the Raspberry Pi and arrives with its nightly state
+# push into the backup inbox. This host only serves a static file: it never
+# reads the agent's databases, never holds a broker credential, and never opens
+# a connection to the Pi, so publishing the page adds no way in to either.
+#
+# The same Caddy image the reverse proxy already runs, in file-server mode: no
+# new image to trust or keep patched. Read-only root filesystem, the content
+# mounted read-only, no published port — it is reachable only through the
+# reverse proxy, which puts the shared password in front of it.
+- name: Ensure the trader dashboard directory exists
+  ansible.builtin.file:
+    path: "{{ trader_dashboard_site_dir }}"
+    state: directory
+    owner: "{{ backup_inbox_user }}"
+    group: "{{ backup_inbox_user }}"
+    mode: "0755"
+
+- name: Ensure the trader dashboard network exists
+  community.docker.docker_network:
+    name: "{{ trader_dashboard_network_name }}"
+    state: present
+
+- name: Pull the trader dashboard image
+  community.docker.docker_image:
+    name: "{{ trader_dashboard_image }}"
+    source: pull
+    force_source: true
+  register: trader_dashboard_image_pull
+
+- name: Run the trader dashboard container
+  community.docker.docker_container:
+    name: "{{ trader_dashboard_container_name }}"
+    image: "{{ trader_dashboard_image }}"
+    state: started
+    recreate: "{{ trader_dashboard_image_pull.changed }}"
+    restart_policy: unless-stopped
+    command: [caddy, file-server, --root, /srv, --listen, ":80"]
+    read_only: true
+    # Caddy expects writable config and data directories even when serving
+    # files only. Memory-backed, so the root filesystem can stay read-only.
+    tmpfs:
+      - /config
+      - /data
+    networks:
+      - name: "{{ trader_dashboard_network_name }}"
+    volumes:
+      - "{{ trader_dashboard_site_dir }}:/srv:ro"

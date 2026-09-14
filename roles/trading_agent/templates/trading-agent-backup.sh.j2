@@ -19,8 +19,11 @@ chmod 0700 "$staging"
 # entirely. .backup takes a consistent snapshot of a live database.
 for db in state views; do
   if [ -f "$root/$db.db" ]; then
-    rm -f "$staging/$db.db"
+    rm -f "$staging/$db.db" "$staging/$db.db-wal" "$staging/$db.db-shm"
     sqlite3 "$root/$db.db" ".backup '$staging/$db.db'"
+    # One self-contained file. The copy inherits WAL mode, and in WAL mode
+    # pages can sit in a side file rather than the database itself.
+    sqlite3 "$staging/$db.db" "PRAGMA journal_mode=DELETE;" >/dev/null
   fi
 done
 
@@ -31,6 +34,19 @@ if [ -d "{{ trading_agent_log_dir }}" ]; then
   mkdir -p "$staging/logs"
   cp -p "{{ trading_agent_log_dir }}"/*.log "$staging/logs/" 2>/dev/null || true
 fi
+
+{% if trading_agent_dashboard_enabled | default(false) %}
+# The operator's daily page, rendered from the snapshots above rather than the
+# live databases and pushed with them. The server only serves the file.
+# Best effort: a page that fails to render must not cost the night its backup.
+# No bytecode: this runs as root, and root-owned cache files inside the venv
+# would later stop the agent's own user from upgrading it.
+mkdir -p "$staging/dashboard"
+PYTHONDONTWRITEBYTECODE=1 "{{ trading_agent_venv }}/bin/python" -m trading_agent.dashboard \
+  --root "$staging" --env-file "{{ trading_agent_env_file }}" \
+  --out "$staging/dashboard/index.html" \
+  || echo "WARNING: dashboard render failed; the backup continues" >&2
+{% endif %}
 
 # --delete so the copy is a mirror rather than an ever-growing pile, and the
 # remote key is confined to this one directory by rrsync at the far end.

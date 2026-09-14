@@ -56,3 +56,7 @@ trading_agent_opencode_user: lion
 # — exists nowhere else.
 trading_agent_backup_enabled: true
 trading_agent_backup_host_key: "192.168.1.100 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMX9G6OI23dVKAGOGQzdnhYCtUfqfI1w28spHCW2IPcs"
+
+# The daily page rides along with that push: rendered here from the snapshots,
+# served by serverannah behind its password.
+trading_agent_dashboard_enabled: true

@@ -80,6 +80,35 @@ class ViewStore:
             self._db.execute("PRAGMA journal_mode=WAL")
         self._db.executescript(_SCHEMA)
 
+    @classmethod
+    def read_only(cls, path: Path | str) -> "ViewStore":
+        """Open an existing database strictly for reading.
+
+        No schema creation, no journal-mode switch, no files created: the
+        daily page is rendered from a backup snapshot, which must leave the
+        rendering exactly as it found it.
+        """
+        store = cls.__new__(cls)
+        store.path = Path(path)
+        store._db = sqlite3.connect(f"{store.path.resolve().as_uri()}?mode=ro", uri=True)
+        return store
+
+    def all_views(self) -> list[dict]:
+        rows = self._db.execute(
+            "SELECT symbol,event_id,stance,confidence,note,recorded_at FROM views"
+            " ORDER BY recorded_at DESC"
+        ).fetchall()
+        return [{"symbol": r[0], "event_id": r[1], "stance": r[2],
+                 "confidence": int(r[3]), "note": r[4], "recorded_at": r[5]}
+                for r in rows]
+
+    def outcome_map(self) -> dict:
+        return {(r[0], r[1]): r[2] for r in self._db.execute(
+            "SELECT symbol,event_id,outcome FROM outcomes")}
+
+    def close(self) -> None:
+        self._db.close()
+
     def record(self, view: View) -> None:
         self._db.execute(
             "INSERT OR REPLACE INTO views"

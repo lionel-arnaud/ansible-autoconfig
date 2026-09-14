@@ -207,6 +207,12 @@ server_reverse_proxy_sites:
     upstream: excalidraw:80
     basic_auth: true
     basic_auth_password_file: "{{ server_reverse_proxy_secret_dir }}/caddy-shared-password"
+  - hostname: trader.dinnizer.com
+    upstream: trader-dashboard:80
+    # A static page, rendered on the Pi and pushed nightly. Behind the shared
+    # password like every other admin page.
+    basic_auth: true
+    basic_auth_password_file: "{{ server_reverse_proxy_secret_dir }}/caddy-shared-password"
   - hostname: jelly.dinnizer.com
     upstream: "http://{{ jellyfin_lan_ip | default('192.168.1.100') }}:8096"
     # No basic_auth: Jellyfin clients authenticate via username + password or
@@ -351,3 +357,6 @@ jellyfin_libraries:
 # Receive state pushed by other hosts (currently raspi's trading agent) so the
 # existing Borg job carries it off-site. See roles/server/tasks/backup_inbox.yml.
 backup_inbox_enabled: true
+
+# Serve the trading agent's daily page from the backup inbox.
+server_trader_dashboard_enabled: true

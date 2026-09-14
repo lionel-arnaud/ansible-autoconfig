@@ -48,3 +48,7 @@ trading_agent_backup_known_hosts: /etc/trading-agent/backup_known_hosts
 trading_agent_backup_host_key: ""
 # 23:30 UTC, half an hour before the server's Borg run at midnight.
 trading_agent_backup_oncalendar: "*-*-* 23:30:00 UTC"
+
+# Render the operator's daily page during the backup push. The server serves it
+# (see roles/server/tasks/trader_dashboard.yml); nothing on the Pi listens.
+trading_agent_dashboard_enabled: false

@@ -422,6 +422,14 @@ backup_inbox_clients:
   - name: raspi
     public_key: files/backup/raspi-trading-agent.pub
 
+# The trading agent's daily page: rendered on the Pi, pushed into the backup
+# inbox, served from here. See tasks/trader_dashboard.yml.
+server_trader_dashboard_enabled: false
+trader_dashboard_container_name: trader-dashboard
+trader_dashboard_image: "{{ server_reverse_proxy_image }}"
+trader_dashboard_network_name: autoconfig-services
+trader_dashboard_site_dir: "{{ backup_inbox_dir }}/raspi/dashboard"
+
 backup_paths:
   - /opt/aumenuilya
   - /opt/nextcloud

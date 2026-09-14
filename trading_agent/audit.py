@@ -55,6 +55,17 @@ class AuditLog:
             h.setFormatter(logging.Formatter("%(message)s"))
             self._logger.addHandler(h)
 
+    @classmethod
+    def reader(cls, path: Path | str) -> "AuditLog":
+        """Read an existing log without attaching a writer to it. Opening the
+        normal way installs a rotating handler, which creates the file."""
+        log = cls.__new__(cls)
+        log.path = Path(path)
+        return log
+
+    def entries(self) -> list[dict]:
+        return list(self._entries())
+
     def record(self, event: str, correlation_id: str, payload: dict) -> None:
         self._logger.info(json.dumps({
             "ts": dt.datetime.now(dt.timezone.utc).isoformat(),
