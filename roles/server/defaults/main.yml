@@ -115,6 +115,35 @@ game_timer_image: nginx:alpine
 game_timer_network_name: autoconfig-services
 game_timer_published_ports: []
 
+server_toki_suli_enabled: false
+# toki.suli.dinnizer.com is a plain static HTML/CSS/JS + WAV site (no build
+# step) — a Toki Pona whistle-synthesis learning guide and trainer. Source is
+# a public fork of github.com/gliese1337/toki-suli, cloned directly on the
+# server. To deploy a change: push the toki-suli repo, then re-run the
+# autoconfig pull (which re-clones it).
+toki_suli_repo_url: https://github.com/lionel-arnaud/toki-suli.git
+toki_suli_repo_version: main
+toki_suli_root_dir: /opt/toki-suli
+# Where the repo is cloned, and the curated dir nginx actually serves.
+toki_suli_src_dir: "{{ toki_suli_root_dir }}/src"
+toki_suli_site_dir: "{{ toki_suli_root_dir }}/site"
+# Repo paths that must NOT be served: git metadata (security), the TypeScript
+# source/build tooling, and node_modules (none of these are needed to serve
+# the static guide/trainer). Everything else in the repo root is published.
+toki_suli_deploy_excludes:
+  - .git
+  - node_modules
+  - src
+  - scripts
+  - bin
+  - package.json
+  - package-lock.json
+  - tsconfig.json
+toki_suli_container_name: toki-suli
+toki_suli_image: nginx:alpine
+toki_suli_network_name: autoconfig-services
+toki_suli_published_ports: []
+
 # NOTE: *_secret_dir variables across all services point to /etc/ansible/secrets
 # on the MANAGED HOST (not in this repo). Passwords and passphrases are stored
 # there at runtime — either placed manually before the first run, or generated

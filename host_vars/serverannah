@@ -88,6 +88,7 @@ homepage_published_ports:
   - "192.168.1.100:3000:3000"
 server_bentopdf_enabled: true
 server_game_timer_enabled: true
+server_toki_suli_enabled: true
 server_dinnizer_enabled: true
 server_nextcloud_enabled: true
 server_frigate_enabled: true
@@ -176,6 +177,10 @@ server_reverse_proxy_sites:
     upstream: aumenuilya:80
   - hostname: tabletop-timer.com
     upstream: game-timer:80
+  - hostname: toki.suli.dinnizer.com
+    upstream: toki-suli:80
+    # Public learning content, same as tabletop-timer.com/aumenuilya.fr — no
+    # basic_auth (this isn't an admin-style dashboard).
   - hostname: www.tabletop-timer.com
     redirect_to: https://tabletop-timer.com
   - hostname: app.dinnizer.com

@@ -186,6 +186,13 @@
     - server
     - game_timer
 
+- name: Deploy toki-suli
+  ansible.builtin.import_tasks: toki_suli.yml
+  when: server_toki_suli_enabled | default(false)
+  tags:
+    - server
+    - toki_suli
+
 - name: Deploy Dinnizer
   ansible.builtin.import_tasks: dinnizer.yml
   when: server_dinnizer_enabled | default(false)

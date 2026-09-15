@@ -1,0 +1,67 @@
+---
+# toki.suli.dinnizer.com is a plain static HTML/CSS/JS + WAV site with no
+# build step (the LEARNING.md guide and the lesson/ trainer; the TypeScript
+# synthesizer itself is not served).
+#
+# Deployment model: mirrors game_timer.yml. Source lives in its own PUBLIC
+# repo (toki_suli_repo_url — a fork of github.com/gliese1337/toki-suli). We
+# clone that repo directly on the server and publish a curated copy into the
+# dir nginx serves. To ship a change: push the toki-suli repo, then re-run the
+# autoconfig pull on the server (it re-clones + republishes). nginx serves the
+# files from a read-only bind mount, so updates are live the instant they are
+# published — no container restart needed.
+
+- name: Ensure toki-suli directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ toki_suli_root_dir }}"
+    - "{{ toki_suli_site_dir }}"
+
+- name: Clone/update the toki-suli site repository
+  ansible.builtin.git:
+    repo: "{{ toki_suli_repo_url }}"
+    dest: "{{ toki_suli_src_dir }}"
+    version: "{{ toki_suli_repo_version }}"
+    # force: discard any local drift in the checkout so the server is always an
+    # exact mirror of the repo (the checkout is managed state, not an edit copy).
+    force: true
+  register: toki_suli_checkout
+
+# Publish the repo into the nginx site dir, excluding git metadata, the
+# TypeScript source/build tooling (not needed to serve the static site), and
+# node_modules. --delete keeps the site dir an exact mirror of the filtered
+# repo, so files removed upstream disappear here too. -i (itemize-changes)
+# makes rsync print only what it actually changed, which is what drives the
+# honest "changed" status below.
+- name: Publish the served files into the nginx site dir
+  ansible.builtin.command:
+    argv: "{{ ['rsync', '-ai', '--delete'] +
+              (toki_suli_deploy_excludes | map('regex_replace', '^', '--exclude=') | list) +
+              [toki_suli_src_dir ~ '/', toki_suli_site_dir ~ '/'] }}"
+  register: toki_suli_publish
+  changed_when: toki_suli_publish.stdout | trim | length > 0
+
+- name: Ensure the toki-suli container network exists
+  community.docker.docker_network:
+    name: "{{ toki_suli_network_name }}"
+    state: present
+
+# Serve the published static files directly; the site is plain HTML/CSS/JS/WAV
+# with no build step, mounted read-only so the container never writes into the
+# site dir.
+- name: Run the toki-suli container
+  community.docker.docker_container:
+    name: "{{ toki_suli_container_name }}"
+    image: "{{ toki_suli_image }}"
+    state: started
+    restart_policy: unless-stopped
+    published_ports: "{{ toki_suli_published_ports }}"
+    networks:
+      - name: "{{ toki_suli_network_name }}"
+    volumes:
+      - "{{ toki_suli_site_dir }}:/usr/share/nginx/html:ro"
