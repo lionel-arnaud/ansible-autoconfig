@@ -7,6 +7,8 @@ import json
 import string
 import zipfile
 
+import pytest
+
 from trading_agent.config import Config
 from trading_agent.sources import (alpaca_news_client, ctgov_client,
                                    etf_holdings_fetcher)
@@ -192,3 +194,26 @@ def test_an_unknown_ticker_yields_no_name_rather_than_a_guess():
 
     fetch = alpaca_assets_client(Config.for_testing(), get=_get(Resp(status=404)))
     assert fetch("NOPE") == ""
+
+
+# --- one trial, fetched by its registry id ----------------------------------
+
+def test_a_study_is_returned_by_id():
+    from trading_agent.sources import ctgov_study_client
+
+    study = {"protocolSection": {"identificationModule": {"nctId": "NCT1"}}}
+    fetch = ctgov_study_client(get=_get(Resp(payload=study)))
+    assert fetch("NCT1") == study
+
+
+def test_a_missing_study_is_empty_rather_than_an_error():
+    from trading_agent.sources import ctgov_study_client
+
+    assert ctgov_study_client(get=_get(Resp(status=404)))("NCT404") == {}
+
+
+def test_a_rate_limited_study_is_raised_so_the_caller_can_back_off():
+    from trading_agent.sources import RateLimited, ctgov_study_client
+
+    with pytest.raises(RateLimited):
+        ctgov_study_client(get=_get(Resp(status=429)))("NCT1")

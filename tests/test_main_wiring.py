@@ -73,6 +73,7 @@ def _paths(tmp_path):
         "views_db": str(tmp_path / "v.db"),
         "audit_log": str(tmp_path / "a.log"),
         "universe_cache": str(tmp_path / "u.json"),
+        "trials_db": str(tmp_path / "trials.db"),
     }
 
 
@@ -157,3 +158,23 @@ def test_every_loop_is_started():
 
     src = inspect.getsource(m.main)
     assert "work_loop" in src and "consultation_loop" in src and "command_loop" in src
+
+
+def test_the_registry_watcher_is_wired_into_the_conversation():
+    """Built and tested for days without being called by anything — the same
+    shape of gap as the consultation subsystem before it."""
+    import inspect
+
+    from trading_agent import main as m
+
+    assert "watch_registry" in inspect.getsource(m.consultation_loop)
+    assert "watcher" in inspect.getsource(m.build_worker)
+
+
+def test_the_cycle_can_tell_the_operator_it_sold_something():
+    """An exit the operator only discovers on the dashboard is a surprise."""
+    import inspect
+
+    from trading_agent import main as m
+
+    assert "notify=" in inspect.getsource(m.work_loop)

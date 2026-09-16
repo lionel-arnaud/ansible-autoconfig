@@ -277,3 +277,100 @@ def test_an_answer_with_nothing_waiting_explains_how_to_change_one(tmp_path):
     kit = _kit(tmp_path)
     assert handle_reply("yes 3", **_reply_kit(kit)) == "ignored"
     assert "start with the ticker" in kit["telegram"].sent[-1]
+
+
+# --- watching the registry for changes to a trial already judged ------------
+
+def _study(outcome="Overall survival", status="RECRUITING", enrollment=400,
+           date="2026-10-01", phases=("PHASE3",)):
+    return {"protocolSection": {
+        "identificationModule": {"nctId": "NCT04265651", "briefTitle": "Phase 3"},
+        "designModule": {"phases": list(phases),
+                         "enrollmentInfo": {"count": enrollment}},
+        "statusModule": {"overallStatus": status,
+                         "primaryCompletionDateStruct": {"date": date}},
+        "outcomesModule": {"primaryOutcomes": [{"measure": outcome}]},
+    }}
+
+
+def _watch_kit(tmp_path):
+    from trading_agent.state import State
+    from trading_agent.trial_watch import TrialWatcher
+
+    state = State(tmp_path / "s.db")
+    state.open_thread_for("NCT04265651", "BMRN", "Phase 3 VOXZOGO", NOW)
+    state.close_thread()
+    return {"watcher": TrialWatcher(tmp_path / "t.db"), "state": state,
+            "telegram": Tg(), "audit": AuditLog(tmp_path / "a.log"), "now": NOW}
+
+
+def test_the_first_look_at_a_trial_is_only_a_baseline(tmp_path):
+    """There is nothing to compare against yet, and a message saying a trial
+    changed the moment it is first seen would be false."""
+    from trading_agent.dialogue import watch_registry
+
+    kit = _watch_kit(tmp_path)
+    assert watch_registry(fetch_study=lambda _n: _study(), **kit) == {}
+    assert kit["telegram"].sent == []
+
+
+def test_a_changed_endpoint_reopens_the_question(tmp_path):
+    """What the trial measures is what the operator judged. Change it and the
+    old answer is about a different trial."""
+    from trading_agent.dialogue import watch_registry
+
+    kit = _watch_kit(tmp_path)
+    watch_registry(fetch_study=lambda _n: _study(), **kit)
+    found = watch_registry(fetch_study=lambda _n: _study(outcome="Response rate"),
+                           **kit)
+
+    assert "NCT04265651" in found
+    assert "BMRN" in kit["telegram"].sent[-1]
+    assert "ask you about it again" in kit["telegram"].sent[-1]
+    assert not kit["state"].was_asked("NCT04265651")
+
+
+def test_a_trial_that_terminates_reopens_the_question(tmp_path):
+    from trading_agent.dialogue import watch_registry
+
+    kit = _watch_kit(tmp_path)
+    watch_registry(fetch_study=lambda _n: _study(), **kit)
+    watch_registry(fetch_study=lambda _n: _study(status="TERMINATED"), **kit)
+    assert not kit["state"].was_asked("NCT04265651")
+
+
+def test_a_smaller_or_later_trial_is_reported_without_re_asking(tmp_path):
+    """Worth knowing, not worth re-asking unprompted: the operator can change
+    their answer if it matters to them."""
+    from trading_agent.dialogue import watch_registry
+
+    kit = _watch_kit(tmp_path)
+    watch_registry(fetch_study=lambda _n: _study(), **kit)
+    watch_registry(fetch_study=lambda _n: _study(enrollment=250,
+                                                 date="2027-03-01"), **kit)
+
+    message = kit["telegram"].sent[-1]
+    assert "enrollment" in message or "250" in message
+    assert "Your answer stands" in message
+    assert kit["state"].was_asked("NCT04265651")
+
+
+def test_an_unchanged_trial_says_nothing(tmp_path):
+    from trading_agent.dialogue import watch_registry
+
+    kit = _watch_kit(tmp_path)
+    watch_registry(fetch_study=lambda _n: _study(), **kit)
+    assert watch_registry(fetch_study=lambda _n: _study(), **kit) == {}
+    assert kit["telegram"].sent == []
+
+
+def test_one_unreachable_trial_does_not_end_the_sweep(tmp_path):
+    from trading_agent.dialogue import watch_registry
+
+    kit = _watch_kit(tmp_path)
+
+    def boom(_nct):
+        raise OSError("registry down")
+
+    assert watch_registry(fetch_study=boom, **kit) == {}
+    assert any(e["event"] == "registry_check_failed" for e in kit["audit"].entries())

@@ -25,14 +25,17 @@ from trading_agent.agent import run_cycle
 from trading_agent.audit import AuditLog, new_correlation_id
 from trading_agent.broker import Broker
 from trading_agent.catalysts import CatalystFeed
-from trading_agent.dialogue import ask_next, handle_reply, to_events
+from trading_agent.dialogue import (ask_next, handle_reply, to_events,
+                                    watch_registry)
 from trading_agent.sources import (alpaca_assets_client, alpaca_news_client,
-                                   ctgov_client, etf_holdings_fetcher)
+                                   ctgov_client, ctgov_study_client,
+                                   etf_holdings_fetcher)
 from trading_agent.commands import handle_command
 from trading_agent.config import Config
 from trading_agent.reasoning import ReasoningClient
 from trading_agent.state import State
 from trading_agent.telegram_bot import Telegram
+from trading_agent.trial_watch import TrialWatcher
 from trading_agent.universe import Universe
 from trading_agent.views import ViewStore
 
@@ -82,6 +85,10 @@ def build_worker(config: Config, paths: dict) -> dict:
                              http=ctgov_client(),
                              news=alpaca_news_client(config)),
         "telegram": Telegram(config.telegram_bot_token, config.telegram_chat_id),
+        # Its own snapshot store: ClinicalTrials.gov offers no history, so the
+        # only way to know what changed is to have kept the previous version.
+        "watcher": TrialWatcher(paths["trials_db"]),
+        "study": ctgov_study_client(),
     }
 
 
@@ -110,6 +117,7 @@ def work_loop(config: Config, paths: dict) -> None:
             result = run_cycle(
                 state=state, config=config, broker=broker, feed=feed,
                 reasoner=reasoner, audit=audit, views=views,
+                notify=tg.send,
                 ask=lambda key, payload: tg.send(
                     f"*Approval needed* `{key[:8]}`\n"
                     f"{payload['side']} {payload['symbol']} "
@@ -141,16 +149,22 @@ def consultation_loop(config: Config, paths: dict) -> None:
     parts = build_worker(config, paths)
     state, views, audit = parts["state"], parts["views"], parts["audit"]
     reasoner, feed, tg = parts["reasoner"], parts["feed"], parts["telegram"]
-    universe = parts["universe"]
+    universe, watcher, study = parts["universe"], parts["watcher"], parts["study"]
 
     while not _stop.is_set():
         cid = new_correlation_id()
         try:
+            now = dt.datetime.now(dt.timezone.utc)
+            # Changes first: a trial that moved may need asking about again,
+            # and the change belongs in the brief that follows.
+            amendments = watch_registry(watcher=watcher, fetch_study=study,
+                                        state=state, telegram=tg, audit=audit,
+                                        now=now, correlation_id=cid)
             catalysts = feed.upcoming_trials() + feed.recent_news()
             ask_next(to_events(catalysts, universe=universe),
                      views=views, state=state,
                      telegram=tg, reasoner=reasoner, audit=audit,
-                     now=dt.datetime.now(dt.timezone.utc), correlation_id=cid)
+                     amendments=amendments, now=now, correlation_id=cid)
         except Exception as exc:  # noqa: BLE001 — a failed question must not
             # end the conversation. Nothing here can reach an order.
             log.exception("consultation failed: %s", exc)
@@ -216,6 +230,7 @@ def main() -> int:
         "views_db": f"{root}/views.db",
         "audit_log": f"{os.environ.get('LOG_DIR', root + '/logs')}/audit.log",
         "universe_cache": f"{root}/universe.json",
+        "trials_db": f"{root}/trials.db",
     }
 
     log.info("starting: endpoint=%s live=%s", config.endpoint, config.is_live)

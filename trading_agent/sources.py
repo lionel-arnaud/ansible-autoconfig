@@ -42,6 +42,9 @@ IBB_HOLDINGS = (
 # Both issuers serve a bot-check page to an unfamiliar client.
 _UA = "Mozilla/5.0 (compatible; ansible-autoconfig trading-agent)"
 
+# The registry, for fetching one trial at a time. catalysts.py has its own
+# copy for searching; this one is for looking a known trial up by id.
+CTGOV_STUDIES = "https://clinicaltrials.gov/api/v2/studies"
 ALPACA_NEWS = "https://data.alpaca.markets/v1beta1/news"
 # Suffixes the exchange listing carries and a trial registry never does.
 _NAME_NOISE = re.compile(
@@ -80,6 +83,23 @@ def ctgov_client(*, get=_get):
         data = r.json()
         studies = data.get("studies") if isinstance(data, dict) else None
         return studies if isinstance(studies, list) else []
+
+    return fetch
+
+
+def ctgov_study_client(*, get=_get):
+    """One trial by its registry id, for watching it change over time."""
+    def fetch(nct_id: str) -> dict:
+        r = get(f"{CTGOV_STUDIES}/{nct_id}")
+        if r.status_code == 429:
+            raise RateLimited(nct_id)
+        if r.status_code != 200:
+            return {}
+        try:
+            data = r.json()
+        except Exception:  # noqa: BLE001 — a reshaped answer is not a study
+            return {}
+        return data if isinstance(data, dict) else {}
 
     return fetch
 

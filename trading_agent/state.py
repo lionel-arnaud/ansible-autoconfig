@@ -246,6 +246,22 @@ class State:
     def close_thread(self) -> None:
         self._db.execute("UPDATE threads SET open=0 WHERE open=1")
 
+    def all_threads(self) -> list[dict]:
+        rows = self._db.execute(
+            "SELECT event_key,symbol,title,opened_at,open FROM threads"
+            " ORDER BY opened_at").fetchall()
+        return [{"event_key": r[0], "symbol": r[1], "title": r[2],
+                 "opened_at": r[3], "open": bool(r[4])} for r in rows]
+
+    def allow_reask(self, event_key: str) -> None:
+        """Forget that a question was asked, so it can be asked again.
+
+        Used when a trial changes materially. The earlier answer was about a
+        different trial in the way that matters, and was_asked() would
+        otherwise keep the new question silent forever.
+        """
+        self._db.execute("DELETE FROM threads WHERE event_key=?", (event_key,))
+
     def was_asked(self, event_key: str) -> bool:
         """Asked at some point, answered or not. A question the operator chose
         not to answer is a kind of answer, and re-sending it every cycle is how

@@ -59,7 +59,7 @@ def to_events(catalysts, *, universe=None) -> list[Event]:
 
 
 def ask_next(events, *, views, state, telegram, reasoner, audit, now,
-             correlation_id: str = "") -> str:
+             amendments=None, correlation_id: str = "") -> str:
     """Ask the operator about the most pressing unanswered event.
 
     One question at a time. The alternative is a phone full of questions whose
@@ -79,7 +79,10 @@ def ask_next(events, *, views, state, telegram, reasoner, audit, now,
     if state.was_asked(event.view_key):
         return ""
 
-    brief = research(event, reasoner=reasoner)
+    # A trial that changed gets its changes fed into the brief, so the research
+    # addresses what moved rather than repeating the original write-up.
+    brief = research(event, reasoner=reasoner,
+                     amendments=(amendments or {}).get(event.view_key, ()))
     audit.record("research", correlation_id, {
         "symbol": event.symbol, "event": event.view_key, "ok": brief.ok,
     })
@@ -217,3 +220,58 @@ def _answer_followup(thread, question, title, *, telegram, reasoner, audit,
     telegram.send(answer or "(no answer available right now)")
     audit.record("followup", correlation_id,
                  {"symbol": thread.symbol, "question": question[:200]})
+
+
+# The registry is the one place a sponsor has to publish a change, and they see
+# their own data before anyone else. A primary endpoint quietly rewritten, or a
+# trial switched to terminated, is about as close to an early warning as an
+# outsider gets.
+_REOPENING = ("primary_outcomes", "overall_status")
+
+
+def watch_registry(*, watcher, fetch_study, state, telegram, audit, now,
+                   correlation_id: str = "") -> dict:
+    """Check every trial already asked about for changes since last time.
+
+    Returns the amendments found, keyed by trial, for the question that follows.
+    A change to what the trial measures, or to whether it is still running,
+    re-opens the question: the operator judged a different trial. Changes to
+    size, dates or phase are reported and kept for the next brief.
+    """
+    found: dict[str, list] = {}
+    for thread in state.all_threads():
+        nct_id = thread["event_key"]
+        if not nct_id.upper().startswith("NCT"):
+            continue
+        try:
+            study = fetch_study(nct_id)
+        except Exception as exc:  # noqa: BLE001 — one trial must not end the sweep
+            audit.record("registry_check_failed", correlation_id,
+                         {"trial": nct_id, "error": str(exc)})
+            continue
+        if not study:
+            continue
+
+        amendments = watcher.observe(nct_id, study, now=now)
+        if not amendments:
+            continue
+        found[nct_id] = amendments
+        audit.record("registry_amendment", correlation_id, {
+            "symbol": thread["symbol"], "trial": nct_id,
+            "changes": [a.describe() for a in amendments],
+        })
+
+        reopening = [a for a in amendments if a.field in _REOPENING]
+        lines = [f"{thread['symbol']} — the trial you judged has changed:", ""]
+        lines += [f"• {a.describe()}" for a in amendments]
+        if reopening:
+            lines += ["", "That changes what is being measured, so I will ask "
+                      "you about it again with a fresh brief."]
+        else:
+            lines += ["", "Your answer stands. Reply starting with "
+                      f"{thread['symbol']}: if this changes your mind."]
+        telegram.send("\n".join(lines))
+
+        if reopening:
+            state.allow_reask(nct_id)
+    return found
