@@ -172,17 +172,24 @@ def _registry(event_id: str) -> str:
 
 
 _CSS = """
-:root{--bg:#f7f7f5;--fg:#1c1c1a;--muted:#6b6b66;--card:#fff;--line:#e3e3de;
---good:#1f7a4d;--bad:#b3261e;--warn:#8a5a00;--warnbg:#fff4d6}
-@media (prefers-color-scheme:dark){:root{--bg:#161614;--fg:#ecece8;--muted:#a0a09a;
---card:#1f1f1c;--line:#33332e;--good:#5fc48f;--bad:#ff8a80;--warn:#ffcf66;--warnbg:#3a2f12}}
+/* Palette chosen by the operator: deep navy through to a single orange accent.
+   Gains and losses keep a green and a red, because on a money page colour is
+   information rather than decoration, and navy-on-navy cannot carry it. */
+:root{--bg:#f5f7fb;--fg:#253c6d;--muted:#455b8a;--card:#ffffff;--line:#dbe2f0;
+--accent:#f2842f;--accent-bg:#fdefe1;--good:#1f7a4d;--bad:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#1b2a4e;--fg:#eef2fa;--muted:#a9b8d8;
+--card:#253c6d;--line:#455b8a;--accent:#f2842f;--accent-bg:#30497d;
+--good:#6fd3a0;--bad:#ff9a8f}}
 *{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,sans-serif;
 background:var(--bg);color:var(--fg)}main{max-width:980px;margin:0 auto;padding:16px}
-h1{font-size:22px;margin:8px 0 2px}h2{font-size:17px;margin:0 0 10px}
+h1{font-size:22px;margin:8px 0 2px;color:var(--fg)}
+h2{font-size:17px;margin:0 0 10px;color:var(--fg)}
 section{background:var(--card);border:1px solid var(--line);border-radius:10px;
 padding:14px 16px;margin:12px 0}.muted{color:var(--muted)}
-.banner{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 14px}
-.banner.stale{background:var(--bad);color:#fff}
+.banner{background:var(--accent-bg);border-left:4px solid var(--accent);
+border-radius:10px;padding:10px 14px}
+.banner.stale{background:var(--accent);border-left-color:#253c6d;color:#253c6d;
+font-weight:600}
 .badge{display:inline-block;padding:1px 8px;border-radius:99px;border:1px solid var(--line);
 font-size:12px;font-weight:600}.good{color:var(--good)}.bad{color:var(--bad)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
@@ -190,7 +197,7 @@ font-size:12px;font-weight:600}.good{color:var(--good)}.bad{color:var(--bad)}
 .kpi b{display:block;font-size:18px}.scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:6px 8px;
 border-bottom:1px solid var(--line);vertical-align:top}th{font-size:12px;color:var(--muted)}
-pre{white-space:pre-wrap;font:inherit;margin:0}a{color:inherit}
+pre{white-space:pre-wrap;font:inherit;margin:0}a{color:var(--accent)}
 """
 
 _AGE_SCRIPT = """

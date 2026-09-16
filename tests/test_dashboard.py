@@ -151,3 +151,10 @@ def test_the_env_file_is_read_literally_not_by_a_shell(tmp_path, monkeypatch):
     import os
     assert os.environ["OPENCODE_PASSWORD"] == "pa$$w;rd&(x)`id`"
     assert os.environ["QUOTED"] == "a b"
+
+
+def test_the_page_uses_the_operators_palette(tmp_path):
+    """Navy through to a single orange accent, chosen by the operator."""
+    page = _page(_staging(tmp_path))
+    for colour in ("#253c6d", "#30497d", "#455b8a", "#f2842f"):
+        assert colour in page, colour
