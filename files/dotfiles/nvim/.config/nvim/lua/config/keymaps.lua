@@ -11,3 +11,7 @@ map("n", "<leader>zw", "zw", { desc = "Mark word as wrong (undo add)" })
 map("n", "<leader>z=", "z=", { desc = "Spelling suggestions" })
 map("n", "<leader>zn", "]s", { desc = "Next misspelled word" })
 map("n", "<leader>zp", "[s", { desc = "Previous misspelled word" })
+
+-- Keep the cursor centered after half-page scrolling.
+map("n", "<C-d>", "<C-d>zz", { desc = "Scroll down and center" })
+map("n", "<C-u>", "<C-u>zz", { desc = "Scroll up and center" })
