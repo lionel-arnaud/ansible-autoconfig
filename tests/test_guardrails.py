@@ -224,3 +224,61 @@ def test_c4_a_nan_limit_is_refused_rather_than_disabling_the_limit(monkeypatch):
     monkeypatch.setenv("MAX_POSITION_USD", "nan")
     with pytest.raises(ConfigError):
         Config.from_env()
+
+
+# --- exits are not stopped by limits meant to stop risk being taken on ------
+
+def _sell(notional=900.0):
+    return OrderIntent(symbol="BMRN", side="sell", notional_usd=notional,
+                       correlation_id="x")
+
+
+def _cfg():
+    return Config.for_testing(max_position_usd=150.0, max_deployed_usd=750.0,
+                              max_trades_per_day=5, daily_loss_limit_usd=50.0)
+
+
+def test_an_exit_is_allowed_above_the_position_limit(tmp_path):
+    """A position opened at the limit grows. Applying a buy-side size cap to
+    the sale would trap it at exactly the size that worries you most."""
+    state = State(tmp_path / "s.db")
+    assert evaluate(_sell(), state=state, config=_cfg(), now=NOW).allowed
+
+
+def test_an_exit_is_allowed_once_the_loss_breaker_has_latched(tmp_path):
+    state = State(tmp_path / "s.db")
+    state.trip_loss_breaker(NOW)
+    decision = evaluate(_sell(), state=state, config=_cfg(), now=NOW)
+    assert decision.allowed, decision.reason
+    assert not evaluate(OrderIntent(symbol="BMRN", side="buy", notional_usd=100.0),
+                        state=state, config=_cfg(), now=NOW).allowed
+
+
+def test_an_exit_is_allowed_while_the_day_is_breaching_its_loss_limit(tmp_path):
+    """The moment an exit matters most is the moment the limit is being hit."""
+    state = State(tmp_path / "s.db")
+    state.set_daily_pnl_usd(-60.0, NOW)
+    assert evaluate(_sell(), state=state, config=_cfg(), now=NOW).allowed
+    # and the breach still latches the day for buying
+    assert state.loss_breaker_tripped(NOW)
+
+
+def test_an_exit_is_allowed_after_the_daily_trade_budget_is_spent(tmp_path):
+    state = State(tmp_path / "s.db")
+    for _ in range(5):
+        state.record_trade(NOW)
+    assert evaluate(_sell(), state=state, config=_cfg(), now=NOW).allowed
+
+
+def test_the_kill_switch_still_stops_an_exit(tmp_path):
+    """"Stop trading" means stop, in both directions: the operator halting the
+    agent is not asking it to liquidate."""
+    state = State(tmp_path / "s.db")
+    state.set_kill_switch(True)
+    assert not evaluate(_sell(), state=state, config=_cfg(), now=NOW).allowed
+
+
+def test_an_exit_still_has_to_be_a_sane_order(tmp_path):
+    state = State(tmp_path / "s.db")
+    for bad in (float("nan"), 0.0, -5.0):
+        assert not evaluate(_sell(bad), state=state, config=_cfg(), now=NOW).allowed

@@ -42,6 +42,11 @@ class _FakeClient:
     def get_all_positions(self):
         return list(getattr(self, "positions", []) or [])
 
+    def close_position(self, symbol):
+        self.closed = getattr(self, "closed", [])
+        self.closed.append(symbol)
+        return type("Order", (), {"id": f"fake-close-{len(self.closed)}"})()
+
     def get_account(self):
         return type("Account", (), {"equity": "1000", "cash": "1000",
                                     "buying_power": "2000"})()
@@ -93,6 +98,51 @@ class Broker:
             client_order_id=intent.idempotency_key,
         )
         return str(order.id)
+
+    def open_positions(self) -> list[dict]:
+        """What is held right now.
+
+        Raises rather than returning nothing on failure: a cycle that cannot
+        see the portfolio must not conclude there is nothing to manage.
+        """
+        try:
+            positions = self._client.get_all_positions()
+        except Exception as exc:  # noqa: BLE001
+            raise BrokerUnavailableError(str(exc)) from exc
+
+        def num(obj, name):
+            try:
+                return float(getattr(obj, name, 0) or 0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        return [{"symbol": str(getattr(p, "symbol", "")).upper(),
+                 "qty": num(p, "qty"),
+                 "market_value": num(p, "market_value"),
+                 "unrealized_pl": num(p, "unrealized_pl"),
+                 "unrealized_plpc": num(p, "unrealized_plpc")}
+                for p in positions or []]
+
+    def close_position(self, intent: OrderIntent) -> str:
+        """Close a position completely.
+
+        Same approval rule as submit(): an exit is still an order, and the
+        guardrail is not optional merely because this direction reduces risk.
+
+        Closing the position rather than selling an amount: the market value
+        moves between deciding and sending, and an order for slightly more than
+        is held is rejected outright, which would leave the position open at
+        exactly the moment it was meant to be closed.
+        """
+        if not intent.is_approved:
+            raise UnapprovedOrderError(
+                f"{intent.symbol} exit: no guardrail approval. Route through "
+                "guardrails.evaluate() — the broker is not a bypass."
+            )
+        if intent.side != "sell":
+            raise ValueError(f"close_position is for exits, got {intent.side!r}")
+        order = self._client.close_position(intent.symbol)
+        return str(getattr(order, "id", "") or "")
 
     def account_summary(self) -> dict:
         """A read-only picture of the account, for the operator's daily page.

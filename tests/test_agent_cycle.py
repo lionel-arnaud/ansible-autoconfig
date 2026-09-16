@@ -200,3 +200,110 @@ def test_c1_a_failing_notification_does_not_open_the_gate(tmp_path):
 
     r = run_cycle(**kw, ask=boom, now=OPEN)
     assert r.submitted == 0
+
+
+# --- selling when the operator changes their mind ---------------------------
+
+NOTHING = '{"proposals":[]}'
+
+
+def _held(symbol="MRNA", value=200.0, pct=-0.10):
+    import types
+
+    return types.SimpleNamespace(symbol=symbol, qty=2.0, market_value=value,
+                                 unrealized_pl=value * pct, unrealized_plpc=pct)
+
+
+def _with_view(tmp_path, stance, *, proposals=NOTHING):
+    from trading_agent.views import View, ViewStore
+
+    kw = mk(tmp_path, proposals)
+    kw["views"] = ViewStore(tmp_path / "v.db")
+    if stance:
+        kw["views"].record(View("MRNA", "NCT1", stance, 2, "changed my mind",
+                                OPEN, OPEN + dt.timedelta(days=90)))
+    kw["broker"]._client.positions = [_held()]
+    return kw
+
+
+def test_a_flipped_call_sells_the_position(tmp_path):
+    """The position existed because of a recorded call. Withdraw the call and
+    the reason for holding is gone."""
+    kw = _with_view(tmp_path, "negative")
+    told = []
+    r = run_cycle(**kw, notify=told.append, now=OPEN)
+
+    assert len(r.exits) == 1
+    assert kw["broker"]._client.closed == ["MRNA"]
+    assert told and "Sold MRNA" in told[0]
+    assert [e["event"] for e in kw["audit"].entries() if e["event"] == "exit"]
+
+
+def test_skipping_also_withdraws_the_reason_to_hold(tmp_path):
+    kw = _with_view(tmp_path, "no_opinion")
+    assert len(run_cycle(**kw, now=OPEN).exits) == 1
+
+
+def test_a_call_that_still_stands_leaves_the_position_alone(tmp_path):
+    kw = _with_view(tmp_path, "positive")
+    assert run_cycle(**kw, now=OPEN).exits == []
+    assert kw["broker"]._client.closed == [] if hasattr(kw["broker"]._client, "closed") else True
+
+
+def test_an_expired_or_missing_call_is_reported_not_liquidated(tmp_path):
+    """Views expire after ninety days by design. Selling a portfolio because an
+    opinion aged out would be a surprise, not a decision."""
+    kw = _with_view(tmp_path, None)
+    assert run_cycle(**kw, now=OPEN).exits == []
+    assert any(e["event"] == "held_without_view" for e in kw["audit"].entries())
+
+
+def test_a_broker_that_cannot_list_positions_stops_the_cycle(tmp_path):
+    """An outage must not look like having nothing to manage."""
+    kw = _with_view(tmp_path, "negative")
+
+    def boom():
+        raise OSError("down")
+
+    kw["broker"]._client.get_all_positions = boom
+    r = run_cycle(**kw, now=OPEN)
+    # Reconcile asks for positions first and already fails closed, so the cycle
+    # stops there. Either way it stops: what matters is that it never proceeds
+    # believing the portfolio is empty.
+    assert not r.ran and r.exits == [] and "down" in r.skipped_reason
+
+
+def test_the_model_is_shown_what_is_held(tmp_path):
+    """It used to be handed an empty portfolio, so it could not reason about
+    what it already owned."""
+    seen = {}
+    kw = _with_view(tmp_path, "positive")
+    kw["reasoner"] = ReasoningClient(
+        transport=lambda payload: seen.update(payload) or NOTHING)
+    run_cycle(**kw, now=OPEN)
+    assert any("MRNA" in p for p in seen.get("positions", []))
+
+
+def test_a_negative_call_does_not_license_buying(tmp_path):
+    """The gate asked whether the operator held an opinion, and "no, this will
+    fail" is an opinion — so a trial called a failure could still be bought."""
+    from trading_agent.views import View, ViewStore
+
+    kw = mk(tmp_path, BUY)
+    kw["views"] = ViewStore(tmp_path / "v.db")
+    kw["views"].record(View("MRNA", "NCT1", "negative", 4, "the comparator is weak",
+                            OPEN, OPEN + dt.timedelta(days=90)))
+    r = run_cycle(**kw, now=OPEN)
+
+    assert r.submitted == 0
+    assert any("negative view recorded" in x for x in r.rejected), r.rejected
+
+
+def test_a_positive_call_still_licenses_buying(tmp_path):
+    from trading_agent.views import View, ViewStore
+
+    kw = mk(tmp_path, BUY)
+    kw["views"] = ViewStore(tmp_path / "v.db")
+    kw["views"].record(View("MRNA", "NCT1", "positive", 4, "derisked",
+                            OPEN, OPEN + dt.timedelta(days=90)))
+    assert run_cycle(**kw, now=OPEN).submitted == 1

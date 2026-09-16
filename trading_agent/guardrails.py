@@ -85,29 +85,39 @@ def evaluate(intent: OrderIntent, *, state, config, now: dt.datetime) -> Decisio
     if intent.side not in ("buy", "sell"):
         return Decision(False, f"invalid: side must be buy or sell, got {intent.side!r}")
 
+    # Selling reduces exposure. Every limit below exists to stop risk being
+    # taken on, so applying them to an exit would mean a position could be
+    # opened inside the rules and then trapped by them — the loss breaker
+    # forbidding the very sale that stops the loss. The kill switch above is
+    # deliberately not exempt: "stop trading" means stop, in both directions.
+    selling = intent.side == "sell"
+
     # 3. Daily loss breaker. Latched: once tripped the day is over, even if the
     #    position recovers. Checked before the P&L itself so a recovery cannot
     #    silently re-arm trading.
-    if state.loss_breaker_tripped(now):
+    if not selling and state.loss_breaker_tripped(now):
         return Decision(False, "daily_loss: circuit breaker latched for today")
     if state.daily_pnl_usd(now) <= -abs(config.daily_loss_limit_usd):
+        # The breach latches even when the order in hand is an exit: the day is
+        # over for buying either way. It just does not stop the exit itself.
         state.trip_loss_breaker(now)
-        return Decision(
-            False,
-            f"daily_loss: {state.daily_pnl_usd(now):.2f} breached "
-            f"-{abs(config.daily_loss_limit_usd):.2f}, halted for today",
-        )
+        if not selling:
+            return Decision(
+                False,
+                f"daily_loss: {state.daily_pnl_usd(now):.2f} breached "
+                f"-{abs(config.daily_loss_limit_usd):.2f}, halted for today",
+            )
 
     # 4. Trade rate.
     used = state.trades_today(now)
-    if used >= config.max_trades_per_day:
+    if not selling and used >= config.max_trades_per_day:
         return Decision(
             False, f"max_trades: {used}/{config.max_trades_per_day} already used today"
         )
 
     # 5. Position size. The boundary belongs to the allowed side — a limit you
     #    cannot reach is a different limit than the one configured.
-    if n > config.max_position_usd:
+    if not selling and n > config.max_position_usd:
         return Decision(
             False, f"max_position: {n:.2f} exceeds {config.max_position_usd:.2f}"
         )

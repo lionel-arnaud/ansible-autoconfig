@@ -22,7 +22,7 @@ import datetime as dt
 from dataclasses import dataclass, field
 
 from trading_agent.audit import new_correlation_id
-from trading_agent.guardrails import evaluate
+from trading_agent.guardrails import OrderIntent, evaluate
 from trading_agent.market import is_market_open
 from trading_agent.reasoning import proposals_or_none
 
@@ -35,10 +35,11 @@ class CycleResult:
     submitted: int = 0
     rejected: list[str] = field(default_factory=list)
     orders: list[str] = field(default_factory=list)
+    exits: list[str] = field(default_factory=list)
 
 
 def run_cycle(*, state, config, broker, feed, reasoner, audit, views=None,
-              ask=None, now: dt.datetime | None = None) -> CycleResult:
+              ask=None, notify=None, now: dt.datetime | None = None) -> CycleResult:
     """`ask` is called with (approval_key, payload) when an order needs the
     operator's explicit yes. It is optional, and its absence does not soften
     the gate: an unanswered request stays unanswered and the order stays
@@ -68,6 +69,19 @@ def run_cycle(*, state, config, broker, feed, reasoner, audit, views=None,
         audit.record("reconcile_failed", cid, {"error": str(exc)})
         return CycleResult(skipped_reason=f"reconcile failed: {exc}")
 
+    # What is actually held. Fail closed: a cycle that cannot see the portfolio
+    # would mistake a broker outage for having nothing to manage.
+    try:
+        held = broker.open_positions()
+    except Exception as exc:  # noqa: BLE001
+        audit.record("positions_unavailable", cid, {"error": str(exc)})
+        return CycleResult(skipped_reason=f"positions unavailable: {exc}")
+
+    result = CycleResult(ran=True)
+    _exit_flipped_views(held, state=state, config=config, broker=broker,
+                        views=views, audit=audit, notify=notify, now=now,
+                        cid=cid, result=result)
+
     catalysts = feed.upcoming_trials() + feed.recent_news()
     audit.record("catalysts", cid, {"count": len(catalysts)})
 
@@ -76,13 +90,16 @@ def run_cycle(*, state, config, broker, feed, reasoner, audit, views=None,
     proposals = proposals_or_none(
         reasoner,
         catalysts=[c.summary() for c in catalysts],
-        positions=[],
+        # The model was previously shown an empty portfolio, so it could not
+        # reason about what was already held, let alone propose leaving it.
+        positions=[f"{p['symbol']}: {p['market_value']:.0f} USD "
+                   f"({p['unrealized_plpc'] * 100:+.1f}%)" for p in held],
     )
     if proposals is None:
         audit.record("reasoning_unavailable", cid, {})
         return CycleResult(skipped_reason="reasoning unavailable")
 
-    result = CycleResult(ran=True, proposed=len(proposals))
+    result.proposed = len(proposals)
     for p in proposals:
         intent = p.to_intent()
         intent = type(intent)(**{**intent.__dict__, "correlation_id": cid})
@@ -100,8 +117,12 @@ def run_cycle(*, state, config, broker, feed, reasoner, audit, views=None,
         # anyone's availability.
         if views is not None and p.side == "buy":
             view = views.for_symbol(p.symbol, now=now)
-            if view is None or not view.is_actionable:
-                why = "no view recorded" if view is None else "no_opinion recorded"
+            # Positive only. is_actionable means "the operator holds an
+            # opinion", which is true of "no" as well — so this gate used to
+            # let a trial the operator had called a failure be bought anyway.
+            if view is None or view.stance != "positive":
+                why = ("no view recorded" if view is None
+                       else f"{view.stance} view recorded")
                 audit.record("view_gate", cid, {"symbol": p.symbol, "reason": why})
                 result.rejected.append(f"{p.symbol}: {why}")
                 continue
@@ -151,3 +172,61 @@ def run_cycle(*, state, config, broker, feed, reasoner, audit, views=None,
         result.orders.append(order_id)
 
     return result
+
+
+def _exit_flipped_views(held, *, state, config, broker, views, audit, notify,
+                        now, cid, result) -> None:
+    """Sell what the operator has changed their mind about.
+
+    A position exists because of a recorded call. When that call is changed to
+    "no" or "skip" before the results, the reason for holding is gone, and the
+    honest response is to leave rather than to keep paying for a risk whose
+    justification has been withdrawn.
+
+    Deliberately not triggered by a *missing* view. Views expire after ninety
+    days by design, and liquidating a portfolio because an opinion aged out
+    would be a surprise, not a decision. That case is recorded and left alone.
+    """
+    if views is None:
+        return
+    for position in held:
+        symbol = position["symbol"]
+        view = views.for_symbol(symbol, now=now)
+        if view is None:
+            audit.record("held_without_view", cid, {"symbol": symbol})
+            continue
+        # Anything other than a positive call withdraws the reason to hold.
+        if view.stance == "positive":
+            continue
+
+        intent = OrderIntent(symbol=symbol, side="sell",
+                             notional_usd=abs(position["market_value"]),
+                             correlation_id=cid)
+        decision = evaluate(intent, state=state, config=config, now=now)
+        audit.record("exit_guardrail", cid, {
+            "symbol": symbol, "allowed": decision.allowed,
+            "reason": decision.reason, "view": view.stance,
+        })
+        if not decision.allowed:
+            result.rejected.append(f"{symbol}: exit refused: {decision.reason}")
+            continue
+
+        try:
+            order_id = broker.close_position(decision.intent)
+        except Exception as exc:  # noqa: BLE001 — one failure must not end the cycle
+            audit.record("exit_failed", cid, {"symbol": symbol, "error": str(exc)})
+            result.rejected.append(f"{symbol}: exit failed: {exc}")
+            continue
+
+        state.record_trade(now)
+        audit.record("exit", cid, {"symbol": symbol, "broker_order_id": order_id,
+                                   "view": view.stance, "note": view.note})
+        result.exits.append(order_id)
+        if notify is not None:
+            try:
+                notify(f"Sold {symbol}. You changed your call to "
+                       f"{'no' if view.stance == 'negative' else 'skip'}, so the "
+                       f"reason for holding it was gone.")
+            except Exception as exc:  # noqa: BLE001 — telling you is not the trade
+                audit.record("exit_notify_failed", cid,
+                             {"symbol": symbol, "error": str(exc)})
