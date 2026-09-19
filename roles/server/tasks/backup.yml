@@ -126,6 +126,45 @@
       mv "$dump_tmp" "$dump_dir/{{ dump.name }}.sql"
       {% endfor %}
 
+      # Consistent snapshots of every live SQLite database in the backup set.
+      #
+      # A SQLite database in WAL mode is two files that only agree with each
+      # other at a single instant. Copied raw while a service writes, the
+      # archive can pair a database with a log from a different moment, which
+      # may not open on restore; Borg notices and warns, which is how Uptime
+      # Kuma failed the run of 19 September. Jellyfin, Pi-hole and opencode
+      # carry the same risk. sqlite3 .backup takes a consistent copy of a live
+      # database without stopping the service that writes it.
+      #
+      # Discovered rather than listed, so the next service with a SQLite
+      # database is covered without anyone remembering to add it. A raw copy
+      # is excluded only once its snapshot has succeeded: if a snapshot fails,
+      # the raw files stay in the archive and a warning is raised, so a
+      # database is never silently dropped from the backup.
+      sqlite_dir="$dump_dir/sqlite"
+      sqlite_excludes="$dump_dir/sqlite-excludes"
+      rm -rf "$sqlite_dir"
+      mkdir -p "$sqlite_dir"
+      chmod 700 "$sqlite_dir"
+      : > "$sqlite_excludes"
+      for root in {% for path in backup_paths %}'{{ path }}' {% endfor %}; do
+        find "$root" -type f -name '*-wal' 2>/dev/null
+      done | while IFS= read -r wal; do
+        db="${wal%-wal}"
+        [ -f "$db" ] || continue
+        snap="$sqlite_dir$db"
+        mkdir -p "$(dirname "$snap")"
+        if sqlite3 "$db" ".timeout 30000" ".backup '$snap'" \
+           && sqlite3 "$snap" "PRAGMA journal_mode=DELETE;" >/dev/null \
+           && [ -s "$snap" ]; then
+          printf 'fm:%s\nfm:%s-wal\nfm:%s-shm\n' "$db" "$db" "$db" >> "$sqlite_excludes"
+          echo "sqlite snapshot: $db"
+        else
+          rm -f "$snap"
+          echo "WARNING: could not snapshot $db, so its raw files stay in the archive" >&2
+        fi
+      done
+
       if ! borg info "$BORG_REPO" >/dev/null 2>&1; then
         borg init --encryption=repokey "$BORG_REPO"
       fi
@@ -139,6 +178,7 @@
       # stops the run now; a warning is reported at the end, after the work.
       set +e
       borg create --stats --compression zstd,6 \
+        --exclude-from "$sqlite_excludes" \
       {% for path in backup_exclude_paths | default([]) %}
         --exclude '{{ path }}' \
       {% endfor %}
@@ -149,6 +189,9 @@
         "$dump_dir"
       create_rc=$?
       set -e
+      # The snapshots are in the archive now; keeping them would only double
+      # the disk used by every database.
+      rm -rf "$sqlite_dir"
       if [ "$create_rc" -ge 2 ]; then
         echo "FATAL: borg create failed with exit code $create_rc" >&2
         exit "$create_rc"

@@ -750,6 +750,14 @@ borg list  /path/to/repo                       # pick an archive
 borg extract /path/to/repo::serverannah-<ts>   # restores ./opt/... and ./var/...
 ```
 
+**SQLite databases** (Uptime Kuma, Jellyfin, Pi-hole, opencode, and any
+future service using SQLite in WAL mode, which the backup discovers by itself)
+are archived as consistent snapshots rather than raw files, because a live
+database copied mid-write may not open. They extract under
+`var/lib/autoconfig-backup/dumps/sqlite/` followed by their original path, for
+example `…/dumps/sqlite/opt/uptime-kuma/kuma.db`. Stop the service, copy each
+one back to its original path, and start it again.
+
 borg's standalone binary (GitHub releases, `borg-linux-glibc236`) needs no root,
 so a restore works even on a machine where you cannot install packages. Match
 the binary's major version to the one that wrote the repo (currently `1.4.x`).
