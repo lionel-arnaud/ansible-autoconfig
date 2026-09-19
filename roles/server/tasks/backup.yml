@@ -86,7 +86,16 @@
       set -eu
 
       export BORG_REPO='{{ backup_repo_dir }}'
-      export BORG_PASSPHRASE="$(cat '{{ backup_borg_passphrase_file }}')"
+      # Assigned before it is exported. "export X=$(cat f)" reports the exit
+      # status of export, not of cat, so under set -e a missing passphrase file
+      # used to carry on with an empty passphrase and fail later, confusingly,
+      # inside borg. Split, a missing or empty file stops the run right here.
+      BORG_PASSPHRASE="$(cat '{{ backup_borg_passphrase_file }}')"
+      if [ -z "$BORG_PASSPHRASE" ]; then
+        echo "FATAL: the Borg passphrase file {{ backup_borg_passphrase_file }} is empty" >&2
+        exit 1
+      fi
+      export BORG_PASSPHRASE
       export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=no
       export BORG_RELOCATED_REPO_ACCESS_IS_OK=no
 
