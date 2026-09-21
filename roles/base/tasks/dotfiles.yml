@@ -388,15 +388,23 @@
 # compositor. Issuing `hyprctl reload` after Stow forces Hyprland to re-parse
 # the new tree and dismisses any error overlay that surfaced mid-sync.
 #
-# Best-effort only: this task must NEVER break a sync. It runs only when:
-#   - the hypr Stow package is in scope on this host, and
-#   - hyprctl is installed and on PATH, and
-#   - the command can reach a Hyprland instance (rc 0).
-# Anything else silently no-ops via `register` + `failed_when: false`.
-- name: Probe for hyprctl on the desktop user PATH
-  ansible.builtin.command:
-    argv: [command, -v, hyprctl]
-  register: base_dotfiles_hyprctl_probe
+# ansible-pull does not inherit the graphical session's environment. Discover
+# instances as the desktop user and select each explicitly instead of relying
+# on HYPRLAND_INSTANCE_SIGNATURE. No running compositor is a normal no-op.
+- name: Discover the desktop user's running Hyprland instances
+  ansible.builtin.shell: |
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    unset HYPRLAND_INSTANCE_SIGNATURE
+    if ! command -v hyprctl >/dev/null 2>&1; then
+      printf '[]\n'
+      exit 0
+    fi
+    hyprctl -j instances
+  args:
+    executable: /bin/sh
+  environment:
+    PATH: /usr/local/bin:/usr/bin:/bin
+  register: base_dotfiles_hyprland_instances
   become: true
   become_user: "{{ dotfiles_user }}"
   changed_when: false
@@ -405,17 +413,26 @@
   when: "'hypr' in dotfiles_stow_packages"
 
 - name: Reload Hyprland after dotfiles sync to clear stale inotify overlays
-  ansible.builtin.command:
-    argv: [hyprctl, reload]
+  ansible.builtin.shell: |
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    hyprctl --instance {{ item.instance | quote }} reload
+  args:
+    executable: /bin/sh
+  environment:
+    PATH: /usr/local/bin:/usr/bin:/bin
   become: true
   become_user: "{{ dotfiles_user }}"
   changed_when: false
   failed_when: false
-  check_mode: false
+  loop: >-
+    {{ (base_dotfiles_hyprland_instances.stdout | default('[]', true) | from_json)
+       if base_dotfiles_hyprland_instances.rc | default(1) == 0 else [] }}
+  loop_control:
+    label: "{{ item.instance }}"
   when:
+    - not ansible_check_mode
     - "'hypr' in dotfiles_stow_packages"
-    - base_dotfiles_hyprctl_probe is defined
-    - base_dotfiles_hyprctl_probe.rc | default(1) == 0
+    - base_dotfiles_hyprland_instances.rc | default(1) == 0
 
 # Secret dotfiles are stored vault-encrypted in the repo. Stow cannot manage them
 # (a symlink would hand the application ciphertext), so they are copied into place
