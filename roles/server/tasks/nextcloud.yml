@@ -959,13 +959,48 @@
   when: >-
     (_mount_options if _mount_options is mapping else {}).get('filesystem_check_changes', '') | string != '1'
 
-# One level only. That is enough to list the disk, and the folders inside it
-# are indexed the first time somebody opens them, so this stays cheap on a
-# terabyte. The scan reports what it found, so the task is "changed" only when
-# it actually corrected something and stays quiet on every run after that;
-# it also repairs the same fault if it ever recurs. Every user of a mount shares
-# one storage, so scanning through one user's path covers all of them.
-- name: Index the top level of each external mount
+# Ask Nextcloud's own database what it has indexed, rather than inferring it
+# from a scan's report. The scan's Folders and Files counters only count folders
+# it walks into, so a shallow scan of a disk whose top level is all folders
+# reads "1 folder, 0 files" even when it worked, and "Updated" is nonzero on
+# every run. Neither can tell "indexed" from "not indexed"; the database can.
+- name: Look for entries on the disk behind each external mount
+  ansible.builtin.command:
+    argv: [find, "{{ item.path }}", -mindepth, "1", -maxdepth, "1", -print, -quit]
+  loop: "{{ nextcloud_external_mounts | default([]) }}"
+  register: nextcloud_mount_disk_entries
+  changed_when: false
+  check_mode: false
+
+- name: Count what Nextcloud has indexed at the top of each external mount
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: >-
+      set -o pipefail;
+      MYSQL_PWD="$(cat '{{ nextcloud_db_root_password_file }}')"
+      docker exec -i -e MYSQL_PWD '{{ nextcloud_db_container_name }}'
+      mariadb -uroot -N -B '{{ nextcloud_db_name }}'
+    stdin: "{{ _top_level_count_sql }}"
+  loop: "{{ nextcloud_external_mounts | default([]) }}"
+  register: nextcloud_mount_indexed_before
+  vars:
+    _top_level_count_sql: &top_level_count_sql >-
+      SET @sid = (SELECT numeric_id FROM {{ nextcloud_db_table_prefix }}storages
+      WHERE id = 'local::{{ item.path | regex_replace('/+$', '') }}/');
+      SELECT COUNT(*) FROM {{ nextcloud_db_table_prefix }}filecache
+      WHERE storage = @sid AND parent = (SELECT fileid
+      FROM {{ nextcloud_db_table_prefix }}filecache WHERE storage = @sid AND path = '');
+  changed_when: false
+  check_mode: false
+
+# Only when there is something to fix: the disk has entries and Nextcloud has
+# none. One level deep, which is enough to list the disk and stays cheap on a
+# terabyte; the folders inside are indexed the first time somebody opens them.
+# Every user of a mount shares one storage, so scanning through one user's path
+# covers all of them. Running it only when needed is what keeps the play quiet
+# afterwards: the scan reports itself as "updated" on every run, so it cannot
+# be allowed to run unconditionally.
+- name: Index the top level of each external mount that Nextcloud shows as empty
   ansible.builtin.command:
     argv:
       - docker
@@ -979,46 +1014,44 @@
       - "--path=/{{ item.users | first }}/files{{ item.mount_point }}"
       - --shallow
   loop: "{{ nextcloud_external_mounts | default([]) }}"
+  loop_control:
+    index_var: idx
+  when:
+    - not ansible_check_mode
+    - (nextcloud_mount_disk_entries.results[idx].stdout | trim | length) > 0
+    - (nextcloud_mount_indexed_before.results[idx].stdout | trim | int) == 0
   register: nextcloud_mount_scan
-  vars:
-    _scan_row: >-
-      {{ nextcloud_mount_scan.stdout | default('')
-         | regex_findall('\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|') }}
-  # Columns are Folders, Files, New, Updated, Removed, Errors. Unparseable
-  # output is a failure rather than a silent "nothing changed".
-  failed_when: >-
-    nextcloud_mount_scan.rc != 0 or (_scan_row | length) == 0
-    or (_scan_row | first)[5] | int > 0
-  changed_when: >-
-    (_scan_row | length) > 0
-    and (_scan_row | first)[2:5] | map('int') | sum > 0
 
-# The check that would have caught this in June. Having just scanned, the folder
-# must show at least one entry if the disk has one. A disk with contents that
-# Nextcloud still reports as empty means the scan could not read them, and that
-# has to stop the run and say so instead of leaving a dead folder behind.
-- name: Look for entries on the disk behind each external mount
-  ansible.builtin.command:
-    argv: [find, "{{ item.path }}", -mindepth, "1", -maxdepth, "1", -print, -quit]
+- name: Count what Nextcloud has indexed after that
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: >-
+      set -o pipefail;
+      MYSQL_PWD="$(cat '{{ nextcloud_db_root_password_file }}')"
+      docker exec -i -e MYSQL_PWD '{{ nextcloud_db_container_name }}'
+      mariadb -uroot -N -B '{{ nextcloud_db_name }}'
+    stdin: "{{ _top_level_count_sql }}"
   loop: "{{ nextcloud_external_mounts | default([]) }}"
-  register: nextcloud_mount_disk_entries
+  register: nextcloud_mount_indexed_after
+  vars:
+    _top_level_count_sql: *top_level_count_sql
   changed_when: false
   check_mode: false
 
-- name: Fail if a mount with contents on disk is empty in Nextcloud
+# The check that would have caught this in June. A disk with entries that
+# Nextcloud still shows as empty after a scan means the scan could not read
+# them, and that has to stop the run and say so rather than leave a dead folder.
+- name: Fail if a mount with contents on disk is still empty in Nextcloud
   ansible.builtin.assert:
     that:
       - >-
         (nextcloud_mount_disk_entries.results[idx].stdout | trim | length) == 0
-        or ((nextcloud_mount_scan.results[idx].stdout | default('')
-             | regex_findall('\\|\\s*(\\d+)\\s*\\|\\s*(\\d+)\\s*\\|') | first)[0] | int - 1
-            + (nextcloud_mount_scan.results[idx].stdout | default('')
-             | regex_findall('\\|\\s*(\\d+)\\s*\\|\\s*(\\d+)\\s*\\|') | first)[1] | int) > 0
+        or (nextcloud_mount_indexed_after.results[idx].stdout | trim | int) > 0
     fail_msg: >-
-      {{ item.path }} has entries on disk but Nextcloud sees none at
-      {{ item.mount_point }} after a scan. It probably cannot read them: check
-      the ACL for {{ nextcloud_external_mount_acl_user }} and the mount's
-      permissions.
+      {{ item.path }} has entries on disk but Nextcloud shows none at
+      {{ item.mount_point }} after indexing it. It probably cannot read them:
+      check the ACL for {{ nextcloud_external_mount_acl_user }} and the
+      permissions of the mount.
     quiet: true
   loop: "{{ nextcloud_external_mounts | default([]) }}"
   loop_control:

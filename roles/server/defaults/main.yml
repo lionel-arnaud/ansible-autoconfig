@@ -277,6 +277,9 @@ nextcloud_container_name: nextcloud
 nextcloud_image: nextcloud:34
 nextcloud_db_name: nextcloud
 nextcloud_db_user: nextclouduser
+# The default Nextcloud table prefix. Named here because the external-mount
+# check reads the file cache table directly.
+nextcloud_db_table_prefix: oc_
 nextcloud_db_password_file: "{{ nextcloud_secret_dir }}/nextcloud-db-password"
 nextcloud_db_root_password_file: "{{ nextcloud_secret_dir }}/nextcloud-db-root-password"
 nextcloud_admin_user: lion
