@@ -561,6 +561,9 @@ server_reverse_proxy_enabled: false
 # Caddy keeps the reverse proxy readable enough to use as a learning tool.
 server_reverse_proxy_container_name: server-reverse-proxy
 server_reverse_proxy_image: caddy:2.10-alpine
+# HTTP/3 needs UDP 443 published and forwarded; neither is set up, so it stays
+# off rather than being advertised to browsers that then hang on it.
+server_reverse_proxy_http3_enabled: false
 server_reverse_proxy_root_dir: /opt/reverse-proxy
 server_reverse_proxy_config_dir: "{{ server_reverse_proxy_root_dir }}/caddy"
 server_reverse_proxy_data_dir: "{{ server_reverse_proxy_root_dir }}/data"

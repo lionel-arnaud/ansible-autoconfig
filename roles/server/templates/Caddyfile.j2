@@ -8,6 +8,20 @@
     log {
         output file {{ server_reverse_proxy_access_log }}
     }
+{% if not server_reverse_proxy_http3_enabled %}
+    # HTTP/1.1 and HTTP/2 only. Caddy advertises HTTP/3 by default ("alt-svc:
+    # h3=:443", cached by browsers for 30 days), but HTTP/3 runs over UDP 443,
+    # which this proxy does not publish and the router does not forward. A
+    # browser that follows the hint waits on a connection nothing answers,
+    # instead of falling back, and a phone on a mobile network can sit on a blank
+    # page indefinitely. Measured: HTTP/2 answered in 45 ms, HTTP/3 not at all,
+    # and not one request had ever been served over it. Set
+    # server_reverse_proxy_http3_enabled to true only together with publishing
+    # 443/udp on the container and forwarding it on the router.
+    servers {
+        protocols h1 h2
+    }
+{% endif %}
 {% if not server_reverse_proxy_auto_https %}
     # Stay on plain HTTP for VM and LAN tests. Real public domains can switch
     # this off and let Caddy manage certificates automatically.
