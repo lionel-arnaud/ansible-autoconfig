@@ -20,3 +20,16 @@ maxretry = {{ fail2ban_caddy_basic_auth_maxretry }}
 findtime = {{ fail2ban_caddy_basic_auth_findtime }}
 bantime = {{ fail2ban_caddy_basic_auth_bantime }}
 port = http,https
+
+# Requests to the login prompt that carry no credentials at all. Kept separate
+# from the jail above because it needs a threshold high enough that a browser's
+# ordinary icon and manifest requests never reach it.
+[caddy-probe]
+enabled = {{ fail2ban_caddy_probe_enabled | ternary('true', 'false') }}
+filter = caddy-probe
+backend = polling
+logpath = {{ fail2ban_caddy_basic_auth_logpath }}
+maxretry = {{ fail2ban_caddy_probe_maxretry }}
+findtime = {{ fail2ban_caddy_probe_findtime }}
+bantime = {{ fail2ban_caddy_probe_bantime }}
+port = http,https

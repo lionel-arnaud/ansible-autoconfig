@@ -33,6 +33,15 @@
     group: root
     mode: "0755"
 
+# What counts as a failure. The filter used to count every 401 from the proxy,
+# which is not a failed login: a browser loading a password-protected page gets
+# a 401 for the page itself and again for each icon and manifest it fetches
+# without credentials, so a normal page view looked like five attacks. It banned
+# the owner's own phone, and it counted 6,587 checks from Uptime Kuma in one week.
+# Caddy logs a wrong password as an Authorization header (the value itself is
+# redacted) followed by a 401 carrying Caddy's own realm, so that is the pattern.
+# The realm is matched so a 401 produced by an application behind the proxy, with
+# its own login and its own throttling, is not mistaken for one.
 - name: Install Caddy basic auth fail2ban filter
   ansible.builtin.copy:
     dest: /etc/fail2ban/filter.d/caddy-basic-auth.conf
@@ -41,9 +50,23 @@
     mode: "0644"
     content: |
       [Definition]
-      failregex = ^.*"remote_ip":"<HOST>".*"status":401.*$
+      failregex = ^.*"remote_ip":"<HOST>".*"Authorization":\["REDACTED"\].*"status":401.*"Www-Authenticate":\["Basic realm=[^\]]*restricted
       ignoreregex =
   register: fail2ban_caddy_basic_auth_filter
+
+# The other half: a 401 from Caddy's own prompt with no Authorization header at
+# all. Harmless one at a time, and counted only at a rate no visitor reaches.
+- name: Install Caddy probe fail2ban filter
+  ansible.builtin.copy:
+    dest: /etc/fail2ban/filter.d/caddy-probe.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Definition]
+      failregex = ^.*"remote_ip":"<HOST>"(?:(?!"Authorization").)*"status":401.*"Www-Authenticate":\["Basic realm=[^\]]*restricted
+      ignoreregex =
+  register: fail2ban_caddy_probe_filter
 
 # Keep the first internet-facing protection slice small and explicit: protect
 # SSH now, then add more jails later only after they are validated.
@@ -56,8 +79,21 @@
     mode: "0644"
   register: fail2ban_jail_config
 
+# Validate before restarting. The service keeps running on the configuration it
+# already loaded, so a mistake here fails the play with a message and leaves the
+# protection in place, instead of restarting into a fail2ban that will not start.
+- name: Validate the fail2ban configuration
+  ansible.builtin.command:
+    argv: [fail2ban-client, -t]
+  register: fail2ban_config_test
+  changed_when: false
+  check_mode: false
+
 - name: Ensure fail2ban is enabled and running
   ansible.builtin.systemd_service:
     name: fail2ban
-    state: "{{ (fail2ban_caddy_basic_auth_filter.changed or fail2ban_jail_config.changed) | ternary('restarted', 'started') }}"
+    state: >-
+      {{ (fail2ban_caddy_basic_auth_filter.changed
+          or fail2ban_caddy_probe_filter.changed
+          or fail2ban_jail_config.changed) | ternary('restarted', 'started') }}
     enabled: true

@@ -396,8 +396,12 @@ fail2ban_packages_by_family:
     - fail2ban
   Archlinux:
     - fail2ban
-fail2ban_ignoreips:
-  - 127.0.0.1/8
+# Never counted and never banned: loopback, the home network (which includes the
+# router's own address, the one every hairpinned request arrives from) and the
+# Docker networks, which is where Uptime Kuma runs. Anything reaching the proxy
+# from these is the household or the server itself, and locking either out would
+# be a self-inflicted outage. Everything from the internet is still covered in full.
+fail2ban_ignoreips: "{{ ['127.0.0.0/8', '172.16.0.0/12'] + server_lan_cidrs }}"
 fail2ban_bantime: 1h
 fail2ban_findtime: 10m
 fail2ban_maxretry: 5
@@ -409,6 +413,16 @@ fail2ban_caddy_basic_auth_logpath: /opt/reverse-proxy/data/access.log
 fail2ban_caddy_basic_auth_maxretry: 5
 fail2ban_caddy_basic_auth_findtime: 10m
 fail2ban_caddy_basic_auth_bantime: 1h
+# A second, looser rule for hosts that hammer the login prompt without ever
+# sending a password. It exists because the first rule counts only real login
+# attempts, and probing does not involve one. The threshold comes from the real
+# access log: the worst ten minutes a normal visitor produced was 10 credential-
+# less requests (a browser fetches icons and a manifest without credentials on
+# every page load), while scanners produced 277, 96, 31 and 21.
+fail2ban_caddy_probe_enabled: "{{ fail2ban_caddy_basic_auth_enabled }}"
+fail2ban_caddy_probe_maxretry: 60
+fail2ban_caddy_probe_findtime: 10m
+fail2ban_caddy_probe_bantime: 1h
 
 # Hard cap on one Borg run so a hung dump or a stalled repo lock becomes a
 # failure (which notifies) instead of an eternally "activating" unit.
