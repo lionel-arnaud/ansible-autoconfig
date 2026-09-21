@@ -8,11 +8,13 @@
     "@mohak34/opencode-notifier@latest"
   ],
   "permission": {
-    "read": "ask",
-    "edit": "ask",
-    "list": "ask",
-    "glob": "ask",
-    "grep": "ask",
-    "external_directory": "ask"
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.env.example": "allow"
+    },
+    "external_directory": "ask",
+    "doom_loop": "ask"
   }
 }
