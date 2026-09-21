@@ -56,6 +56,22 @@
     recursive: true
   loop: "{{ nextcloud_external_mounts | default([]) }}"
 
+# The two ACL tasks above grant www-data rwX, but an ACL entry is only as strong
+# as the mask above it, and the mount root's mask had been left at r-x. The
+# entry then *looked* right (getfacl printed "rwx") while the effective
+# permission was read-only, so Nextcloud could not create anything at the top
+# of the disk. The acl module compares the entry, not what it resolves to, so
+# those tasks reported "ok" every night. Subfolders were fine: their masks
+# were already rwx. Only the root is set here, because that is the only place
+# the mask was found narrower than the entry it governs.
+- name: Let Nextcloud write at the top level of each external mount
+  ansible.posix.acl:
+    path: "{{ item.path }}"
+    etype: mask
+    permissions: rwx
+    state: present
+  loop: "{{ nextcloud_external_mounts | default([]) }}"
+
 - name: Remove Nextcloud ACL access from protected external paths
   ansible.posix.acl:
     path: "{{ item }}"
@@ -905,3 +921,106 @@
     argv: "{{ ['docker', 'exec', '-u', 'www-data', nextcloud_container_name, 'php', 'occ', 'files_external:applicable', ((nextcloud_external_mounts_current | selectattr('mount_point', 'equalto', item.0.mount_point) | map(attribute='mount_id') | first) | string)] + ['--add-user=' ~ item.1] }}"
   loop: "{{ nextcloud_external_mounts | subelements('users') }}"
   changed_when: false
+
+# A mount that Nextcloud lists as empty although the disk is full is almost
+# never a permissions problem: it is a stale index. For a local mount the
+# listing is served from Nextcloud's own database and refreshed only when the
+# folder's modification time differs from the one it stored. SSD_1TO went in on
+# 12 June with a first scan that found nothing, and because nothing ever
+# changes the modification time of a disk's top folder, it was never looked at
+# again: three months of a full disk shown as empty.
+#
+# The mount option below makes Nextcloud compare on every access, which is what
+# a disk that other things write to (the host, Jellyfin, a copy from another
+# machine) needs. It is unset by default for mounts created from the command
+# line, which is how this one was made.
+- name: Make Nextcloud notice changes made to an external mount from outside
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - -u
+      - www-data
+      - "{{ nextcloud_container_name }}"
+      - php
+      - occ
+      - files_external:option
+      - "{{ nextcloud_external_mounts_current | selectattr('mount_point', 'equalto', item.mount_point) | map(attribute='mount_id') | first | string }}"
+      - filesystem_check_changes
+      - "1"
+  loop: "{{ nextcloud_external_mounts | default([]) }}"
+  vars:
+    _mount_options: >-
+      {{ nextcloud_external_mounts_current
+         | selectattr('mount_point', 'equalto', item.mount_point)
+         | map(attribute='options') | first | default({}) }}
+  # PHP prints a mount with no options as [] rather than {}, and a list has no
+  # .get(), so anything that is not a mapping counts as "nothing set yet".
+  when: >-
+    (_mount_options if _mount_options is mapping else {}).get('filesystem_check_changes', '') | string != '1'
+
+# One level only. That is enough to list the disk, and the folders inside it
+# are indexed the first time somebody opens them, so this stays cheap on a
+# terabyte. The scan reports what it found, so the task is "changed" only when
+# it actually corrected something and stays quiet on every run after that;
+# it also repairs the same fault if it ever recurs. Every user of a mount shares
+# one storage, so scanning through one user's path covers all of them.
+- name: Index the top level of each external mount
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - -u
+      - www-data
+      - "{{ nextcloud_container_name }}"
+      - php
+      - occ
+      - files:scan
+      - "--path=/{{ item.users | first }}/files{{ item.mount_point }}"
+      - --shallow
+  loop: "{{ nextcloud_external_mounts | default([]) }}"
+  register: nextcloud_mount_scan
+  vars:
+    _scan_row: >-
+      {{ nextcloud_mount_scan.stdout | default('')
+         | regex_findall('\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|') }}
+  # Columns are Folders, Files, New, Updated, Removed, Errors. Unparseable
+  # output is a failure rather than a silent "nothing changed".
+  failed_when: >-
+    nextcloud_mount_scan.rc != 0 or (_scan_row | length) == 0
+    or (_scan_row | first)[5] | int > 0
+  changed_when: >-
+    (_scan_row | length) > 0
+    and (_scan_row | first)[2:5] | map('int') | sum > 0
+
+# The check that would have caught this in June. Having just scanned, the folder
+# must show at least one entry if the disk has one. A disk with contents that
+# Nextcloud still reports as empty means the scan could not read them, and that
+# has to stop the run and say so instead of leaving a dead folder behind.
+- name: Look for entries on the disk behind each external mount
+  ansible.builtin.command:
+    argv: [find, "{{ item.path }}", -mindepth, "1", -maxdepth, "1", -print, -quit]
+  loop: "{{ nextcloud_external_mounts | default([]) }}"
+  register: nextcloud_mount_disk_entries
+  changed_when: false
+  check_mode: false
+
+- name: Fail if a mount with contents on disk is empty in Nextcloud
+  ansible.builtin.assert:
+    that:
+      - >-
+        (nextcloud_mount_disk_entries.results[idx].stdout | trim | length) == 0
+        or ((nextcloud_mount_scan.results[idx].stdout | default('')
+             | regex_findall('\\|\\s*(\\d+)\\s*\\|\\s*(\\d+)\\s*\\|') | first)[0] | int - 1
+            + (nextcloud_mount_scan.results[idx].stdout | default('')
+             | regex_findall('\\|\\s*(\\d+)\\s*\\|\\s*(\\d+)\\s*\\|') | first)[1] | int) > 0
+    fail_msg: >-
+      {{ item.path }} has entries on disk but Nextcloud sees none at
+      {{ item.mount_point }} after a scan. It probably cannot read them: check
+      the ACL for {{ nextcloud_external_mount_acl_user }} and the mount's
+      permissions.
+    quiet: true
+  loop: "{{ nextcloud_external_mounts | default([]) }}"
+  loop_control:
+    index_var: idx
+  when: not ansible_check_mode
