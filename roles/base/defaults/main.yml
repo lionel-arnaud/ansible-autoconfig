@@ -105,6 +105,12 @@ dotfiles_managed_paths:
     path: .config/starship.toml
   - package: opencode
     path: .config/opencode/opencode.json
+  # tui.json is the separate TUI config opencode split out of opencode.json
+  # (theme, keybinds). It is listed on its own rather than widening the entry to
+  # .config/opencode, because opencode writes runtime files into that same
+  # directory (bun.lock, node_modules, the notifier state) that must stay local.
+  - package: opencode
+    path: .config/opencode/tui.json
   - package: claude
     path: .claude/settings.json
   # ssh ships only the sanitized public config (it just Includes ~/.ssh/config.local).
