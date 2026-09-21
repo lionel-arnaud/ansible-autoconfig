@@ -30,13 +30,19 @@
 
 # Mount points must exist before mount -a can apply the managed entries. The
 # loop runs the file module once per path extracted from the fstab source.
+# Creates a missing mount point and leaves an existing one alone. It used to
+# enforce root:root 0755 on every run, and once a disk is mounted that path is
+# the disk's own root directory, so the playbook was changing the permissions of
+# the data disks every night. A chmod on a directory that carries an ACL also
+# resets the ACL mask to the group bits: it silently capped the web user's write
+# access at the top of SSD_1TO to read-only, while getfacl still printed "rwx"
+# and every ACL task reported "ok". No owner, group or mode is given, so a
+# directory that already exists is never touched, and a new one is created as
+# root with the default umask, which is 0755 anyway.
 - name: Ensure mount points from fstab exist
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    owner: root
-    group: root
-    mode: "0755"
   loop: "{{ server_fstab_mount_points.stdout_lines }}"
 
 # Apply the current fstab after the managed block and its target directories are
