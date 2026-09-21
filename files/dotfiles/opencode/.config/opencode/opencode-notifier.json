@@ -1,0 +1,12 @@
+{
+  "suppressWhenFocused": false,
+  "events": {
+    "permission": false,
+    "subagent_complete": false,
+    "user_cancelled": false,
+    "interrupted": false,
+    "complete": true,
+    "error": true,
+    "question": true
+  }
+}

@@ -111,6 +111,10 @@ dotfiles_managed_paths:
   # directory (bun.lock, node_modules, the notifier state) that must stay local.
   - package: opencode
     path: .config/opencode/tui.json
+  # The notifier plugin's own config. Its sibling opencode-notifier-state.json
+  # is a turn counter the plugin rewrites constantly, so it stays unmanaged.
+  - package: opencode
+    path: .config/opencode/opencode-notifier.json
   - package: claude
     path: .claude/settings.json
   # ssh ships only the sanitized public config (it just Includes ~/.ssh/config.local).
