@@ -14,6 +14,12 @@ port = {{ fail2ban_sshd_port }}
 [caddy-basic-auth]
 enabled = {{ fail2ban_caddy_basic_auth_enabled | ternary('true', 'false') }}
 filter = caddy-basic-auth
+# A jail-level chain, not one in the action's brackets: jail.conf sets
+# "chain = <known/chain>" for every jail, and that overrides a chain given in
+# the brackets, which silently put both web jails back into the sshd jail's
+# input chain. The hook, priority and block type have no such default.
+chain = {{ fail2ban_web_ban_chain }}
+banaction = nftables[type=multiport, chain_hook={{ fail2ban_web_ban_hook }}, chain_priority={{ fail2ban_web_ban_priority }}, blocktype={{ fail2ban_web_ban_blocktype }}]
 backend = polling
 logpath = {{ fail2ban_caddy_basic_auth_logpath }}
 maxretry = {{ fail2ban_caddy_basic_auth_maxretry }}
@@ -27,6 +33,9 @@ port = http,https
 [caddy-probe]
 enabled = {{ fail2ban_caddy_probe_enabled | ternary('true', 'false') }}
 filter = caddy-probe
+# See the note on chain above: it must be set at jail level.
+chain = {{ fail2ban_web_ban_chain }}
+banaction = nftables[type=multiport, chain_hook={{ fail2ban_web_ban_hook }}, chain_priority={{ fail2ban_web_ban_priority }}, blocktype={{ fail2ban_web_ban_blocktype }}]
 backend = polling
 logpath = {{ fail2ban_caddy_basic_auth_logpath }}
 maxretry = {{ fail2ban_caddy_probe_maxretry }}

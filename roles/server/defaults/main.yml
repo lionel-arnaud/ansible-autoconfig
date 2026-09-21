@@ -423,6 +423,18 @@ fail2ban_caddy_probe_enabled: "{{ fail2ban_caddy_basic_auth_enabled }}"
 fail2ban_caddy_probe_maxretry: 60
 fail2ban_caddy_probe_findtime: 10m
 fail2ban_caddy_probe_bantime: 1h
+# Where the two web jails apply a ban. The default nftables action hooks "input",
+# which only sees traffic addressed to the host itself. Every published Docker
+# port is delivered by NAT to a container, so it never reaches "input": a banned
+# address kept getting normal answers, and 52,000 recorded failures blocked
+# nothing. Measured with a temporary rule against a real client: hook input let
+# the request through, hook prerouting blocked it. "drop" because "reject" is
+# not permitted that early in the packet path. Priority -300 acts before
+# connection tracking and Docker's own NAT rules.
+fail2ban_web_ban_chain: f2b-chain-web
+fail2ban_web_ban_hook: prerouting
+fail2ban_web_ban_priority: -300
+fail2ban_web_ban_blocktype: drop
 
 # Hard cap on one Borg run so a hung dump or a stalled repo lock becomes a
 # failure (which notifies) instead of an eternally "activating" unit.
