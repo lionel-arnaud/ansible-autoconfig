@@ -1130,6 +1130,51 @@ off-site. The same push carries a daily report page, rendered on the Pi and serv
 by the server as a static file behind the reverse proxy's password. It is labelled
 as a daily snapshot, and warns when it is older than expected.
 
+### Fail2ban
+
+Role `roles/server/tasks/fail2ban.yml`, settings in `roles/server/defaults/main.yml`
+(`fail2ban_*`). Three jails: `sshd`, `caddy-basic-auth` and `caddy-probe`.
+
+- **What counts.** `caddy-basic-auth` counts a 401 from Caddy's own login prompt
+  that *carried a password* (a wrong one): 5 in 10 minutes bans for an hour.
+  A 401 alone is not a failed login. A browser loading a protected page is
+  challenged for the page and again for every icon and manifest it fetches without
+  credentials, so a normal page view used to look like five attacks and banned the
+  owner's own phone. `caddy-probe` covers the other case, hosts hammering the
+  prompt with no password at all, at 60 in 10 minutes: six times the worst burst a
+  real visitor produced, well under what scanners do.
+- **Who is exempt.** Loopback, the LAN (`server_lan_cidrs`) and the Docker networks.
+  Uptime Kuma checks every protected site each minute and correctly gets a 401; it
+  reaches the proxy from the router's address through hairpin NAT, and used to
+  keep that address banned continuously. Anything from the internet is covered in
+  full.
+- **Where bans apply.** At the `prerouting` hook, dropping ports 80 and 443. The
+  stock action hooks `input`, which never sees traffic to a published Docker port,
+  so bans were recorded and blocked nothing (52,000 recorded failures, none
+  enforced). SSH is not covered by the web bans, so a banned address can still
+  reach the host, and the `sshd` jail has its own chain.
+- **Locked out?** From another network, or over SSH:
+  `sudo fail2ban-client set caddy-basic-auth unbanip <address>` (and the same for
+  `caddy-probe`). `sudo fail2ban-client status caddy-basic-auth` lists current bans.
+
+Things that will trip the next person, all found the hard way:
+
+- The chain must be a **jail option** (`chain = …`), not inside the action's
+  brackets. `jail.conf` gives every jail `chain = <known/chain>`, which silently
+  overrides the bracketed value and would put the web jails into the `sshd` jail's
+  `input` chain.
+- Actions start **lazily, on the first ban**. Until then the web chain does not
+  exist in `nft list table inet f2b-table`, which looks like a broken setup and
+  is not. Test it with `fail2ban-client set caddy-probe banip 203.0.113.77` (a
+  documentation-range address) and unban it afterwards.
+- The configuration is validated with `fail2ban-client -t` before the restart, so
+  a mistake fails the play and leaves the running protection in place.
+- Known limitation: fail2ban's automatic date detection occasionally fails to date
+  a line (2 of 43 matches observed), which would delay a ban by about one
+  attempt. Pinning the date pattern to the `ts` field is the fix; a first attempt
+  crashed fail2ban's own pattern parser, so it was left alone rather than risk
+  the filter.
+
 ### Conventions For Future Changes
 
 - package lists should stay in role defaults
