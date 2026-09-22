@@ -28,7 +28,7 @@ o.bind("XF86Calculator", "Calculator", { launch = "gnome-calculator" })
 o.window("org.gnome.Calculator", { float = true })
 o.window("org.gnome.Calculator", { center = true })
 
-o.bind("SUPER + SHIFT + H", "Email", { webapp = "https://app.hey.com" })
+o.bind("SUPER + SHIFT + H", "Email", { launch = "thunderbird" })
 
 hl.unbind("SUPER + SHIFT + S")
 o.bind("SUPER + SHIFT + S", "Hyprmon", { tui = "hyprmon" })
