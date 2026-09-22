@@ -30,6 +30,8 @@ o.window("org.gnome.Calculator", { center = true })
 
 o.bind("SUPER + SHIFT + H", "Email", { launch = "thunderbird" })
 
+o.bind("SUPER + SHIFT + V", "Speak clipboard", "tts-clip")
+
 hl.unbind("SUPER + SHIFT + S")
 o.bind("SUPER + SHIFT + S", "Hyprmon", { tui = "hyprmon" })
 o.bind("SUPER + SHIFT + CTRL + S", "External only", [[sh -c '[ "$(hyprctl monitors | grep -c Monitor)" -gt 1 ] && hyprctl keyword monitor "eDP-1, disable"']])
