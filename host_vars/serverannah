@@ -364,6 +364,8 @@ jellyfin_media_volumes:
   - "{{ jellyfin_media_root }}/Humour:/data/Humour:ro"
   - "{{ jellyfin_media_root }}/TV Shows:/data/TV Shows:ro"
   - "{{ jellyfin_media_root }}/Music:/data/Music:ro"
+jellyfin_excluded_media_paths:
+  - /data/Pictures
 
 # Receive state pushed by other hosts (currently raspi's trading agent) so the
 # existing Borg job carries it off-site. See roles/server/tasks/backup_inbox.yml.

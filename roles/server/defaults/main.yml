@@ -196,6 +196,9 @@ jellyfin_media_root: /mnt/SSD_1TO
 # it has no library configured for it.
 jellyfin_media_volumes:
   - "{{ jellyfin_media_root }}:/data:ro"
+# Removing a library does not reliably remove its indexed items. Paths listed
+# here are purged from Jellyfin's database and generated image cache.
+jellyfin_excluded_media_paths: []
 jellyfin_secret_dir: /etc/ansible/secrets
 jellyfin_admin_password_file: "{{ jellyfin_secret_dir }}/jellyfin-admin-password"
 jellyfin_admin_username: lion

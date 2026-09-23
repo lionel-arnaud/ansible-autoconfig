@@ -463,3 +463,84 @@
   when:
     - jellyfin_wizard_complete | bool
     - jellyfin_db_orphans.stdout_lines | default([]) | length > 0
+
+# Removing a virtual folder only hides its root: Jellyfin 12 leaves the indexed
+# descendants in BaseItems, so cached thumbnails remain visible even though the
+# container can no longer read the source files. Purge only explicitly excluded
+# paths. Foreign keys are enabled for this transaction so each item's metadata,
+# image references and user-data rows are removed with it.
+- name: Count indexed Jellyfin items under excluded media paths
+  ansible.builtin.command:
+    cmd: >-
+      sqlite3 {{ jellyfin_config_dir }}/data/data/jellyfin.db
+      "SELECT COUNT(*) FROM BaseItems WHERE
+      {% for path in jellyfin_excluded_media_paths %}
+      Path = '{{ path }}' OR Path LIKE '{{ path }}/%'{% if not loop.last %} OR{% endif %}
+      {% endfor %};"
+  register: jellyfin_excluded_item_count
+  changed_when: false
+  when:
+    - jellyfin_wizard_complete | bool
+    - jellyfin_excluded_media_paths | length > 0
+
+- name: Stop Jellyfin before purging excluded media metadata
+  ansible.builtin.command:
+    cmd: docker stop {{ jellyfin_container_name }}
+  register: jellyfin_excluded_media_stopped
+  changed_when: true
+  when:
+    - jellyfin_excluded_item_count.stdout | default('0') | trim | int > 0
+
+- name: Purge excluded Jellyfin media metadata
+  ansible.builtin.command:
+    cmd: >-
+      sqlite3 {{ jellyfin_config_dir }}/data/data/jellyfin.db
+      "PRAGMA foreign_keys=ON;
+      DELETE FROM LinkedChildren WHERE
+      ParentId IN (SELECT Id FROM BaseItems WHERE
+      {% for path in jellyfin_excluded_media_paths %}
+      Path = '{{ path }}' OR Path LIKE '{{ path }}/%'{% if not loop.last %} OR{% endif %}
+      {% endfor %}) OR ChildId IN (SELECT Id FROM BaseItems WHERE
+      {% for path in jellyfin_excluded_media_paths %}
+      Path = '{{ path }}' OR Path LIKE '{{ path }}/%'{% if not loop.last %} OR{% endif %}
+      {% endfor %});
+      DELETE FROM BaseItems WHERE
+      {% for path in jellyfin_excluded_media_paths %}
+      Path = '{{ path }}' OR Path LIKE '{{ path }}/%'{% if not loop.last %} OR{% endif %}
+      {% endfor %};
+      VACUUM;"
+  register: jellyfin_excluded_media_purged
+  changed_when: true
+  when:
+    - jellyfin_excluded_item_count.stdout | default('0') | trim | int > 0
+
+- name: Remove generated Jellyfin image cache after excluded media purge
+  ansible.builtin.file:
+    # linuxserver.io Jellyfin stores generated image derivatives below /config,
+    # not its separately mounted /cache directory.
+    path: "{{ jellyfin_config_dir }}/cache/images/resized-images"
+    state: absent
+  when:
+    - jellyfin_excluded_item_count.stdout | default('0') | trim | int > 0
+
+- name: Restart Jellyfin after excluded media purge
+  ansible.builtin.command:
+    cmd: docker start {{ jellyfin_container_name }}
+  register: jellyfin_excluded_media_restarted
+  changed_when: true
+  when:
+    - jellyfin_excluded_item_count.stdout | default('0') | trim | int > 0
+
+- name: Wait for Jellyfin to come back up after excluded media purge
+  ansible.builtin.uri:
+    url: "http://{{ jellyfin_lan_ip | default('192.168.1.100') }}:8096/System/Info/Public"
+    status_code: 200
+    validate_certs: false
+    timeout: 10
+  register: jellyfin_excluded_media_ready
+  until: jellyfin_excluded_media_ready.status | default(0) == 200
+  retries: 30
+  delay: 3
+  changed_when: false
+  when:
+    - jellyfin_excluded_item_count.stdout | default('0') | trim | int > 0
