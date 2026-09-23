@@ -191,6 +191,11 @@ jellyfin_network_name: autoconfig-services
 jellyfin_config_dir: /opt/jellyfin/config
 jellyfin_cache_dir: /opt/jellyfin/cache
 jellyfin_media_root: /mnt/SSD_1TO
+# Mount only the directories that back managed libraries. A whole-disk bind
+# mount makes every private file on that disk available to Jellyfin, even when
+# it has no library configured for it.
+jellyfin_media_volumes:
+  - "{{ jellyfin_media_root }}:/data:ro"
 jellyfin_secret_dir: /etc/ansible/secrets
 jellyfin_admin_password_file: "{{ jellyfin_secret_dir }}/jellyfin-admin-password"
 jellyfin_admin_username: lion

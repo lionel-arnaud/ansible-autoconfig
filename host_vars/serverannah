@@ -354,10 +354,16 @@ jellyfin_libraries:
     paths:
       - /data/Music
     preferred_language: fr
-  - name: Photos
-    collection_type: homevideos
-    paths:
-      - /data/Pictures
+
+# Do not bind-mount personal photos into Jellyfin. The explicit mount list is
+# also an access boundary: a newly created Jellyfin library cannot expose an
+# unmounted directory from the SSD.
+jellyfin_media_volumes:
+  - "{{ jellyfin_media_root }}/Movies:/data/Movies:ro"
+  - "{{ jellyfin_media_root }}/Docus:/data/Docus:ro"
+  - "{{ jellyfin_media_root }}/Humour:/data/Humour:ro"
+  - "{{ jellyfin_media_root }}/TV Shows:/data/TV Shows:ro"
+  - "{{ jellyfin_media_root }}/Music:/data/Music:ro"
 
 # Receive state pushed by other hosts (currently raspi's trading agent) so the
 # existing Borg job carries it off-site. See roles/server/tasks/backup_inbox.yml.

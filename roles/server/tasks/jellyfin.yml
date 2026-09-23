@@ -9,8 +9,8 @@
 
 # Jellyfin runs as a fixed UID inside the linuxserver.io image (UID 1000 in
 # the jellyfin user account). Bind-mount the config and cache into the host
-# so the state survives image upgrades. /mnt/SSD_1TO is mounted read-only
-# because media files are not mutated by the server.
+# so the state survives image upgrades. Selected SSD media directories are
+# mounted read-only because media files are not mutated by the server.
 - name: Ensure Jellyfin config directory exists
   ansible.builtin.file:
     path: "{{ jellyfin_config_dir }}"
@@ -96,16 +96,20 @@
     # port stayed open while its LAN-only guard rule was correctly removed.
     comparisons:
       published_ports: strict
+      volumes: strict
     networks:
       - name: "{{ jellyfin_network_name }}"
     env:
       PUID: "{{ jellyfin_puid | string }}"
       PGID: "{{ jellyfin_pgid | string }}"
       TZ: "{{ jellyfin_timezone }}"
-    volumes:
-      - "{{ jellyfin_config_dir }}:/config"
-      - "{{ jellyfin_cache_dir }}:/cache"
-      - "{{ jellyfin_media_root }}:/data:ro"
+    volumes: >-
+      {{
+        [
+          jellyfin_config_dir ~ ':/config',
+          jellyfin_cache_dir ~ ':/cache'
+        ] + jellyfin_media_volumes
+      }}
   no_log: true
 
 # Jellyfin's first-run wizard needs to complete before any library or user
