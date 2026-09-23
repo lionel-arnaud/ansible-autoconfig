@@ -257,6 +257,10 @@
       [Unit]
       Description=Run autoconfig Borg backup
       Requires=docker.service
+      # Do not snapshot databases or let Borg initialize a repository until
+      # the dedicated backup filesystem is mounted. RequiresMountsFor adds
+      # both the mount requirement and ordering derived from this path.
+      RequiresMountsFor={{ backup_required_mount }}
       After=network-online.target docker.service
       {% if notify_enabled | default(false) %}
       OnFailure=autoconfig-notify@%n.service
