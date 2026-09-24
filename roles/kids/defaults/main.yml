@@ -60,15 +60,20 @@ kids_backup_users:
   - "{{ kids_admin_user }}"
   - oscar
   - romy
+# Installed games and application runtimes can be reproduced. Keep this backup
+# focused on files the family creates in the standard personal directories.
+kids_backup_personal_directories:
+  - Desktop
+  - Documents
+  - Downloads
+  - Pictures
+  - Music
+  - Videos
 kids_backup_target: "backup-inbox@192.168.1.100:."
 kids_backup_key: /etc/kidsbook-backup/backup_key
 kids_backup_known_hosts: /etc/kidsbook-backup/backup_known_hosts
 kids_backup_host_key: ""
 kids_backup_oncalendar: "*-*-* 21:00:00 Europe/Paris"
-kids_backup_excludes:
-  - .cache/
-  - .local/share/Trash/
-
 # --- Applications (captured deliberate set, NOT the whole OS) ------------------
 # Curated out of `apt-mark showmanual` — review/adjust freely; these are the
 # learning + gaming apps actually installed on kidsbook.
