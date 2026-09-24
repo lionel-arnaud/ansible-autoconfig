@@ -391,3 +391,150 @@
   when:
     - pihole_policy_import_enabled | bool
     - not pihole_policy_hash_file_stat.stat.exists or (pihole_policy_hash_existing.content | b64decode | trim) != (pihole_policy_hash.stdout | trim)
+
+- name: Apply the managed kids Pi-hole client profile
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - |
+        import json
+        import sqlite3
+        import sys
+
+        db, enabled, name, clients_json, allow_json = sys.argv[1:]
+        enabled = enabled == "true"
+        clients = json.loads(clients_json)
+        allow = json.loads(allow_json)
+        marker = f"Managed by ansible Pi-hole client policy: {name}"
+        conn = sqlite3.connect(db, timeout=10)
+        conn.execute("PRAGMA foreign_keys = ON")
+        before = conn.total_changes
+
+        with conn:
+            row = conn.execute(
+                "SELECT id FROM 'group' WHERE name = ?", (name,)
+            ).fetchone()
+            if not enabled:
+                if row is not None:
+                    group_id = row[0]
+                    owned = conn.execute(
+                        "SELECT domainlist_id FROM domainlist_by_group "
+                        "WHERE group_id = ?", (group_id,)
+                    ).fetchall()
+                    conn.execute(
+                        "DELETE FROM client_by_group WHERE group_id = ?",
+                        (group_id,),
+                    )
+                    conn.execute(
+                        "DELETE FROM domainlist_by_group WHERE group_id = ?",
+                        (group_id,),
+                    )
+                    conn.execute("DELETE FROM 'group' WHERE id = ?", (group_id,))
+                    for (domainlist_id,) in owned:
+                        conn.execute(
+                            "DELETE FROM domainlist WHERE id = ? AND comment = ? "
+                            "AND NOT EXISTS (SELECT 1 FROM domainlist_by_group "
+                            "WHERE domainlist_id = ?)",
+                            (domainlist_id, marker, domainlist_id),
+                        )
+            else:
+                if row is None:
+                    conn.execute(
+                        "INSERT INTO 'group'(enabled, name, description) "
+                        "VALUES(1, ?, ?)",
+                        (name, "Restricted children device profile managed by Ansible"),
+                    )
+                    group_id = conn.execute(
+                        "SELECT id FROM 'group' WHERE name = ?", (name,)
+                    ).fetchone()[0]
+                else:
+                    group_id = row[0]
+                    conn.execute(
+                        "UPDATE 'group' SET enabled = 1, description = ? WHERE id = ?",
+                        ("Restricted children device profile managed by Ansible", group_id),
+                    )
+
+                client_ids = []
+                for client in clients:
+                    conn.execute(
+                        "INSERT INTO client(ip, comment) VALUES(?, ?) "
+                        "ON CONFLICT(ip) DO NOTHING",
+                        (client, marker),
+                    )
+                    client_id = conn.execute(
+                        "SELECT id FROM client WHERE ip = ?", (client,)
+                    ).fetchone()[0]
+                    client_ids.append(client_id)
+                    conn.execute(
+                        "INSERT OR IGNORE INTO client_by_group(client_id, group_id) "
+                        "VALUES(?, ?)",
+                        (client_id, group_id),
+                    )
+
+                placeholders = ",".join("?" for _ in client_ids) or "NULL"
+                conn.execute(
+                    "DELETE FROM client_by_group WHERE group_id = ? AND client_id "
+                    f"NOT IN ({placeholders})",
+                    [group_id, *client_ids],
+                )
+
+                rules = [(3, ".*"), *((2, rule) for rule in allow)]
+                rule_ids = []
+                for rule_type, domain in rules:
+                    conn.execute(
+                        "INSERT INTO domainlist(type, domain, enabled, comment) "
+                        "VALUES(?, ?, 1, ?) ON CONFLICT(domain, type) DO UPDATE "
+                        "SET enabled = 1, comment = excluded.comment",
+                        (rule_type, domain, marker),
+                    )
+                    domainlist_id = conn.execute(
+                        "SELECT id FROM domainlist WHERE type = ? AND domain = ?",
+                        (rule_type, domain),
+                    ).fetchone()[0]
+                    rule_ids.append(domainlist_id)
+                    conn.execute(
+                        "INSERT OR IGNORE INTO domainlist_by_group(domainlist_id, group_id) "
+                        "VALUES(?, ?)",
+                        (domainlist_id, group_id),
+                    )
+
+                placeholders = ",".join("?" for _ in rule_ids)
+                stale = conn.execute(
+                    "SELECT domainlist_id FROM domainlist_by_group WHERE group_id = ? "
+                    f"AND domainlist_id NOT IN ({placeholders})",
+                    [group_id, *rule_ids],
+                ).fetchall()
+                conn.execute(
+                    "DELETE FROM domainlist_by_group WHERE group_id = ? "
+                    f"AND domainlist_id NOT IN ({placeholders})",
+                    [group_id, *rule_ids],
+                )
+                for (domainlist_id,) in stale:
+                    conn.execute(
+                        "DELETE FROM domainlist WHERE id = ? AND comment = ? "
+                        "AND NOT EXISTS (SELECT 1 FROM domainlist_by_group "
+                        "WHERE domainlist_id = ?)",
+                        (domainlist_id, marker, domainlist_id),
+                    )
+
+        print("changed" if conn.total_changes != before else "ok")
+      - "{{ pihole_config_dir }}/gravity.db"
+      - "{{ pihole_kids_profile_enabled | ternary('true', 'false') }}"
+      - "{{ pihole_kids_profile_name }}"
+      - "{{ pihole_kids_profile_clients | to_json }}"
+      - "{{ pihole_kids_profile_allow_regex | to_json }}"
+  register: pihole_kids_profile
+  changed_when: pihole_kids_profile.stdout | trim == 'changed'
+  retries: 5
+  delay: 1
+  until: pihole_kids_profile.rc == 0
+
+- name: Restart Pi-hole after kids profile changes
+  ansible.builtin.command:
+    argv:
+      - docker
+      - restart
+      - "{{ pihole_container_name }}"
+  changed_when: true
+  when: pihole_kids_profile.changed

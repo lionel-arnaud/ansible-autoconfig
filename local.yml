@@ -67,7 +67,8 @@
   tags: kids
   become: true
   roles:
-    - kids
+    - role: kids
+      when: kids_enabled | default(false)
 
 # end of run cleanup
 - name: Clean up the package cache after the run

@@ -98,6 +98,11 @@ server_jellyfin_enabled: true
 # host loopback resolver while household clients use serverannah directly.
 server_pihole_enabled: true
 pihole_policy_import_enabled: true
+# The children use this static DHCP address. Their Pi-hole group is default-deny
+# except for Wikipedia and the operating-system/application update channels.
+pihole_kids_profile_enabled: true
+pihole_kids_profile_clients:
+  - 192.168.1.41
 
 # Pi-hole local DNS records — short names every LAN client resolves via
 # 192.168.1.100 (Pi-hole). Lets every device on the homelab refer to the

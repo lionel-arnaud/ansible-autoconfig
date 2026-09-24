@@ -1,0 +1,66 @@
+---
+- name: Require a complete strict DNS configuration
+  ansible.builtin.assert:
+    that:
+      - kids_dns_connection | length > 0
+      - kids_dns_device | length > 0
+      - kids_dns_servers | length > 0
+    fail_msg: >-
+      Strict DNS needs the active NetworkManager connection, its device, and at
+      least one Pi-hole DNS server.
+
+- name: Read the active Wi-Fi DNS configuration
+  ansible.builtin.command:
+    argv:
+      - nmcli
+      - --get-values
+      - ipv4.ignore-auto-dns,ipv4.dns,ipv6.ignore-auto-dns
+      - connection
+      - show
+      - "{{ kids_dns_connection }}"
+  register: kids_dns_current
+  changed_when: false
+
+- name: Pin the active Wi-Fi connection to Pi-hole DNS
+  ansible.builtin.command:
+    argv:
+      - nmcli
+      - connection
+      - modify
+      - "{{ kids_dns_connection }}"
+      - ipv4.ignore-auto-dns
+      - "yes"
+      - ipv4.dns
+      - "{{ kids_dns_servers | join(',') }}"
+      - ipv6.ignore-auto-dns
+      - "yes"
+  register: kids_dns_connection_update
+  when: >-
+    (kids_dns_current.stdout_lines | map('trim') | list)
+    != ['yes', kids_dns_servers | join(','), 'yes']
+
+- name: Apply the DNS configuration to the active Wi-Fi device
+  ansible.builtin.command:
+    argv:
+      - nmcli
+      - device
+      - reapply
+      - "{{ kids_dns_device }}"
+  when: kids_dns_connection_update.changed
+
+- name: Disable Firefox DNS-over-HTTPS
+  ansible.builtin.copy:
+    dest: "{{ kids_firefox_policies_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      {
+        "policies": {
+          "DNSOverHTTPS": {
+            "Enabled": false,
+            "Locked": true
+          }
+        }
+      }
+  when: kids_firefox_dns_over_https_disabled | default(false)

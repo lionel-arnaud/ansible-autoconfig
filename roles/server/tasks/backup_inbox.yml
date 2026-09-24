@@ -28,7 +28,7 @@
     password: "!"
     password_lock: true
 
-- name: Ensure the backup inbox directories exist
+- name: Ensure the shared backup inbox directories exist
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -38,12 +38,22 @@
   loop:
     - "{{ backup_inbox_dir }}"
     - "{{ backup_inbox_dir }}/.ssh"
-    - "{{ backup_inbox_dir }}/raspi"
+
+- name: Ensure each backup client directory exists
+  ansible.builtin.file:
+    path: "{{ backup_inbox_dir }}/{{ item.name }}"
+    state: directory
+    owner: "{{ backup_inbox_user }}"
+    group: "{{ backup_inbox_user }}"
+    mode: "0750"
+  loop: "{{ backup_inbox_clients }}"
+  loop_control:
+    label: "{{ item.name }}"
 
 # rrsync confines the key to one directory and to rsync alone: no shell, no
 # port forwarding, no reading anything else on this machine. "-wo" is
 # write-only, so a compromised Pi cannot read back what other hosts have sent.
-- name: Authorise the raspi trading agent backup key
+- name: Authorise backup client keys
   ansible.builtin.template:
     src: backup-inbox-authorized-keys.j2
     dest: "{{ backup_inbox_dir }}/.ssh/authorized_keys"

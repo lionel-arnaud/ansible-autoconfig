@@ -39,6 +39,17 @@ kids_timekpr_config_src_dir: "{{ playbook_dir }}/files/kids/timekpr/config"
 # oscar/romy = 15 min weekdays / 30 min weekends, allowed 16-20h on school days.
 kids_timekpr_user_confs: [daddy, oscar, romy]
 
+# A strict Pi-hole profile only works when the laptop cannot use DNS supplied by
+# the router alongside Pi-hole. The network address remains DHCP-managed; only
+# the resolver list is pinned. Firefox DoH is disabled separately so it cannot
+# silently select an encrypted public resolver.
+kids_dns_enforcement_enabled: false
+kids_dns_connection: ""
+kids_dns_device: ""
+kids_dns_servers: []
+kids_firefox_dns_over_https_disabled: false
+kids_firefox_policies_path: /usr/lib/firefox/distribution/policies.json
+
 # --- Applications (captured deliberate set, NOT the whole OS) ------------------
 # Curated out of `apt-mark showmanual` — review/adjust freely; these are the
 # learning + gaming apps actually installed on kidsbook.
