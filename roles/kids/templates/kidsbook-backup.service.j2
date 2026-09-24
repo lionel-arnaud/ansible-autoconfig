@@ -2,6 +2,10 @@
 Description=Push Kidsbook personal files to the backup inbox
 After=network-online.target
 Wants=network-online.target
+{% if notify_enabled | default(false) %}
+# The remote copy is otherwise silent when it fails between configuration runs.
+OnFailure=autoconfig-notify@%n.service
+{% endif %}
 
 [Service]
 Type=oneshot

@@ -2,12 +2,59 @@
 - name: Require a complete strict DNS configuration
   ansible.builtin.assert:
     that:
-      - kids_dns_connection | length > 0
-      - kids_dns_device | length > 0
       - kids_dns_servers | length > 0
     fail_msg: >-
-      Strict DNS needs the active NetworkManager connection, its device, and at
-      least one Pi-hole DNS server.
+      Strict DNS needs at least one Pi-hole DNS server.
+
+- name: Discover the active Wi-Fi device
+  ansible.builtin.command:
+    argv:
+      - nmcli
+      - --terse
+      - --fields
+      - DEVICE,TYPE,STATE
+      - device
+      - status
+  register: kids_nmcli_devices
+  changed_when: false
+  when: kids_dns_device | length == 0
+
+- name: Select the DNS device
+  ansible.builtin.set_fact:
+    kids_dns_effective_device: >-
+      {{ kids_dns_device if kids_dns_device | length > 0 else
+         ((kids_nmcli_devices.stdout_lines | select('search', ':wifi:connected$')
+         | first | default('')).split(':')[0]) }}
+
+- name: Require a connected Wi-Fi device
+  ansible.builtin.assert:
+    that: kids_dns_effective_device | length > 0
+    fail_msg: Could not discover a connected Wi-Fi device; set kids_dns_device explicitly.
+
+- name: Discover the active Wi-Fi connection
+  ansible.builtin.command:
+    argv:
+      - nmcli
+      - --get-values
+      - GENERAL.CONNECTION
+      - device
+      - show
+      - "{{ kids_dns_effective_device }}"
+  register: kids_nmcli_connection
+  changed_when: false
+  when: kids_dns_connection | length == 0
+
+- name: Select the DNS connection
+  ansible.builtin.set_fact:
+    kids_dns_effective_connection: >-
+      {{ kids_dns_connection if kids_dns_connection | length > 0 else kids_nmcli_connection.stdout | trim }}
+
+- name: Require an active Wi-Fi connection
+  ansible.builtin.assert:
+    that:
+      - kids_dns_effective_connection | length > 0
+      - kids_dns_effective_connection != '--'
+    fail_msg: Could not discover an active Wi-Fi connection; set kids_dns_connection explicitly.
 
 - name: Read the active Wi-Fi DNS configuration
   ansible.builtin.command:
@@ -17,7 +64,7 @@
       - ipv4.ignore-auto-dns,ipv4.dns,ipv6.ignore-auto-dns
       - connection
       - show
-      - "{{ kids_dns_connection }}"
+      - "{{ kids_dns_effective_connection }}"
   register: kids_dns_current
   changed_when: false
 
@@ -27,7 +74,7 @@
       - nmcli
       - connection
       - modify
-      - "{{ kids_dns_connection }}"
+      - "{{ kids_dns_effective_connection }}"
       - ipv4.ignore-auto-dns
       - "yes"
       - ipv4.dns
@@ -45,8 +92,17 @@
       - nmcli
       - device
       - reapply
-      - "{{ kids_dns_device }}"
+      - "{{ kids_dns_effective_device }}"
   when: kids_dns_connection_update.changed
+
+- name: Disable Firefox DNS-over-HTTPS
+  ansible.builtin.file:
+    path: "{{ kids_firefox_policies_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: kids_firefox_dns_over_https_disabled | default(false)
 
 - name: Disable Firefox DNS-over-HTTPS
   ansible.builtin.copy:

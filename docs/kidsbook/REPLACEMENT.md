@@ -18,8 +18,8 @@ hand.
 
 ## Install The Replacement
 
-1. Install a supported Linux Mint release with full-disk encryption where the
-   hardware supports it.
+1. Install Linux Mint or Ubuntu with full-disk encryption where the hardware
+   supports it. GNOME is supported; the role avoids XFCE-specific configuration.
 2. Create the `daddy` administrator account and retain its sudo password in the
    family password manager. The children accounts are created by Ansible.
 3. Set the hostname to `kidsbook`, join the home Wi-Fi, enable OpenSSH, and add
@@ -47,11 +47,25 @@ sudo ansible-playbook -i hosts --limit kidsbook local.yml --check
 sudo ansible-playbook -i hosts --limit kidsbook local.yml
 ```
 
-3. Confirm `timekpr.service` and `autoconfig-pull.timer` are both active and
-   enabled.
-4. Sign in as each child, check their permitted hours and budget, and test one
+3. Run the managed migration verification.
+
+```bash
+sudo ansible-playbook -i hosts --limit kidsbook local.yml --tags kids_verify
+```
+
+4. Confirm `timekpr.service`, `autoconfig-pull.timer`, and
+   `kidsbook-backup.timer` are all active and enabled.
+5. Confirm the ntfy test reaches the existing serverannah channel.
+
+```bash
+sudo /usr/local/sbin/autoconfig-notify "Kidsbook test" default "Notification path is working"
+```
+
+6. A replacement generates a new restricted backup key. Add its public key to
+   `backup_inbox_clients` on serverannah before enabling the backup timer.
+7. Sign in as each child, check their permitted hours and budget, and test one
    learning app and one game.
-5. Restore the backed-up user data, then verify SSH with `ssh kidsbook`.
+8. Restore the backed-up user data, then verify SSH with `ssh kidsbook`.
 
 ## Deliberate Decisions
 

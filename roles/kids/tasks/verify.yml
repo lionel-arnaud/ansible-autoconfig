@@ -1,0 +1,40 @@
+---
+- name: Check managed Kidsbook services
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - is-active
+      - "{{ kids_timekpr_service }}"
+      - autoconfig-pull.timer
+      - kidsbook-backup.timer
+  register: kids_verify_services
+  changed_when: false
+
+- name: Require managed Kidsbook services to be active
+  ansible.builtin.assert:
+    that: kids_verify_services.stdout_lines == ['active', 'active', 'active']
+    fail_msg: "One or more Kidsbook services are inactive: {{ kids_verify_services.stdout }}"
+
+- name: Check that the Pi-hole resolver is active
+  ansible.builtin.command: resolvectl dns
+  register: kids_verify_dns
+  changed_when: false
+  when: kids_dns_enforcement_enabled | default(false)
+
+- name: Require the configured Pi-hole resolver
+  ansible.builtin.assert:
+    that: (kids_dns_servers | first) in kids_verify_dns.stdout
+    fail_msg: "Pi-hole DNS is not active: {{ kids_verify_dns.stdout }}"
+  when: kids_dns_enforcement_enabled | default(false)
+
+- name: Check the Firefox DNS policy exists
+  ansible.builtin.stat:
+    path: "{{ kids_firefox_policies_path }}"
+  register: kids_verify_firefox_policy
+  when: kids_firefox_dns_over_https_disabled | default(false)
+
+- name: Require the Firefox DNS policy
+  ansible.builtin.assert:
+    that: kids_verify_firefox_policy.stat.exists
+    fail_msg: "Firefox DNS policy is missing from {{ kids_firefox_policies_path }}"
+  when: kids_firefox_dns_over_https_disabled | default(false)

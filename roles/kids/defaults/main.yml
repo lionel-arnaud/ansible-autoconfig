@@ -5,6 +5,14 @@
 # from scratch idempotently. Opt-in per host like every other role.
 kids_enabled: false
 
+# Mint GNOME and Ubuntu GNOME share the Debian/NetworkManager baseline used by
+# this role. Distribution-specific values stay in the mappings below instead of
+# leaking into a machine's host variables.
+kids_supported_distributions:
+  - Linux Mint
+  - Ubuntu
+kids_desktop: any
+
 # --- Accounts & groups --------------------------------------------------------
 # Two custom groups were created by hand on the machine. We pin their GIDs so a
 # rebuilt machine keeps the same numeric IDs (matters for any file shares / ACLs).
@@ -32,9 +40,13 @@ kids_admin_extra_groups: [parent, gamers]
 kids_timekpr_enabled: true
 kids_timekpr_packages: [timekpr-next]
 kids_timekpr_ppa: ppa:mjasnik/ppa
-# Ubuntu derivatives can have their own release name, while the PPA publishes
-# against Ubuntu codenames. Override this per derivative where needed.
-kids_timekpr_ppa_codename: "{{ ansible_facts['distribution_release'] }}"
+# The PPA publishes Ubuntu releases. Mint 22.x derives from Noble despite its
+# own named release; Ubuntu uses its native codename directly.
+kids_timekpr_ppa_codename_by_distribution:
+  Linux Mint: noble
+  Ubuntu: "{{ ansible_facts['distribution_release'] }}"
+kids_timekpr_ppa_codename: >-
+  {{ kids_timekpr_ppa_codename_by_distribution[ansible_facts['distribution']] }}
 kids_timekpr_service: timekpr.service
 kids_timekpr_main_conf_src: "{{ playbook_dir }}/files/kids/timekpr/timekpr.conf"
 kids_timekpr_config_src_dir: "{{ playbook_dir }}/files/kids/timekpr/config"
@@ -47,11 +59,19 @@ kids_timekpr_user_confs: [daddy, oscar, romy]
 # the resolver list is pinned. Firefox DoH is disabled separately so it cannot
 # silently select an encrypted public resolver.
 kids_dns_enforcement_enabled: false
+# Leave these blank for automatic discovery on a replacement machine. Set either
+# only when a non-default NetworkManager profile must be selected deliberately.
 kids_dns_connection: ""
 kids_dns_device: ""
 kids_dns_servers: []
 kids_firefox_dns_over_https_disabled: false
-kids_firefox_policies_path: /usr/lib/firefox/distribution/policies.json
+# Ubuntu ships Firefox as a Snap while Mint currently ships a deb. Their managed
+# policy locations differ, but both honour the same policy JSON.
+kids_firefox_policies_path_by_distribution:
+  Linux Mint: /usr/lib/firefox/distribution/policies.json
+  Ubuntu: /etc/firefox/policies/policies.json
+kids_firefox_policies_path: >-
+  {{ kids_firefox_policies_path_by_distribution[ansible_facts['distribution']] }}
 
 # Personal files are pushed to the server's write-only backup inbox. The server
 # Borg job then owns retention and the encrypted off-site copy.

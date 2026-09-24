@@ -22,16 +22,18 @@ base_cli_packages_exclude:
   - snapd
 
 # Keep the strict Pi-hole client profile effective even when the router advertises
-# an IPv6 resolver. DHCP still supplies the address and route; only DNS is pinned.
+# an IPv6 resolver. The active Wi-Fi profile/device are discovered automatically.
 kids_dns_enforcement_enabled: true
-kids_dns_connection: "#M+L_5"
-kids_dns_device: wlp2s0
 kids_dns_servers:
   - 192.168.1.100
 kids_firefox_dns_over_https_disabled: true
-# Mint 22.3 calls its release Zena; the Timekpr PPA publishes the matching
-# Ubuntu Noble build instead.
-kids_timekpr_ppa_codename: noble
+
+# Report failed pulls and failed personal-file backups through the existing
+# serverannah ntfy topic, so either machine can be diagnosed away from home. The
+# topic itself is seeded once into /etc/ansible/secrets/notify-topic, never kept
+# in this public repository.
+notify_enabled: true
+notify_show_subscribe_hint: false
 
 # Personal folders are mirrored to serverannah's write-only inbox. Its Borg job
 # keeps the retention history and encrypted off-site copy.

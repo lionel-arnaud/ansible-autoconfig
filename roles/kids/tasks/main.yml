@@ -31,6 +31,10 @@
     append: true
   tags: [kids, kids_users]
 
+- name: Check the Kidsbook platform prerequisites
+  ansible.builtin.import_tasks: platform.yml
+  tags: [kids, kids_platform]
+
 - name: Set up timekpr-next parental controls
   ansible.builtin.import_tasks: timekpr.yml
   when: kids_timekpr_enabled | default(true)
@@ -49,3 +53,9 @@
 - name: Install learning and gaming applications
   ansible.builtin.import_tasks: apps.yml
   tags: [kids, kids_apps]
+
+# Run explicitly during a migration or after a significant platform change:
+# ansible-playbook local.yml --limit kidsbook --tags kids_verify
+- name: Verify the managed Kidsbook baseline
+  ansible.builtin.import_tasks: verify.yml
+  tags: [never, kids_verify]

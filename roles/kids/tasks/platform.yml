@@ -1,0 +1,20 @@
+---
+- name: Require a supported Kidsbook distribution
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] in kids_supported_distributions
+      - ansible_facts['os_family'] == 'Debian'
+    fail_msg: >-
+      Kidsbook supports {{ kids_supported_distributions | join(' and ') }}.
+      Add a platform mapping for {{ ansible_facts['distribution'] }} before using it.
+
+- name: Require NetworkManager for managed DNS enforcement
+  ansible.builtin.service_facts:
+  when: kids_dns_enforcement_enabled | default(false)
+
+- name: Require NetworkManager to be active
+  ansible.builtin.assert:
+    that: >-
+      ansible_facts.services['NetworkManager.service'].state == 'running'
+    fail_msg: NetworkManager must be active when Kidsbook DNS enforcement is enabled.
+  when: kids_dns_enforcement_enabled | default(false)
