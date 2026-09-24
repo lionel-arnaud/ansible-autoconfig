@@ -599,6 +599,8 @@ pihole_kids_profile_allow_regex:
   # Mint, Ubuntu, the Timekpr PPA, and signed package metadata.
   - '(^|\.)linuxmint\.com$'
   - '(^|\.)ubuntu\.com$'
+  - '(^|\.)ibcp\.fr$'
+  - '(^|\.)univ-reims\.fr$'
   - '(^|\.)launchpadcontent\.net$'
   - '(^|\.)launchpad\.net$'
   - '(^|\.)keyserver\.ubuntu\.com$'
