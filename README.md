@@ -216,8 +216,24 @@ tells me when one of them stops".
       Nextcloud `occ` wait loop, so the playbook cannot be pre-flighted. Guard
       the wait loops with `when: not ansible_check_mode`.
 - [ ] **Docker log rotation is capped; disk usage is not monitored.** A simple
-      hourly disk-percentage check wired to the new notifier would have flagged
-      the 94%-full disk long before it became urgent.
+       hourly disk-percentage check wired to the new notifier would have flagged
+       the 94%-full disk long before it became urgent.
+
+### Kidsbook Portability
+
+- [x] **Portable Kidsbook baseline.** Linux Mint (XFCE or Cinnamon) and Ubuntu
+      GNOME are accepted explicitly; NetworkManager profiles are discovered at
+      runtime; Timekpr, Firefox policy, and Steam delivery are platform-mapped.
+- [x] **Remote failure reporting.** Kidsbook's automatic pull and personal-file
+      backup failures publish to the shared ntfy channel through a root-only
+      local topic file.
+- [x] **Personal file backup.** Standard user folders are mirrored to the
+      server's restricted inbox and included in its encrypted Borg/off-site copy.
+- [ ] **Test the full role in a Mint Cinnamon VM.** Validate login/session,
+      Timekpr enforcement, Firefox policy, DNS policy, learning apps, Steam,
+      and one restore before changing the real laptop.
+- [ ] **Test the Ubuntu GNOME adapter in a VM.** Confirm Flatpak Steam, Timekpr
+      availability, and the Snap Firefox policy path for the selected release.
 
 - [ ] **Trading agent: act on a changed call.** Changing an answer from yes to
       no stops new purchases, but does not yet sell a position already held:

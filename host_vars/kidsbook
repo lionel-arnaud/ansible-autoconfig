@@ -11,6 +11,7 @@ ansible_python_interpreter: /usr/bin/python3
 # but its workstation-flavoured extras stay off — no dotfiles, no Starship prompt
 # rewrite, no lazydocker on a kids machine.
 kids_enabled: true
+kids_desktop: xfce
 base_dotfiles_enabled: false
 base_starship_prompt_enabled: false
 base_lazydocker_enabled: false

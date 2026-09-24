@@ -18,24 +18,30 @@
     state: present
   when: kids_gamemode_enabled | default(true)
 
-# Steam ships only as a 32-bit package, so the i386 architecture has to be added
-# to dpkg before apt can resolve it.
+# Steam's native package ships only as 32-bit, so i386 must be enabled before apt
+# can resolve it. Ubuntu uses the Flatpak delivery path instead (see defaults).
 - name: Enable the i386 architecture for Steam
   ansible.builtin.command: dpkg --add-architecture i386
   register: kids_dpkg_i386
   changed_when: "'i386' not in kids_dpkg_i386.stdout"
-  when: kids_steam_enabled | default(true)
+  when:
+    - kids_steam_enabled | default(true)
+    - kids_steam_install_method == 'apt'
 
 - name: Refresh apt cache after adding i386
   ansible.builtin.apt:
     update_cache: true
-  when: kids_steam_enabled | default(true)
+  when:
+    - kids_steam_enabled | default(true)
+    - kids_steam_install_method == 'apt'
 
 - name: Install Steam
   ansible.builtin.apt:
     name: "{{ kids_steam_packages }}"
     state: present
-  when: kids_steam_enabled | default(true)
+  when:
+    - kids_steam_enabled | default(true)
+    - kids_steam_install_method == 'apt'
 
 # Flatpak apps from Flathub. flatpak itself is already part of the Mint base.
 - name: Ensure the Flathub remote is configured
@@ -50,5 +56,8 @@
     name: "{{ item }}"
     remote: "{{ kids_flatpak_remote_name }}"
     state: present
-  loop: "{{ kids_flatpak_apps }}"
+  loop: >-
+    {{ kids_flatpak_apps +
+       ([kids_steam_flatpak_app] if kids_steam_enabled | default(true)
+       and kids_steam_install_method == 'flatpak' else []) }}
   when: kids_flatpak_enabled | default(true)

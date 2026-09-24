@@ -11,6 +11,11 @@ kids_enabled: false
 kids_supported_distributions:
   - Linux Mint
   - Ubuntu
+kids_supported_desktops:
+  - any
+  - xfce
+  - cinnamon
+  - gnome
 kids_desktop: any
 
 # --- Accounts & groups --------------------------------------------------------
@@ -116,7 +121,16 @@ kids_apt_games:
 
 # Steam is a 32-bit package: enabling the i386 architecture is required first.
 kids_steam_enabled: true
+# Mint's Steam package is already available through its configured sources.
+# Ubuntu's equivalent sits in optional multiverse; Flatpak avoids adding another
+# repository component during a family-machine rebuild.
+kids_steam_install_method_by_distribution:
+  Linux Mint: apt
+  Ubuntu: flatpak
+kids_steam_install_method: >-
+  {{ kids_steam_install_method_by_distribution[ansible_facts['distribution']] }}
 kids_steam_packages: [steam-installer]
+kids_steam_flatpak_app: com.valvesoftware.Steam
 kids_gamemode_enabled: true
 kids_gamemode_packages: [gamemode]
 

@@ -620,6 +620,8 @@ pihole_kids_profile_allow_regex:
   - '(^|\.)ansible\.com$'
   - '(^|\.)ubuntu\.pool\.ntp\.org$'
   - '(^|\.)pool\.ntp\.org$'
+  # Remote failure reporting from the managed Kidsbook jobs.
+  - '(^|\.)ntfy\.sh$'
 pihole_published_ports: "{{ pihole_mode_profiles[pihole_mode].published_ports + pihole_extra_published_ports }}"
 # NET_ADMIN is kept explicit because Pi-hole documents it as the practical
 # default for containerized network operations, even when DHCP stays off.

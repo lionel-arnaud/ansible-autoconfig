@@ -4,9 +4,18 @@
     that:
       - ansible_facts['distribution'] in kids_supported_distributions
       - ansible_facts['os_family'] == 'Debian'
+      - kids_desktop in kids_supported_desktops
     fail_msg: >-
       Kidsbook supports {{ kids_supported_distributions | join(' and ') }}.
       Add a platform mapping for {{ ansible_facts['distribution'] }} before using it.
+
+- name: Require Flatpak when the selected Steam platform uses it
+  ansible.builtin.assert:
+    that: kids_flatpak_enabled | bool
+    fail_msg: Ubuntu Steam installation requires kids_flatpak_enabled to be true.
+  when:
+    - kids_steam_enabled | default(true)
+    - kids_steam_install_method == 'flatpak'
 
 - name: Require NetworkManager for managed DNS enforcement
   ansible.builtin.service_facts:
