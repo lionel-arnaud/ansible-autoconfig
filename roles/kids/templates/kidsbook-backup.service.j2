@@ -1,0 +1,8 @@
+[Unit]
+Description=Push Kidsbook personal files to the backup inbox
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/kidsbook-backup

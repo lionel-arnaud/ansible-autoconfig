@@ -41,6 +41,11 @@
   when: kids_dns_enforcement_enabled | default(false)
   tags: [kids, kids_network]
 
+- name: Back up personal files to serverannah
+  ansible.builtin.import_tasks: backup.yml
+  when: kids_backup_enabled | default(false)
+  tags: [kids, kids_backup]
+
 - name: Install learning and gaming applications
   ansible.builtin.import_tasks: apps.yml
   tags: [kids, kids_apps]

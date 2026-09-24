@@ -1,0 +1,61 @@
+---
+- name: Install rsync for personal file backups
+  ansible.builtin.package:
+    name: rsync
+    state: present
+
+- name: Ensure the backup key directory exists
+  ansible.builtin.file:
+    path: "{{ kids_backup_key | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Generate the Kidsbook backup key when absent
+  ansible.builtin.command:
+    cmd: >-
+      ssh-keygen -q -t ed25519 -N '' -C kidsbook-backup
+      -f {{ kids_backup_key }}
+    creates: "{{ kids_backup_key }}"
+
+- name: Pin the serverannah SSH host key
+  ansible.builtin.copy:
+    content: "{{ kids_backup_host_key }}\n"
+    dest: "{{ kids_backup_known_hosts }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install the personal file backup script
+  ansible.builtin.template:
+    src: kidsbook-backup.sh.j2
+    dest: /usr/local/sbin/kidsbook-backup
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the personal file backup unit
+  ansible.builtin.template:
+    src: kidsbook-backup.service.j2
+    dest: /etc/systemd/system/kidsbook-backup.service
+    owner: root
+    group: root
+    mode: "0644"
+  register: kids_backup_unit
+
+- name: Install the personal file backup timer
+  ansible.builtin.template:
+    src: kidsbook-backup.timer.j2
+    dest: /etc/systemd/system/kidsbook-backup.timer
+    owner: root
+    group: root
+    mode: "0644"
+  register: kids_backup_timer
+
+- name: Enable the personal file backup timer
+  ansible.builtin.systemd:
+    name: kidsbook-backup.timer
+    enabled: true
+    state: started
+    daemon_reload: "{{ (kids_backup_unit is changed) or (kids_backup_timer is changed) }}"

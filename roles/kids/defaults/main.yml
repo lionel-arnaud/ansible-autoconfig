@@ -53,6 +53,22 @@ kids_dns_servers: []
 kids_firefox_dns_over_https_disabled: false
 kids_firefox_policies_path: /usr/lib/firefox/distribution/policies.json
 
+# Personal files are pushed to the server's write-only backup inbox. The server
+# Borg job then owns retention and the encrypted off-site copy.
+kids_backup_enabled: false
+kids_backup_users:
+  - "{{ kids_admin_user }}"
+  - oscar
+  - romy
+kids_backup_target: "backup-inbox@192.168.1.100:."
+kids_backup_key: /etc/kidsbook-backup/backup_key
+kids_backup_known_hosts: /etc/kidsbook-backup/backup_known_hosts
+kids_backup_host_key: ""
+kids_backup_oncalendar: "*-*-* 21:00:00 Europe/Paris"
+kids_backup_excludes:
+  - .cache/
+  - .local/share/Trash/
+
 # --- Applications (captured deliberate set, NOT the whole OS) ------------------
 # Curated out of `apt-mark showmanual` — review/adjust freely; these are the
 # learning + gaming apps actually installed on kidsbook.

@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily Kidsbook personal file backup
+
+[Timer]
+OnCalendar={{ kids_backup_oncalendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

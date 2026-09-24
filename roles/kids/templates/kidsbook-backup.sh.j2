@@ -1,0 +1,24 @@
+#!/bin/sh
+# Managed by Ansible (roles/kids). Do not edit on the host.
+set -eu
+
+remote="{{ kids_backup_target }}"
+
+# The source list is explicit so system directories and other accounts never
+# become part of this family-data backup by accident.
+set --
+{% for user in kids_backup_users %}
+[ -d "/home/{{ user }}" ] && set -- "$@" "/home/{{ user }}"
+{% endfor %}
+
+[ "$#" -gt 0 ] || exit 0
+
+rsync --archive --hard-links --acls --xattrs --numeric-ids --delete \
+{% for exclude in kids_backup_excludes %}
+  --exclude='{{ exclude }}' \
+{% endfor %}
+  --timeout=120 --chmod=D0750,F0640 \
+  -e "ssh -i {{ kids_backup_key }} -o BatchMode=yes -o ConnectTimeout=15 \
+      -o UserKnownHostsFile={{ kids_backup_known_hosts }} \
+      -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes" \
+  "$@" "$remote"

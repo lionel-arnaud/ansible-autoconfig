@@ -375,6 +375,13 @@ jellyfin_excluded_media_paths:
 # Receive state pushed by other hosts (currently raspi's trading agent) so the
 # existing Borg job carries it off-site. See roles/server/tasks/backup_inbox.yml.
 backup_inbox_enabled: true
+backup_inbox_clients:
+  - name: raspi
+    public_key_file: files/backup/raspi-trading-agent.pub
+  # Root on Kidsbook owns this key. rrsync limits it to writes in this directory;
+  # it cannot obtain a shell or read any backup data from serverannah.
+  - name: kidsbook
+    public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMji6KV3bnKwqExKrlTHgExcB8SR9olpNHrw/AjjWZkw kidsbook-backup"
 
 # Serve the trading agent's daily page from the backup inbox.
 server_trader_dashboard_enabled: true

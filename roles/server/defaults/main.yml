@@ -486,7 +486,7 @@ backup_inbox_dir: /var/lib/backup-inbox
 backup_inbox_rrsync: /usr/bin/rrsync
 backup_inbox_clients:
   - name: raspi
-    public_key: files/backup/raspi-trading-agent.pub
+    public_key_file: files/backup/raspi-trading-agent.pub
 
 # The trading agent's daily page: rendered on the Pi, pushed into the backup
 # inbox, served from here. See tasks/trader_dashboard.yml.
