@@ -29,3 +29,6 @@ kids_dns_device: wlp2s0
 kids_dns_servers:
   - 192.168.1.100
 kids_firefox_dns_over_https_disabled: true
+# Mint 22.3 calls its release Zena; the Timekpr PPA publishes the matching
+# Ubuntu Noble build instead.
+kids_timekpr_ppa_codename: noble

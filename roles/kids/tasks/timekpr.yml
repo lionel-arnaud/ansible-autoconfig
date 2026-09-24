@@ -9,6 +9,7 @@
 - name: Add the timekpr-next PPA
   ansible.builtin.apt_repository:
     repo: "{{ kids_timekpr_ppa }}"
+    codename: "{{ kids_timekpr_ppa_codename }}"
     state: present
     update_cache: true
 

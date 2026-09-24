@@ -32,6 +32,9 @@ kids_admin_extra_groups: [parent, gamers]
 kids_timekpr_enabled: true
 kids_timekpr_packages: [timekpr-next]
 kids_timekpr_ppa: ppa:mjasnik/ppa
+# Ubuntu derivatives can have their own release name, while the PPA publishes
+# against Ubuntu codenames. Override this per derivative where needed.
+kids_timekpr_ppa_codename: "{{ ansible_facts['distribution_release'] }}"
 kids_timekpr_service: timekpr.service
 kids_timekpr_main_conf_src: "{{ playbook_dir }}/files/kids/timekpr/timekpr.conf"
 kids_timekpr_config_src_dir: "{{ playbook_dir }}/files/kids/timekpr/config"
