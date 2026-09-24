@@ -14,6 +14,12 @@ kids_enabled: true
 base_dotfiles_enabled: false
 base_starship_prompt_enabled: false
 base_lazydocker_enabled: false
+# Linux Mint 22.3 does not offer these optional workstation tools from its
+# configured repositories, and Kidsbook does not use them.
+base_cli_packages_exclude:
+  - starship
+  - lazygit
+  - snapd
 
 # Keep the strict Pi-hole client profile effective even when the router advertises
 # an IPv6 resolver. DHCP still supplies the address and route; only DNS is pinned.

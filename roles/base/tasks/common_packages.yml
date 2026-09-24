@@ -9,7 +9,9 @@
 
 - name: Load package plan for this OS family
   ansible.builtin.set_fact:
-    base_cli_packages: "{{ base_packages_by_family[ansible_facts.os_family].cli }}"
+    base_cli_packages: >-
+      {{ base_packages_by_family[ansible_facts.os_family].cli
+         | difference(base_cli_packages_exclude | default([])) }}
     base_snap_packages: "{{ base_packages_by_family[ansible_facts.os_family].snaps }}"
 
 - name: Detect Omarchy before distro package installs

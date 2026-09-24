@@ -72,6 +72,10 @@ base_packages_by_family:
       - nethogs
     snaps: []
 
+# Hosts can omit optional packages unavailable in their distribution's enabled
+# repositories without forking the common package map.
+base_cli_packages_exclude: []
+
 # NOTE: Opt-in per host. False by default so unknown machines are never touched.
 # To enable dotfiles on a new host, add to its host_vars:
 #   base_dotfiles_enabled: true
