@@ -416,28 +416,21 @@
                 "SELECT id FROM 'group' WHERE name = ?", (name,)
             ).fetchone()
             if not enabled:
+                conn.execute(
+                    "DELETE FROM domainlist_by_group WHERE domainlist_id IN "
+                    "(SELECT id FROM domainlist WHERE comment = ?)",
+                    (marker,),
+                )
+                conn.execute(
+                    "DELETE FROM domainlist WHERE comment = ?", (marker,)
+                )
                 if row is not None:
                     group_id = row[0]
-                    owned = conn.execute(
-                        "SELECT domainlist_id FROM domainlist_by_group "
-                        "WHERE group_id = ?", (group_id,)
-                    ).fetchall()
                     conn.execute(
                         "DELETE FROM client_by_group WHERE group_id = ?",
                         (group_id,),
                     )
-                    conn.execute(
-                        "DELETE FROM domainlist_by_group WHERE group_id = ?",
-                        (group_id,),
-                    )
                     conn.execute("DELETE FROM 'group' WHERE id = ?", (group_id,))
-                    for (domainlist_id,) in owned:
-                        conn.execute(
-                            "DELETE FROM domainlist WHERE id = ? AND comment = ? "
-                            "AND NOT EXISTS (SELECT 1 FROM domainlist_by_group "
-                            "WHERE domainlist_id = ?)",
-                            (domainlist_id, marker, domainlist_id),
-                        )
             else:
                 if row is None:
                     conn.execute(
@@ -493,6 +486,13 @@
                         (rule_type, domain),
                     ).fetchone()[0]
                     rule_ids.append(domainlist_id)
+                    # Pi-hole adds every new domain rule to Default. Remove
+                    # that implicit link before assigning this client-only rule.
+                    conn.execute(
+                        "DELETE FROM domainlist_by_group WHERE domainlist_id = ? "
+                        "AND group_id != ?",
+                        (domainlist_id, group_id),
+                    )
                     conn.execute(
                         "INSERT OR IGNORE INTO domainlist_by_group(domainlist_id, group_id) "
                         "VALUES(?, ?)",
