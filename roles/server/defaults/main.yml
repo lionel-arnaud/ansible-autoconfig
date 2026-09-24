@@ -593,30 +593,30 @@ pihole_kids_profile_name: kidsbook-restricted
 pihole_kids_profile_clients: []
 pihole_kids_profile_allow_regex:
   # Wikipedia and its media/data hosts.
-  - '(^|\\.)wikipedia\\.org$'
-  - '(^|\\.)wikimedia\\.org$'
-  - '(^|\\.)wikidata\\.org$'
+  - '(^|\.)wikipedia\.org$'
+  - '(^|\.)wikimedia\.org$'
+  - '(^|\.)wikidata\.org$'
   # Mint, Ubuntu, the Timekpr PPA, and signed package metadata.
-  - '(^|\\.)linuxmint\\.com$'
-  - '(^|\\.)ubuntu\\.com$'
-  - '(^|\\.)launchpadcontent\\.net$'
-  - '(^|\\.)launchpad\\.net$'
-  - '(^|\\.)keyserver\\.ubuntu\\.com$'
+  - '(^|\.)linuxmint\.com$'
+  - '(^|\.)ubuntu\.com$'
+  - '(^|\.)launchpadcontent\.net$'
+  - '(^|\.)launchpad\.net$'
+  - '(^|\.)keyserver\.ubuntu\.com$'
   # Flatpak, Steam, Firefox, and Snap update delivery.
-  - '(^|\\.)flathub\\.org$'
-  - '(^|\\.)steampowered\\.com$'
-  - '(^|\\.)steamstatic\\.com$'
-  - '(^|\\.)steamcontent\\.com$'
-  - '(^|\\.)akamaihd\\.net$'
-  - '(^|\\.)mozilla\\.(org|net|com)$'
-  - '(^|\\.)snapcraft\\.io$'
-  - '(^|\\.)snapcraftcontent\\.com$'
+  - '(^|\.)flathub\.org$'
+  - '(^|\.)steampowered\.com$'
+  - '(^|\.)steamstatic\.com$'
+  - '(^|\.)steamcontent\.com$'
+  - '(^|\.)akamaihd\.net$'
+  - '(^|\.)mozilla\.(org|net|com)$'
+  - '(^|\.)snapcraft\.io$'
+  - '(^|\.)snapcraftcontent\.com$'
   # The managed checkout and time synchronisation.
-  - '(^|\\.)github\\.com$'
-  - '(^|\\.)githubusercontent\\.com$'
-  - '(^|\\.)github-releases\\.githubusercontent\\.com$'
-  - '(^|\\.)ubuntu\\.pool\\.ntp\\.org$'
-  - '(^|\\.)pool\\.ntp\\.org$'
+  - '(^|\.)github\.com$'
+  - '(^|\.)githubusercontent\.com$'
+  - '(^|\.)github-releases\.githubusercontent\.com$'
+  - '(^|\.)ubuntu\.pool\.ntp\.org$'
+  - '(^|\.)pool\.ntp\.org$'
 pihole_published_ports: "{{ pihole_mode_profiles[pihole_mode].published_ports + pihole_extra_published_ports }}"
 # NET_ADMIN is kept explicit because Pi-hole documents it as the practical
 # default for containerized network operations, even when DHCP stays off.
