@@ -98,9 +98,9 @@ server_jellyfin_enabled: true
 # host loopback resolver while household clients use serverannah directly.
 server_pihole_enabled: true
 pihole_policy_import_enabled: true
-# Disabled until its Pi-hole v6 group rules have been validated against a live
-# client. A failed profile must never be allowed to affect the Default group.
-pihole_kids_profile_enabled: false
+# The restrictive Pi-hole profile applies only to Kidsbook's static DHCP lease.
+# The role removes Pi-hole's implicit Default-group link before assigning rules.
+pihole_kids_profile_enabled: true
 pihole_kids_profile_clients:
   - 192.168.1.41
 
