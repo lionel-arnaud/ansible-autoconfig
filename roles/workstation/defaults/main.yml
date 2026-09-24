@@ -11,6 +11,7 @@ workstation_cli_enabled: true
 workstation_dotfiles_enabled: true
 workstation_espanso_enabled: false
 workstation_firewall_enabled: true
+workstation_keyd_enabled: false
 
 # ufw rules for a LAN workstation. Prefer an application profile shipped by the
 # package over a hard-coded port range; KDEConnect resolves to 1714:1764 on both

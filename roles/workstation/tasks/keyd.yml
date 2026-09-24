@@ -1,0 +1,33 @@
+---
+- name: Require Arch Linux for keyd input remapping
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family == "Archlinux"
+    fail_msg: >-
+      Add the appropriate keyd package and service details for
+      {{ ansible_facts.os_family }} before enabling workstation_keyd_enabled.
+
+- name: Install keyd
+  ansible.builtin.package:
+    name: keyd
+    state: present
+
+- name: Install the ProtoArc EM11 keyd mapping
+  ansible.builtin.copy:
+    src: keyd/protoarc-em11.conf
+    dest: /etc/keyd/protoarc-em11.conf
+    owner: root
+    group: root
+    mode: "0644"
+  register: workstation_keyd_config
+
+- name: Validate the ProtoArc EM11 keyd mapping
+  ansible.builtin.command:
+    argv: [keyd, check, /etc/keyd/protoarc-em11.conf]
+  changed_when: false
+
+- name: Enable the keyd service
+  ansible.builtin.systemd_service:
+    name: keyd.service
+    enabled: true
+    state: "{{ 'restarted' if workstation_keyd_config.changed else 'started' }}"

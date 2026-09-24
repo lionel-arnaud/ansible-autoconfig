@@ -40,10 +40,6 @@ o.bind("SUPER + SHIFT + ALT + S", "Laptop screen on", [[hyprctl keyword monitor 
 o.bind("SUPER + SHIFT + ESCAPE", "Suspend", "systemctl suspend")
 o.bind("SUPER + SHIFT + code:49", "Restart Espanso", "espanso restart")
 
--- ProtoArc EM11 side buttons switch tabs in Chromium-family browsers.
-o.bind("mouse:8", "Previous browser tab", "wtype -M ctrl -k Page_Up -m ctrl")
-o.bind("mouse:9", "Next browser tab", "wtype -M ctrl -k Page_Down -m ctrl")
-
 local numpad_workspaces = {
   KP_End = 1,
   KP_Down = 2,

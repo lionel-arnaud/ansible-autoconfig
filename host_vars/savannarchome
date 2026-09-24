@@ -11,6 +11,7 @@ workstation_enabled: true
 workstation_cli_enabled: true
 workstation_dotfiles_enabled: true
 workstation_espanso_enabled: true
+workstation_keyd_enabled: true
 # Failure notifications. Generates its own topic, separate from the server's, so
 # one leaked topic does not expose both machines.
 notify_enabled: true

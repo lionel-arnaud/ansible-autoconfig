@@ -10,6 +10,12 @@
       tags:
         - workstation_cli
 
+    - name: Configure input remapping
+      ansible.builtin.import_tasks: keyd.yml
+      when: workstation_keyd_enabled | default(false)
+      tags:
+        - workstation_keyd
+
     - name: Configure the host firewall
       ansible.builtin.import_tasks: firewall.yml
       when: workstation_firewall_enabled | default(true)
