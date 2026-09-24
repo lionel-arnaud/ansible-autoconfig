@@ -617,6 +617,7 @@ pihole_kids_profile_allow_regex:
   - '(^|\.)github\.com$'
   - '(^|\.)githubusercontent\.com$'
   - '(^|\.)github-releases\.githubusercontent\.com$'
+  - '(^|\.)ansible\.com$'
   - '(^|\.)ubuntu\.pool\.ntp\.org$'
   - '(^|\.)pool\.ntp\.org$'
 pihole_published_ports: "{{ pihole_mode_profiles[pihole_mode].published_ports + pihole_extra_published_ports }}"
