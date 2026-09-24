@@ -108,14 +108,16 @@ def run_cycle(*, state, config, broker, feed, reasoner, audit, views=None,
             "notional": p.notional_usd, "rationale": p.rationale,
         })
 
-        # O-07: opening a position requires a view the operator recorded
-        # BEFORE the outcome was known. That makes their judgment the alpha
-        # source rather than the model's, and makes every trade traceable to a
-        # prediction that can be scored afterwards.
+        # Paper trading is a bounded warm-up: it lets the operator see the
+        # system work while consultations build a useful history. Real-money
+        # buys still require a view recorded BEFORE the outcome was known.
+        # That makes their judgment the alpha source rather than the model's,
+        # and makes every live trade traceable to a prediction that can be
+        # scored afterwards.
         #
         # Selling is exempt: getting out is risk reduction and must not wait on
         # anyone's availability.
-        if views is not None and p.side == "buy":
+        if config.is_live and views is not None and p.side == "buy":
             view = views.for_symbol(p.symbol, now=now)
             # Positive only. is_actionable means "the operator holds an
             # opinion", which is true of "no" as well — so this gate used to

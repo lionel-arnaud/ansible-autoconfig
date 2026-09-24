@@ -122,11 +122,13 @@
   is worth more than any amount of model cleverness. It costs almost nothing
   once views carry timestamps.
 
-- **O-07 A stored view gates 100% of opening trades.** This makes the operator's
-  judgment the alpha source and the agent the execution-and-discipline layer,
-  rather than an LLM guessing at biotech outcomes — a worse product that also
-  teaches nothing. Consequence, accepted deliberately: in a week with no
-  answers, the agent opens nothing. That is correct behaviour, not a fault.
+- **O-07 A stored view gates real-money opening trades.** Paper trading is a
+  bounded warm-up: it starts under the same deterministic risk limits while the
+  consultation queue builds useful context. This lets the operator observe the
+  system and learn from the questions without clearing a historical backlog.
+  Real-money buys still make the operator's judgment the alpha source and the
+  agent the execution-and-discipline layer, rather than an LLM guessing at
+  biotech outcomes.
 
   One exception: **closing** a position needs no view. Getting out is risk
   reduction and must not wait on anyone's availability.

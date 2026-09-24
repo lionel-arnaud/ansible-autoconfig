@@ -1098,9 +1098,10 @@ free-text reasoning. The brief explains the field's vocabulary as it goes, and
 calls are scored against real results, measured against the base rate for that
 phase.
 
-**How a trade happens.** Catalyst → model proposal → *view gate* (no opening
-position without a recorded human call) → *guardrails* → broker. The guardrails
-are pure, deterministic code with no model, network or clock inside them:
+**How a trade happens.** Catalyst → model proposal → *view gate* (required for
+real-money opening positions; paper trading starts while views build) →
+*guardrails* → broker. The guardrails are pure, deterministic code with no
+model, network or clock inside them:
 position size, total deployed, trades per day, a latched daily loss breaker, and
 rejection of non-finite amounts. The broker refuses any order that did not pass
 through them.
@@ -1226,4 +1227,3 @@ need to log in to Jellyfin Web, the password is there:
 ```bash
 ssh serverannah 'sudo cat /etc/ansible/secrets/jellyfin-admin-password'
 ```
-

@@ -7,7 +7,7 @@ import datetime as dt
 from trading_agent.agent import run_cycle
 from trading_agent.audit import AuditLog
 from trading_agent.broker import Broker
-from trading_agent.config import Config
+from trading_agent.config import Config, LIVE_ENDPOINT
 from trading_agent.reasoning import ReasoningClient
 from trading_agent.state import State
 
@@ -81,14 +81,24 @@ def test_daily_trade_budget_is_spent_only_on_accepted_orders(tmp_path):
     assert kw["state"].trades_today(OPEN) == 1
 
 
-# --- O-07: a stored view gates every opening trade ---------------------------
+# --- O-07: real-money buys require a stored view -----------------------------
 
-def test_no_view_means_no_opening_trade(tmp_path):
-    """The operator's judgment is the alpha source. Without it the agent does
-    nothing — correct behaviour, not a fault."""
+def test_paper_trading_can_start_without_a_view(tmp_path):
+    """The paper warm-up must not be blocked by the consultation backlog."""
     from trading_agent.views import ViewStore
 
     kw = mk(tmp_path, BUY)
+    kw["views"] = ViewStore(tmp_path / "v.db")
+    r = run_cycle(**kw, now=OPEN)
+    assert r.submitted == 1
+
+
+def test_live_buy_without_a_view_is_rejected(tmp_path):
+    """Real-money buys remain tied to a pre-recorded operator judgment."""
+    from trading_agent.views import ViewStore
+
+    kw = mk(tmp_path, BUY)
+    kw["config"] = Config.for_testing(endpoint=LIVE_ENDPOINT)
     kw["views"] = ViewStore(tmp_path / "v.db")
     r = run_cycle(**kw, now=OPEN)
     assert r.submitted == 0
@@ -100,6 +110,7 @@ def test_a_positive_view_permits_the_trade(tmp_path):
     from trading_agent.views import View, ViewStore
 
     kw = mk(tmp_path, BUY)
+    kw["config"] = Config.for_testing(endpoint=LIVE_ENDPOINT)
     vs = ViewStore(tmp_path / "v.db")
     vs.record(View("MRNA", "MRNA", "positive", 4, "phase 3 looks strong", OPEN))
     kw["views"] = vs
@@ -112,6 +123,7 @@ def test_no_opinion_blocks_the_trade(tmp_path):
     from trading_agent.views import View, ViewStore
 
     kw = mk(tmp_path, BUY)
+    kw["config"] = Config.for_testing(endpoint=LIVE_ENDPOINT)
     vs = ViewStore(tmp_path / "v.db")
     vs.record(View("MRNA", "MRNA", "no_opinion", 0, "outside my area", OPEN))
     kw["views"] = vs
@@ -290,6 +302,7 @@ def test_a_negative_call_does_not_license_buying(tmp_path):
     from trading_agent.views import View, ViewStore
 
     kw = mk(tmp_path, BUY)
+    kw["config"] = Config.for_testing(endpoint=LIVE_ENDPOINT)
     kw["views"] = ViewStore(tmp_path / "v.db")
     kw["views"].record(View("MRNA", "NCT1", "negative", 4, "the comparator is weak",
                             OPEN, OPEN + dt.timedelta(days=90)))
