@@ -1147,6 +1147,51 @@ off-site. The same push carries a daily report page, rendered on the Pi and serv
 by the server as a static file behind the reverse proxy's password. It is labelled
 as a daily snapshot, and warns when it is older than expected.
 
+#### Paper Account And API Key Rotation
+
+Use this procedure when replacing the Alpaca paper account or rotating its API
+key. The account is configured only in the encrypted Raspberry Pi vault, never
+in a playbook, environment file, commit message, or chat transcript.
+
+1. Create or select the paper account and create its API key in Alpaca's paper
+   trading dashboard. Use Alpaca's [paper trading documentation](https://alpaca.markets/docs/trading/paper-trading/)
+   for account-side actions.
+2. On the administration workstation, edit the encrypted vault:
+
+   ```bash
+   ansible-vault edit --vault-password-file ~/secret.txt host_vars/raspi/vault.yml
+   ```
+
+   Replace only `vault_alpaca_paper_key_id` and
+   `vault_alpaca_paper_secret_key`. Do not change `TRADING_MODE` or
+   `LIVE_CONFIRMED`: the role keeps both in paper-only values.
+3. Commit and push the encrypted vault file, then deploy it on the Pi:
+
+   ```bash
+   git add host_vars/raspi/vault.yml
+   git commit -m "chore(trading-agent): rotate paper account credentials"
+   git push
+   ssh raspi 'sudo systemctl start autoconfig-pull.service'
+   ```
+
+4. Confirm the service restarted and the broker sees the new account:
+
+   ```bash
+   ssh raspi 'systemctl status trading-agent.service --no-pager'
+   ```
+
+   Startup reconciliation treats Alpaca as the source of truth. A fresh paper
+   account with no positions starts at zero exposure even if the prior account
+   had positions. Research views and audit history are intentionally retained;
+   they are not account balances.
+5. Check the account value and submitted paper orders in the Alpaca dashboard.
+   During US market hours, the agent evaluates new catalysts every 15 minutes;
+   a qualifying proposal can be submitted without waiting for Telegram answers
+   while it remains in paper mode.
+
+If a credential was sent in chat, email, or any other untrusted channel, rotate
+it in Alpaca after replacing it. Never place the key or secret in this README.
+
 ### Fail2ban
 
 Role `roles/server/tasks/fail2ban.yml`, settings in `roles/server/defaults/main.yml`
