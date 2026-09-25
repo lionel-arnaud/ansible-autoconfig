@@ -41,7 +41,15 @@ def test_a6_submit_accepts_an_approved_intent():
     from trading_agent.guardrails import OrderIntent, approve_for_test
 
     broker = Broker.for_testing()
-    assert broker.submit(approve_for_test(OrderIntent("XBI", "buy", 10.0)))
+    intent = approve_for_test(OrderIntent("XBI", "buy", 10.0))
+    assert broker.submit(intent)
+    assert broker._client.submitted == [{
+        "symbol": "XBI",
+        "notional": 10.0,
+        "side": "buy",
+        "time_in_force": "day",
+        "client_order_id": intent.idempotency_key,
+    }]
 
 
 def test_a6_idempotency_key_is_stable_for_the_same_intent():

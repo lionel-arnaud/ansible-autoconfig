@@ -35,8 +35,8 @@ class _FakeClient:
     def __post_init__(self):
         self.submitted = []
 
-    def submit_order(self, **kwargs):
-        self.submitted.append(kwargs)
+    def submit_order(self, order_data):
+        self.submitted.append(order_data)
         return type("Order", (), {"id": f"fake-{len(self.submitted)}"})()
 
     def get_all_positions(self):
@@ -60,9 +60,16 @@ class _FakeClient:
 
 
 class Broker:
-    def __init__(self, client, *, paper: bool = True) -> None:
+    def __init__(self, client, *, paper: bool = True, order_request=None) -> None:
         self._client = client
         self.paper = paper
+        self._order_request = order_request or (lambda intent: {
+            "symbol": intent.symbol,
+            "notional": intent.notional_usd,
+            "side": intent.side,
+            "time_in_force": "day",
+            "client_order_id": intent.idempotency_key,
+        })
 
     @classmethod
     def for_testing(cls) -> "Broker":
@@ -73,13 +80,24 @@ class Broker:
         # Imported here, not at module scope, so the test suite can exercise
         # this file without alpaca-py installed.
         from alpaca.trading.client import TradingClient
+        from alpaca.trading.enums import OrderSide, TimeInForce
+        from alpaca.trading.requests import MarketOrderRequest
 
         client = TradingClient(
             api_key=config.alpaca_key_id,
             secret_key=config.alpaca_secret_key,
             paper=not config.is_live,
         )
-        return cls(client, paper=not config.is_live)
+        def order_request(intent):
+            return MarketOrderRequest(
+                symbol=intent.symbol,
+                notional=intent.notional_usd,
+                side=OrderSide(intent.side),
+                time_in_force=TimeInForce.DAY,
+                client_order_id=intent.idempotency_key,
+            )
+
+        return cls(client, paper=not config.is_live, order_request=order_request)
 
     def submit(self, intent: OrderIntent) -> str:
         if not intent.is_approved:
@@ -88,15 +106,10 @@ class Broker:
                 "approval. Route through guardrails.evaluate() — the broker is not "
                 "a bypass."
             )
-        order = self._client.submit_order(
-            symbol=intent.symbol,
-            notional=intent.notional_usd,
-            side=intent.side,
-            time_in_force="day",
-            # Alpaca de-duplicates on this, so a retry or a restart mid-flight
-            # cannot produce a second fill.
-            client_order_id=intent.idempotency_key,
-        )
+        # Alpaca's current SDK accepts one OrderRequest object, not order fields
+        # as keyword arguments. The request retains the idempotency key, so a
+        # restart between submitting and recording cannot double-fill.
+        order = self._client.submit_order(order_data=self._order_request(intent))
         return str(order.id)
 
     def open_positions(self) -> list[dict]:

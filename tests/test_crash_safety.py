@@ -22,8 +22,8 @@ class FakeClient:
             raise RuntimeError("alpaca unreachable")
         return self._positions
 
-    def submit_order(self, **kw):
-        self.submitted.append(kw)
+    def submit_order(self, order_data):
+        self.submitted.append(order_data)
         return type("O", (), {"id": f"o{len(self.submitted)}"})()
 
 
