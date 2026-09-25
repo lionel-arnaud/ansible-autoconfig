@@ -190,6 +190,8 @@ server_reverse_proxy_sites:
     redirect_to: https://tabletop-timer.com
   - hostname: app.dinnizer.com
     upstream: dinnizer:3000
+  - hostname: dinnizer.com
+    redirect_to: https://www.dinnizer.com
   - hostname: homepage.dinnizer.com
     upstream: homepage:3000
     basic_auth: true
