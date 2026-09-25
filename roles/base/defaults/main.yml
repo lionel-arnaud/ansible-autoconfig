@@ -157,6 +157,8 @@ dotfiles_managed_paths:
     path: .config/systemd/user/audio-policy.service
   - package: systemd
     path: .config/systemd/user/freebox-mount.service
+  - package: systemd
+    path: .config/environment.d/display-scale.conf
   # opencode-web.service and rclone-gdrive-mount.service are deliberately absent:
   # the server role templates those two units with the host's LAN IP and port, so
   # the systemd Stow package does not ship them and there is nothing for Stow to
