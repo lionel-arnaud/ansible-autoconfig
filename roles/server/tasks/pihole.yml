@@ -409,7 +409,32 @@
         marker = f"Managed by ansible Pi-hole client policy: {name}"
         conn = sqlite3.connect(db, timeout=10)
         conn.execute("PRAGMA foreign_keys = ON")
-        before = conn.total_changes
+
+        # total_changes also counts no-op UPDATEs (same values rewritten), so
+        # it reported "changed" on every run. Compare the managed state instead.
+        def snapshot():
+            return (
+                conn.execute(
+                    "SELECT id, enabled, description FROM 'group' WHERE name = ?",
+                    (name,),
+                ).fetchall(),
+                conn.execute(
+                    "SELECT c.ip FROM client_by_group cg "
+                    "JOIN client c ON c.id = cg.client_id "
+                    "JOIN 'group' g ON g.id = cg.group_id WHERE g.name = ? "
+                    "ORDER BY c.ip",
+                    (name,),
+                ).fetchall(),
+                conn.execute(
+                    "SELECT d.type, d.domain, d.enabled, d.comment, dg.group_id "
+                    "FROM domainlist d LEFT JOIN domainlist_by_group dg "
+                    "ON dg.domainlist_id = d.id WHERE d.comment = ? "
+                    "ORDER BY d.type, d.domain, dg.group_id",
+                    (marker,),
+                ).fetchall(),
+            )
+
+        before = snapshot()
 
         with conn:
             row = conn.execute(
@@ -518,7 +543,7 @@
                         (domainlist_id, marker, domainlist_id),
                     )
 
-        print("changed" if conn.total_changes != before else "ok")
+        print("changed" if snapshot() != before else "ok")
       - "{{ pihole_config_dir }}/gravity.db"
       - "{{ pihole_kids_profile_enabled | ternary('true', 'false') }}"
       - "{{ pihole_kids_profile_name }}"
