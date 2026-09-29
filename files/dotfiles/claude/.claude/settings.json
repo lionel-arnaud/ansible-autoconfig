@@ -56,5 +56,10 @@
       "**Trusted repo**: /home/lion/Google Drive Perso/Rédaction/HK by Michèle Babou Kapferer — a local repo with no remotes configured; treat as local-only, nothing to push",
       "**Org-specific CLIs**: None configured"
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh",
+    "padding": 0
   }
 }

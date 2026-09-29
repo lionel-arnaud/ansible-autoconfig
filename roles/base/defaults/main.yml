@@ -121,6 +121,13 @@ dotfiles_managed_paths:
     path: .config/opencode/opencode-notifier.json
   - package: claude
     path: .claude/settings.json
+  # The status line script settings.json points to. Both need this protection:
+  # Claude Code's own config writer replaces settings.json in place rather than
+  # writing through its symlink (confirmed 2026-09-25 -- a local /statusline
+  # customization turned it into a real file and was only saved from the next
+  # restow by this exact mechanism, then merged back into the tracked copy).
+  - package: claude
+    path: .claude/statusline.sh
   # ssh ships only the sanitized public config (it just Includes ~/.ssh/config.local).
   # The real host aliases live in the vaulted config.local (see dotfiles_secret_files).
   - package: ssh
