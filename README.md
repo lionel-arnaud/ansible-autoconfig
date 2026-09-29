@@ -1237,6 +1237,37 @@ Things that will trip the next person, all found the hard way:
   crashed fail2ban's own pattern parser, so it was left alone rather than risk
   the filter.
 
+### LibreSign
+
+LibreSign is installed through Nextcloud's own app store (its update mechanism
+lives entirely inside the container; this repo does not manage the app itself,
+only `roles/server/tasks/nextcloud.yml`). Its admin overview setup check
+(`occ libresign:configure:check`, or Settings → Overview) can show:
+
+- **`poppler` (info): fixed here.** `pdfinfo`/`pdfsig` are not in the official
+  `nextcloud` image and are not part of Nextcloud itself; LibreSign wants them
+  for PDF signature validation and page-dimension detection. Installed with
+  `apt-get` on every run, gated on the binaries actually being absent, because
+  apt state lives in the container's writable layer and a container recreate
+  (an image update) discards it — the image itself is not rebuilt.
+- **`java`, `jsignpdf`, `pdftk` (error): a confirmed upstream gap, left alone.**
+  "Binary integrity signature data not found" — LibreSign ships maintainer-signed
+  checksum manifests (`appinfo/install-<arch>-<resource>.json`) to verify its
+  downloaded signing binaries, but the *official* v14.2.3 release tarball
+  (downloaded and inspected directly from GitHub, not a guess) contains no such
+  files at all — only `appinfo/signature.json`, which is Nextcloud's unrelated
+  whole-app integrity file. Not something this deployment stripped; not present
+  in the package. The three underlying binaries (a JRE, jsignpdf, pdftk) are all
+  present and were fetched over HTTPS by `occ libresign:install --all` from
+  LibreSign's own channels — signing itself is not known to be broken, only the
+  metadata that would let LibreSign vouch for those binaries' provenance.
+  LibreSign's own code anticipates exactly this case and its built-in remedy is
+  global `occ config:system:set debug --value true --type boolean`, which this
+  repo does not apply automatically: it is an instance-wide setting (more
+  verbose logs, stack traces surfaced), not a LibreSign-scoped one, and no
+  narrower flag exists in this version. Revisit if a future LibreSign release
+  ships the manifests, or if the operator decides the tradeoff is worth it.
+
 ### Conventions For Future Changes
 
 - package lists should stay in role defaults

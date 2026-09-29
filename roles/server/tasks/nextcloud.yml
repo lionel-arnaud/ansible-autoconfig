@@ -341,6 +341,32 @@
   changed_when: "'Nextcloud is already latest version' not in nextcloud_upgrade.stdout"
   when: nextcloud_image_pull.changed
 
+# poppler-utils is not in the official image and is not part of Nextcloud
+# itself: it is what the LibreSign app's own setup check asks for to validate
+# PDF signatures and read page dimensions during signing. apt state lives in
+# the container's writable layer, not the image, so a container recreate
+# (an image update, or anything else that replaces the container) loses it --
+# checked and reinstalled every run rather than gated on the image changing.
+- name: Check whether poppler-utils is present in the Nextcloud container
+  community.docker.docker_container_exec:
+    container: "{{ nextcloud_container_name }}"
+    command: sh -c "command -v pdfinfo && command -v pdfsig"
+  register: nextcloud_poppler_present
+  changed_when: false
+  failed_when: false
+  when: nextcloud_libresign_poppler_enabled | default(true)
+
+- name: Install poppler-utils in the Nextcloud container
+  community.docker.docker_container_exec:
+    container: "{{ nextcloud_container_name }}"
+    command: sh -c "apt-get update -qq && apt-get install -y --no-install-recommends poppler-utils"
+  when:
+    - nextcloud_libresign_poppler_enabled | default(true)
+    # Guarded with a default: when the check above is skipped (the flag is
+    # off), this condition is still evaluated, and an unguarded reference to
+    # an undefined nextcloud_poppler_present would error rather than skip.
+    - (nextcloud_poppler_present.rc | default(0)) != 0
+
 # Keep the reverse-proxy-specific system config idempotent with occ instead of
 # editing PHP arrays by hand.
 - name: Set Nextcloud trusted domains
