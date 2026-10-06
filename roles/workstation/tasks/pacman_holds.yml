@@ -1,0 +1,92 @@
+---
+# Hold packages at a known-good version until an upstream regression is fixed.
+# The held set is installed together (it usually has to move as one: a library
+# soname bump means its consumers must be downgraded with it) and listed in
+# pacman's IgnorePkg, so neither `pacman -Syu` nor `omarchy update` can quietly
+# undo it. Emptying workstation_pacman_holds lifts the hold; the next system
+# update then brings the packages back to the repository version.
+- name: Require explicit acknowledgement for package holds on Omarchy
+  ansible.builtin.assert:
+    that:
+      - omarchy_allow_ansible_package_installs | default(false) | bool
+    fail_msg: >-
+      workstation_pacman_holds changes system packages. Set
+      omarchy_allow_ansible_package_installs: true to let Ansible do that here.
+  when: workstation_pacman_holds | length > 0
+
+- name: Read the installed versions of the held packages
+  ansible.builtin.command:
+    argv: "{{ ['pacman', '-Q'] + (workstation_pacman_holds | map(attribute='name') | list) }}"
+  register: workstation_pacman_holds_installed
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: workstation_pacman_holds | length > 0
+
+# A package already in pacman's cache is installed from there (no network, and
+# the signature next to it is still checked); otherwise it comes from the
+# official Arch Linux Archive, which keeps every version ever published.
+- name: Check which held package files are already in the pacman cache
+  ansible.builtin.stat:
+    path: "/var/cache/pacman/pkg/{{ item.name }}-{{ item.version }}-x86_64.pkg.tar.zst"
+  loop: "{{ workstation_pacman_holds }}"
+  loop_control:
+    label: "{{ item.name }} {{ item.version }}"
+  register: workstation_pacman_holds_cached
+
+- name: Work out the source of each held package and the wanted version list
+  ansible.builtin.set_fact:
+    workstation_pacman_holds_sources: >-
+      {%- set out = [] -%}
+      {%- for r in workstation_pacman_holds_cached.results -%}
+      {%-   if r.stat.exists -%}
+      {%-     set _ = out.append(r.stat.path) -%}
+      {%-   else -%}
+      {%-     set _ = out.append('https://archive.archlinux.org/packages/' ~ r.item.name[0] ~ '/' ~ r.item.name ~ '/' ~ r.item.name ~ '-' ~ r.item.version ~ '-x86_64.pkg.tar.zst') -%}
+      {%-   endif -%}
+      {%- endfor -%}
+      {{ out }}
+    workstation_pacman_holds_wanted: >-
+      {{ workstation_pacman_holds | map(attribute='name')
+         | zip(workstation_pacman_holds | map(attribute='version'))
+         | map('join', ' ') | list | sort }}
+
+- name: Install the held package versions together
+  ansible.builtin.command:
+    argv: "{{ ['pacman', '-U', '--noconfirm'] + workstation_pacman_holds_sources }}"
+  when:
+    - workstation_pacman_holds | length > 0
+    - (workstation_pacman_holds_installed.stdout_lines | default([]) | sort) != workstation_pacman_holds_wanted
+  changed_when: true
+
+- name: Keep pacman from upgrading the held packages
+  ansible.builtin.blockinfile:
+    path: /etc/pacman.conf
+    insertafter: '^\[options\]'
+    marker: "# {mark} ANSIBLE MANAGED: workstation_pacman_holds"
+    block: |
+      # {{ workstation_pacman_holds_reason | default('Held by Ansible.') }}
+      IgnorePkg = {{ workstation_pacman_holds | map(attribute='name') | join(' ') }}
+    state: "{{ (workstation_pacman_holds | length > 0) | ternary('present', 'absent') }}"
+
+# Report-only: makes it visible in every run whether the repositories have moved
+# on, which is the cue to check upstream and lift the hold.
+- name: Read the repository versions of the held packages
+  ansible.builtin.shell: >-
+    LC_ALL=C pacman -Si {{ workstation_pacman_holds | map(attribute='name') | map('quote') | join(' ') }}
+    | awk '/^Name/{n=$3} /^Version/{print n, $3}'
+  args:
+    executable: /bin/bash
+  register: workstation_pacman_holds_repo
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: workstation_pacman_holds | length > 0
+
+- name: Report the package holds
+  ansible.builtin.debug:
+    msg: >-
+      Held: {{ workstation_pacman_holds | map(attribute='name') | zip(workstation_pacman_holds | map(attribute='version')) | map('join', ' ') | join(', ') }}.
+      Repositories offer: {{ workstation_pacman_holds_repo.stdout_lines | default(['unknown']) | join(', ') }}.
+      {{ workstation_pacman_holds_reason | default('') }}
+  when: workstation_pacman_holds | length > 0

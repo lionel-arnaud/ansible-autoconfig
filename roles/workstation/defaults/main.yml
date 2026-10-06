@@ -13,6 +13,13 @@ workstation_espanso_enabled: false
 workstation_firewall_enabled: true
 workstation_keyd_enabled: false
 
+# Arch only. Packages held at a pinned version until an upstream regression is
+# fixed: installed together and added to pacman's IgnorePkg. Each item is
+# { name, version } with version as pacman prints it (e.g. 0.14.0-2). Empty
+# lifts every hold. See roles/workstation/tasks/pacman_holds.yml.
+workstation_pacman_holds: []
+workstation_pacman_holds_reason: Held by Ansible.
+
 # ufw rules for a LAN workstation. Prefer an application profile shipped by the
 # package over a hard-coded port range; KDEConnect resolves to 1714:1764 on both
 # tcp and udp (see /etc/ufw/applications.d/kdeconnect), which KDE Connect needs

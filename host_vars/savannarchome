@@ -30,6 +30,23 @@ workstation_chromium_managed_policies:
   NewTabPageLocation: http://serverannah.lan:3000
 omarchy_allow_ansible_package_installs: true
 
+# External monitor stuck at 0x0 after unplug/replug, lid or dock changes.
+# aquamarine 0.15.0 refuses the kernel "disable" commit for a connector that has
+# just disconnected ("Cannot commit a disconnected output") but marks its CRTC
+# free anyway; the kernel keeps that pipe scanning out, so the next monitor
+# handed the same CRTC fails every modeset with EINVAL, even 640x480. Confirmed
+# here with modetest (DP-3 disconnected yet still holding CRTC 269). Upstream:
+# hyprwm/aquamarine#386 and #431; 0.15.1 is reported not to fix it on Intel.
+# 0.14.0 has no such guard. The three move together: 0.15 bumped the soname
+# (libaquamarine.so 13 -> 14). Lift the hold once a fixed release ships.
+workstation_pacman_holds:
+  - { name: aquamarine, version: 0.14.0-2 }
+  - { name: hyprland, version: 0.56.2-1 }
+  - { name: hyprtoolkit, version: 0.5.4-4 }
+workstation_pacman_holds_reason: >-
+  aquamarine 0.15 leaves unplugged monitors' CRTCs active (hyprwm/aquamarine#386);
+  lift when a fixed release ships.
+
 dotfiles_stow_packages:
   - bash
   - starship

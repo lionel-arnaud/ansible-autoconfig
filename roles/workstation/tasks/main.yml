@@ -4,6 +4,12 @@
 - name: Configure the workstation (CLI/TUI, dotfiles, espanso)
   when: workstation_enabled | default(false)
   block:
+    - name: Hold packages at a known-good version
+      ansible.builtin.import_tasks: pacman_holds.yml
+      when: ansible_facts.os_family | default('Archlinux') == "Archlinux"
+      tags:
+        - workstation_pacman_holds
+
     - name: Install workstation CLI/TUI packages
       ansible.builtin.import_tasks: cli_packages.yml
       when: workstation_cli_enabled | default(true)

@@ -1268,6 +1268,38 @@ only `roles/server/tasks/nextcloud.yml`). Its admin overview setup check
   narrower flag exists in this version. Revisit if a future LibreSign release
   ships the manifests, or if the operator decides the tradeoff is worth it.
 
+### Workstation package holds (external monitor stuck at 0x0)
+
+Symptom: after unplugging/replugging an external monitor (or a dock, a lid
+change, a monitor powering itself off), it is detected and listed with all its
+modes but stays black at `0x0`, and choosing it in the Omarchy menu does nothing.
+
+Cause, confirmed on the laptop rather than guessed: aquamarine 0.15.0 (the DRM
+layer under Hyprland, upgraded on 2026-09-09) refuses to send the kernel the
+"turn this output off" commit for a connector that has just disconnected
+(`Cannot commit a disconnected output` in the Hyprland log) but marks its CRTC
+free anyway. The kernel keeps that pipe scanning out to an empty port
+(`modetest -M i915` shows the disconnected connector still bound and the CRTC
+still active). The next monitor is handed the same CRTC and the Intel driver
+rejects every mode with `EINVAL`, down to 640x480. Upstream: hyprwm/aquamarine
+#386 and #431; 0.15.1 is reported as not fixing it on Intel. Not caused by
+hyprmoncfg (it is in unmanaged mode and writes nothing) nor by Omarchy's own
+clamshell handling, which is what recovers the panel on lid open.
+
+Fix: `workstation_pacman_holds` (in `host_vars/savannarchome`) holds
+`aquamarine 0.14.0-2`, `hyprland 0.56.2-1` and `hyprtoolkit 0.5.4-4`, the last
+versions without the regression. They move together because 0.15 bumped the
+library soname. The role installs them from the pacman cache, or from the Arch
+Linux Archive when the cache has been cleaned, and adds them to `IgnorePkg` in
+`/etc/pacman.conf` so `omarchy update` cannot undo it. Every run prints the
+held versions next to what the repositories offer. Takes effect at the next
+login. To lift it once a fixed release ships, empty the list: the block is
+removed from `pacman.conf` and the next update upgrades normally.
+
+Recovering a stuck session without logging out, as reported upstream: switch
+to a text console and back (`Ctrl+Alt+F3`, then `Ctrl+Alt+F1`), which resets
+the kernel's display state. Logging out and back in always works.
+
 ### Conventions For Future Changes
 
 - package lists should stay in role defaults
