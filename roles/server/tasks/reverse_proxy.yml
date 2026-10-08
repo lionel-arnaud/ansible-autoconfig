@@ -109,6 +109,9 @@
   ansible.builtin.template:
     src: Caddyfile.j2
     dest: "{{ server_reverse_proxy_config_dir }}/Caddyfile"
+    validate: >-
+      docker run --rm -v %s:/etc/caddy/Caddyfile:ro {{ server_reverse_proxy_image }}
+      caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
     owner: root
     group: root
     mode: "0644"

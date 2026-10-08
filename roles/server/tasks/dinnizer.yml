@@ -101,6 +101,27 @@
     force: true
   register: dinnizer_git_checkout
 
+- name: Read the original Rails layout for the analytics overlay
+  ansible.builtin.slurp:
+    src: "{{ dinnizer_repo_dir }}/app/views/layouts/application.html.erb"
+  when: server_umami_enabled
+  register: dinnizer_original_layout
+
+# Keep the git checkout clean: one served-layout overlay, no application refactor
+# and no artificial rebuild on each nightly git reset.
+- name: Add the Umami tag to a separate served Rails layout
+  ansible.builtin.copy:
+    dest: "{{ dinnizer_root_dir }}/umami-layout.html.erb"
+    owner: root
+    group: root
+    mode: "0644"
+    content: >-
+      {{ (dinnizer_original_layout.content | b64decode) | replace('</head>',
+         '<script defer src="https://' ~ umami_hostname ~ '/script.js" data-website-id="' ~
+         ('app.dinnizer.com' | to_uuid) ~ '"></script></head>') }}
+  when: server_umami_enabled
+  register: dinnizer_analytics_layout
+
 - name: Build the Dinnizer application image
   community.docker.docker_image:
     name: "{{ dinnizer_image_name }}"
@@ -189,9 +210,13 @@
     image: "{{ dinnizer_image_name }}"
     state: started
     recreate: "{{ dinnizer_image_build.changed }}"
+    restart: "{{ dinnizer_analytics_layout.changed }}"
     restart_policy: unless-stopped
     networks:
       - name: "{{ dinnizer_network_name }}"
+    volumes: >-
+      {{ [dinnizer_root_dir ~ '/umami-layout.html.erb:/app/app/views/layouts/application.html.erb:ro']
+         if server_umami_enabled else [] }}
     env:
       RAILS_ENV: production
       RAILS_LOG_TO_STDOUT: "1"

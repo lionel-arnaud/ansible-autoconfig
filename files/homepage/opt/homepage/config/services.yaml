@@ -2,9 +2,9 @@
 # Every service actually running on serverannah. Grouped the way they are used,
 # not the way they are deployed.
 #
-# siteMonitor always points at the INTERNAL container URL, never the public
-# hostname: the public routes for the admin tools sit behind Caddy basic auth,
-# so monitoring those would report a permanent 401 and show every tile as down.
+# siteMonitor normally points at the INTERNAL container URL: admin tools sit
+# behind Caddy basic auth and their public homepage would report a constant 401.
+# Umami's public tracker is the exception: it also checks DNS, TLS and routing.
 #
 # `server: local-docker` + `container:` reads container state through the
 # filtered read-only Docker socket proxy (see roles/server/tasks/docker_socket_proxy.yml),
@@ -43,8 +43,24 @@
         container: game-timer
         showStats: true
         siteMonitor: http://game-timer/
+    - Toki Suli:
+        icon: mdi-translate
+        href: https://toki.suli.dinnizer.com/
+        description: Toki Suli language site
+        server: local-docker
+        container: toki-suli
+        showStats: true
+        siteMonitor: http://toki-suli/
 
 - Family Services:
+    - Trader:
+        icon: mdi-chart-line
+        href: https://trader.dinnizer.com/
+        description: Trading dashboard (basic auth)
+        server: local-docker
+        container: trader-dashboard
+        showStats: true
+        siteMonitor: http://trader-dashboard/
     - Nextcloud:
         icon: nextcloud.png
         href: https://cloud.dinnizer.com/
@@ -86,6 +102,14 @@
         siteMonitor: http://bentopdf:8080/
 
 - Infrastructure:
+    - Umami:
+        icon: umami.png
+        href: https://umami.dinnizer.com/
+        description: Website traffic analytics (basic auth)
+        server: local-docker
+        container: umami
+        showStats: true
+        siteMonitor: https://umami.dinnizer.com/script.js
     - Homepage:
         icon: homepage.png
         href: https://homepage.dinnizer.com/
@@ -124,6 +148,12 @@
         showStats: true
 
 - Databases:
+    - Umami DB:
+        icon: postgres.png
+        description: PostgreSQL for website analytics
+        server: local-docker
+        container: umami-db
+        showStats: true
     # No href: these are not meant to be reachable from a browser. They are here
     # so a container that has died shows up on the dashboard rather than being
     # noticed when the app in front of it starts throwing errors.

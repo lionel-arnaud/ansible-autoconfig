@@ -63,5 +63,7 @@
     published_ports: "{{ toki_suli_published_ports }}"
     networks:
       - name: "{{ toki_suli_network_name }}"
-    volumes:
-      - "{{ toki_suli_site_dir }}:/usr/share/nginx/html:ro"
+    volumes: >-
+      {{ [toki_suli_site_dir ~ ':/usr/share/nginx/html:ro'] +
+         ([umami_root_dir ~ '/nginx/' ~ toki_suli_container_name ~ '.conf:/etc/nginx/conf.d/default.conf:ro']
+          if server_umami_enabled else []) }}

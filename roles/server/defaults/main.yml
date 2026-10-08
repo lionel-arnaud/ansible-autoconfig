@@ -86,6 +86,17 @@ homepage_allowed_hosts:
   - "{{ ansible_hostname | default(inventory_hostname) }}:{{ homepage_port }}"
 homepage_extra_allowed_hosts: []
 
+server_umami_enabled: false
+umami_image: ghcr.io/umami-software/umami:3.4.0
+umami_db_image: postgres:15-alpine
+umami_root_dir: /opt/umami
+umami_network_name: autoconfig-services
+umami_hostname: umami.dinnizer.com
+umami_secret_dir: /etc/ansible/secrets
+umami_admin_password_file: "{{ umami_secret_dir }}/caddy-shared-password"
+# Each entry has name/domain; static sites also supply container and site_dir.
+umami_websites: []
+
 server_bentopdf_enabled: false
 bentopdf_container_name: bentopdf
 bentopdf_image: ghcr.io/alam00000/bentopdf-simple:latest

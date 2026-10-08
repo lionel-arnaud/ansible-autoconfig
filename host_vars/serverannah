@@ -48,6 +48,12 @@ backup_paths:
   - /etc/fstab
   - /etc/netplan
 backup_database_dumps:
+  - name: umami
+    engine: postgres
+    container: umami-db
+    database: umami
+    user: umami
+    password_file: /etc/ansible/secrets/umami-db-password
   - name: aumenuilya
     container: aumenuilya-db
     database: aumenuilkomyriam
@@ -65,6 +71,29 @@ backup_database_dumps:
     user: dinnizer
     password_file: /etc/ansible/secrets/dinnizer-db-password
 server_homepage_enabled: true
+server_umami_enabled: true
+umami_websites:
+  - name: Dinnizer Website
+    domain: www.dinnizer.com
+    container: dinnizer-website
+    site_dir: /opt/dinnizer-website/site
+  - name: Tabletop Timer
+    domain: tabletop-timer.com
+    container: game-timer
+    site_dir: /opt/game-timer/site
+    # These are the two distinct HTML pages; /index.html duplicates /.
+    seo_pages:
+      - /
+      - /html/about.html
+    seo_redirect_index: true
+  - name: Toki Suli
+    domain: toki.suli.dinnizer.com
+    container: toki-suli
+    site_dir: /opt/toki-suli/site
+  - name: AuMenuIlYA
+    domain: www.aumenuilya.fr
+  - name: Dinnizer App
+    domain: app.dinnizer.com
 # External checks of the public sites, certs and DNS. Monitors are configured in
 # its own UI; only the container and its route are managed here.
 server_uptime_kuma_enabled: true
@@ -196,6 +225,16 @@ server_reverse_proxy_sites:
     upstream: homepage:3000
     basic_auth: true
     basic_auth_password_file: "{{ server_reverse_proxy_secret_dir }}/caddy-shared-password"
+  - hostname: umami.dinnizer.com
+    upstream: umami:3000
+    basic_auth: true
+    basic_auth_password_file: "{{ server_reverse_proxy_secret_dir }}/caddy-shared-password"
+    basic_auth_except_paths:
+      - /script.js
+      - /api/send
+    # Umami's dashboard API uses Authorization: Bearer, which cannot coexist
+    # with HTTP Basic in the same header. Umami validates these tokens itself.
+    basic_auth_bearer_api: true
   - hostname: status.dinnizer.com
     upstream: uptime-kuma:3001
     basic_auth: true

@@ -53,12 +53,20 @@ http://{{ site.hostname }} {
     }
 
     # Protect admin-style dashboards exposed through public DNS.
+{% if site.basic_auth_except_paths | default([]) or site.basic_auth_bearer_api | default(false) %}
+    # Public collection paths (Umami) or independently authenticated machine
+    # endpoints (Kuma). Dashboard pages still require the shared password.
+    @needs_auth {
 {% if site.basic_auth_except_paths | default([]) %}
-    # ...except these paths, which carry their own credential in the URL and
-    # are called by machines that cannot present basic auth. Uptime Kuma's push
-    # endpoint is the case here: the token in the path IS the authentication,
-    # and the dead-man's switch has no way to send a basic_auth header.
-    @needs_auth not path {{ site.basic_auth_except_paths | join(' ') }}
+        not path {{ site.basic_auth_except_paths | join(' ') }}
+{% endif %}
+{% if site.basic_auth_bearer_api | default(false) %}
+        not {
+            path /api/*
+            header Authorization "Bearer *"
+        }
+{% endif %}
+    }
     basic_auth @needs_auth {
         {{ server_reverse_proxy_basic_auth_hashes[site.hostname].user }} {{ server_reverse_proxy_basic_auth_hashes[site.hostname].hash }}
     }

@@ -172,6 +172,13 @@
     - server
     - homepage
 
+- name: Deploy Umami analytics
+  ansible.builtin.import_tasks: umami.yml
+  when: server_umami_enabled | default(false)
+  tags:
+    - server
+    - umami
+
 - name: Deploy BentoPDF
   ansible.builtin.import_tasks: bentopdf.yml
   when: server_bentopdf_enabled | default(false)

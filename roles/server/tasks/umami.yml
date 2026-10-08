@@ -1,0 +1,174 @@
+---
+- name: Create Umami directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ umami_root_dir }}", mode: "0755"}
+    - {path: "{{ umami_root_dir }}/nginx", mode: "0755"}
+    - {path: "{{ umami_secret_dir }}", mode: "0700"}
+
+- name: Generate persistent Umami secrets on the server
+  ansible.builtin.shell: |
+    umask 077
+    python3 -c 'import secrets; print(secrets.token_hex(32))' > {{ (umami_secret_dir ~ '/' ~ item) | quote }}
+  args:
+    creates: "{{ umami_secret_dir }}/{{ item }}"
+  loop:
+    - umami-db-password
+    - umami-app-secret
+    - umami-two-factor-key
+  no_log: true
+
+- name: Read Umami secrets
+  ansible.builtin.slurp:
+    src: "{{ umami_secret_dir }}/{{ item }}"
+  loop:
+    - umami-db-password
+    - umami-app-secret
+    - umami-two-factor-key
+  register: umami_secrets
+  no_log: true
+
+- name: Ensure Umami container network exists
+  community.docker.docker_network:
+    name: "{{ umami_network_name }}"
+    state: present
+
+- name: Run Umami PostgreSQL
+  community.docker.docker_container:
+    name: umami-db
+    image: "{{ umami_db_image }}"
+    state: started
+    restart_policy: unless-stopped
+    networks:
+      - name: "{{ umami_network_name }}"
+    volumes:
+      - "{{ umami_root_dir }}/postgres:/var/lib/postgresql/data"
+    env:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: "{{ umami_secrets.results[0].content | b64decode | trim }}"
+  no_log: true
+
+- name: Wait for Umami PostgreSQL
+  ansible.builtin.command: docker exec umami-db pg_isready -U umami -d umami
+  changed_when: false
+  register: umami_db_ready
+  retries: 30
+  delay: 2
+  until: umami_db_ready.rc == 0
+
+- name: Run Umami
+  community.docker.docker_container:
+    name: umami
+    image: "{{ umami_image }}"
+    state: started
+    init: true
+    restart_policy: unless-stopped
+    networks:
+      - name: "{{ umami_network_name }}"
+    env:
+      DATABASE_URL: "postgresql://umami:{{ umami_secrets.results[0].content | b64decode | trim }}@umami-db:5432/umami"
+      APP_SECRET: "{{ umami_secrets.results[1].content | b64decode | trim }}"
+      TWO_FACTOR_ENCRYPTION_KEY: "{{ umami_secrets.results[2].content | b64decode | trim }}"
+      DISABLE_TELEMETRY: "1"
+  no_log: true
+
+- name: Read Umami container address
+  community.docker.docker_container_info:
+    name: umami
+  register: umami_container_info
+  no_log: true
+
+- name: Set internal Umami URL
+  ansible.builtin.set_fact:
+    umami_internal_url: >-
+      http://{{ umami_container_info.container.NetworkSettings.Networks[umami_network_name].IPAddress }}:3000
+
+- name: Wait for Umami migrations and web server
+  ansible.builtin.uri:
+    url: "{{ umami_internal_url }}/api/heartbeat"
+  register: umami_ready
+  until: umami_ready.status == 200
+  retries: 60
+  delay: 5
+
+- name: Install Umami bootstrap helper
+  ansible.builtin.copy:
+    src: umami-bootstrap.py
+    dest: /usr/local/sbin/autoconfig-umami-bootstrap
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Save managed Umami websites
+  ansible.builtin.copy:
+    content: "{{ umami_websites | to_nice_json }}\n"
+    dest: "{{ umami_root_dir }}/websites.json"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Initialize admin password and register websites
+  ansible.builtin.command:
+    argv:
+      - /usr/local/sbin/autoconfig-umami-bootstrap
+      - "{{ umami_internal_url }}"
+      - "{{ umami_admin_password_file }}"
+      - "{{ umami_root_dir }}/websites.json"
+  register: umami_bootstrap
+  changed_when: "'changed' in umami_bootstrap.stdout"
+  no_log: true
+
+- name: Configure HTML-only tracking for static websites
+  ansible.builtin.template:
+    src: umami-static-nginx.conf.j2
+    dest: "{{ umami_root_dir }}/nginx/{{ item.container }}.conf"
+    validate: "docker run --rm -v %s:/etc/nginx/conf.d/default.conf:ro nginx:alpine nginx -t"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ umami_websites | selectattr('site_dir', 'defined') | list }}"
+  register: umami_static_configs
+
+# Called here for standalone --tags umami deployments; the regular website
+# tasks preserve this same mount during their own subsequent deployments.
+- name: Enable tracking in static website containers
+  community.docker.docker_container:
+    name: "{{ item.container }}"
+    image: nginx:alpine
+    state: started
+    restart_policy: unless-stopped
+    restart: >-
+      {{ umami_static_configs.results | selectattr('item.container', 'equalto', item.container) |
+         map(attribute='changed') | first }}
+    networks:
+      - name: "{{ umami_network_name }}"
+    volumes:
+      - "{{ item.site_dir }}:/usr/share/nginx/html:ro"
+      - "{{ umami_root_dir }}/nginx/{{ item.container }}.conf:/etc/nginx/conf.d/default.conf:ro"
+  loop: "{{ umami_websites | selectattr('site_dir', 'defined') | list }}"
+
+- name: Install WordPress analytics without changing the theme
+  when: server_aumenuilya_enabled | default(false)
+  block:
+    - name: Ensure WordPress must-use plugin directory exists
+      ansible.builtin.file:
+        path: /opt/aumenuilya/wordpress/wp-content/mu-plugins
+        state: directory
+        mode: "0755"
+    - name: Install the Umami WordPress plugin
+      ansible.builtin.copy:
+        dest: /opt/aumenuilya/wordpress/wp-content/mu-plugins/umami.php
+        mode: "0644"
+        content: |
+          <?php
+          // Managed by ansible-autoconfig; independent of theme updates.
+          add_action('wp_head', function () {
+              echo '<script defer src="https://{{ umami_hostname }}/script.js" '
+                 . 'data-website-id="{{ 'www.aumenuilya.fr' | to_uuid }}"></script>';
+          });

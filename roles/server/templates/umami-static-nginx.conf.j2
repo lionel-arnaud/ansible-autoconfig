@@ -1,0 +1,49 @@
+# Managed by Ansible. Add analytics to HTML responses, leaving the original
+# hand-written source files (and all JS, CSS and audio responses) untouched.
+{% if item.seo_pages | default([]) %}
+map $uri $canonical_tag {
+    default '';
+{% for path in item.seo_pages %}
+    {{ path }} '<link rel="canonical" href="https://{{ item.domain }}{{ path }}">';
+{% if path.endswith('/') %}
+    {{ path }}index.html '<link rel="canonical" href="https://{{ item.domain }}{{ path }}">';
+{% endif %}
+{% endfor %}
+}
+{% endif %}
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    sub_filter_once on;
+    sub_filter '</head>' '{% if item.seo_pages | default([]) %}$canonical_tag{% endif %}<script defer src="https://{{ umami_hostname }}/script.js" data-website-id="{{ item.domain | to_uuid }}"></script></head>';
+
+{% if item.seo_redirect_index | default(false) %}
+    # Match the original request, not nginx's internal / -> /index.html lookup.
+    if ($request_uri ~ "^/index\.html(?:\?|$)") {
+        return 308 https://{{ item.domain }}/$is_args$args;
+    }
+{% endif %}
+{% if item.seo_pages | default([]) %}
+    location = /robots.txt {
+        default_type text/plain;
+        return 200 "User-agent: *\nAllow: /\nSitemap: https://{{ item.domain }}/sitemap.xml\n";
+    }
+
+    location = /sitemap.xml {
+        default_type application/xml;
+        return 200 '<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{% for path in item.seo_pages %}
+<url><loc>https://{{ item.domain }}{{ path }}</loc></url>
+{% endfor %}
+</urlset>';
+    }
+{% endif %}
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}

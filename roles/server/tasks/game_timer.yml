@@ -61,5 +61,7 @@
     published_ports: "{{ game_timer_published_ports }}"
     networks:
       - name: "{{ game_timer_network_name }}"
-    volumes:
-      - "{{ game_timer_site_dir }}:/usr/share/nginx/html:ro"
+    volumes: >-
+      {{ [game_timer_site_dir ~ ':/usr/share/nginx/html:ro'] +
+         ([umami_root_dir ~ '/nginx/' ~ game_timer_container_name ~ '.conf:/etc/nginx/conf.d/default.conf:ro']
+          if server_umami_enabled else []) }}
