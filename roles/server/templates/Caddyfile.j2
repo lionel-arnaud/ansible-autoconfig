@@ -47,13 +47,15 @@ http://{{ site.hostname }} {
     header Strict-Transport-Security "max-age={{ server_reverse_proxy_hsts_max_age }}"
 {% endif %}
 {% if site.basic_auth | default(false) %}
+{% set auth_provider = site.auth_provider | default(server_reverse_proxy_auth_provider) %}
+{% set has_auth_exceptions = site.basic_auth_except_paths | default([]) or site.basic_auth_bearer_api | default(false) %}
     log {
         output file {{ server_reverse_proxy_access_log }}
         format json
     }
 
     # Protect admin-style dashboards exposed through public DNS.
-{% if site.basic_auth_except_paths | default([]) or site.basic_auth_bearer_api | default(false) %}
+{% if has_auth_exceptions %}
     # Public collection paths (Umami) or independently authenticated machine
     # endpoints (Kuma). Dashboard pages still require the shared password.
     @needs_auth {
@@ -67,6 +69,12 @@ http://{{ site.hostname }} {
         }
 {% endif %}
     }
+{% endif %}
+{% if auth_provider == 'authelia' %}
+    forward_auth{% if has_auth_exceptions %} @needs_auth{% endif %} authelia:9091 {
+        uri /api/authz/forward-auth
+    }
+{% elif has_auth_exceptions %}
     basic_auth @needs_auth {
         {{ server_reverse_proxy_basic_auth_hashes[site.hostname].user }} {{ server_reverse_proxy_basic_auth_hashes[site.hostname].hash }}
     }

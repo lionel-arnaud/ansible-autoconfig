@@ -1,0 +1,134 @@
+---
+- name: Create Authelia configuration and state directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "{{ authelia_root_dir }}"
+    - "{{ authelia_root_dir }}/config"
+    - "{{ authelia_root_dir }}/data"
+    - "{{ authelia_secret_dir }}"
+
+- name: Generate persistent Authelia secrets on the server
+  ansible.builtin.shell: |
+    umask 077
+    python3 -c 'import secrets; print(secrets.token_hex(32))' > {{ (authelia_secret_dir ~ '/' ~ item) | quote }}
+  args:
+    creates: "{{ authelia_secret_dir }}/{{ item }}"
+  loop:
+    - session
+    - storage
+    - jwt
+  no_log: true
+
+- name: Pull the pinned Authelia image
+  community.docker.docker_image:
+    name: "{{ authelia_image }}"
+    source: pull
+
+- name: Hash the existing universal password for Authelia
+  ansible.builtin.shell: |
+    set -eu
+    umask 077
+    password_file={{ authelia_password_file | quote }}
+    cache_file={{ (authelia_secret_dir ~ '/password-hash-cache') | quote }}
+    fingerprint=$(sha256sum "$password_file" | cut -d' ' -f1)
+    if [ -f "$cache_file" ] && [ "$(head -n 1 "$cache_file")" = "$fingerprint" ]; then
+      tail -n +2 "$cache_file"
+      exit 0
+    fi
+    digest=$(docker run --rm --entrypoint /bin/sh \
+      -v "$password_file:/run/secrets/password:ro" {{ authelia_image | quote }} \
+      -c 'authelia crypto hash generate argon2 --password "$(cat /run/secrets/password)"')
+    hash="${digest#Digest: }"
+    case "$hash" in
+      '$argon2id$'*) ;;
+      *) exit 1 ;;
+    esac
+    printf '%s\n%s\n' "$fingerprint" "$hash" > "$cache_file"
+    printf '%s\n' "$hash"
+  register: authelia_password_hash
+  changed_when: false
+  no_log: true
+
+- name: Write the Authelia user database
+  ansible.builtin.copy:
+    dest: "{{ authelia_root_dir }}/config/users_database.yml"
+    owner: root
+    group: root
+    mode: "0600"
+    content: >-
+      {{ {'users': {authelia_username: {
+        'displayname': authelia_display_name,
+        'password': authelia_password_hash.stdout | trim,
+        'email': authelia_email,
+        'groups': ['admins']
+      }}} | to_nice_yaml }}
+  register: authelia_users_config
+  no_log: true
+
+- name: Write Authelia configuration
+  ansible.builtin.template:
+    src: authelia-configuration.yml.j2
+    dest: "{{ authelia_root_dir }}/config/configuration.yml"
+    owner: root
+    group: root
+    mode: "0600"
+  register: authelia_config
+
+- name: Validate Authelia configuration before starting it
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - --rm
+      - -v
+      - "{{ authelia_root_dir }}/config:/config:ro"
+      - -v
+      - "{{ authelia_secret_dir }}:/secrets:ro"
+      - -e
+      - AUTHELIA_SESSION_SECRET_FILE=/secrets/session
+      - -e
+      - AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE=/secrets/storage
+      - -e
+      - AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE=/secrets/jwt
+      - "{{ authelia_image }}"
+      - authelia
+      - validate-config
+      - --config
+      - /config/configuration.yml
+  changed_when: false
+
+- name: Ensure the Authelia network exists
+  community.docker.docker_network:
+    name: "{{ authelia_network_name }}"
+    state: present
+
+- name: Run Authelia
+  community.docker.docker_container:
+    name: authelia
+    image: "{{ authelia_image }}"
+    state: started
+    restart_policy: unless-stopped
+    restart: "{{ authelia_config.changed or authelia_users_config.changed }}"
+    networks:
+      - name: "{{ authelia_network_name }}"
+    volumes:
+      - "{{ authelia_root_dir }}/config:/config:ro"
+      - "{{ authelia_root_dir }}/data:/data"
+      - "{{ authelia_secret_dir }}:/secrets:ro"
+    env:
+      AUTHELIA_SESSION_SECRET_FILE: /secrets/session
+      AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: /secrets/storage
+      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE: /secrets/jwt
+
+- name: Wait for Authelia to be healthy
+  ansible.builtin.command: docker exec authelia wget -qO- http://127.0.0.1:9091/api/health
+  changed_when: false
+  register: authelia_health
+  until: authelia_health.rc == 0
+  retries: 30
+  delay: 2

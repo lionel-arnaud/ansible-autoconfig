@@ -105,6 +105,17 @@
 
 # The proxy config is generated from host vars so one role can front different
 # services on the VM and on real servers without forking the role.
+- name: Require a valid authentication provider
+  ansible.builtin.assert:
+    that:
+      - server_reverse_proxy_auth_provider in ['basic', 'authelia']
+      - server_reverse_proxy_auth_provider != 'authelia' or server_authelia_enabled
+
+- name: Check Authelia before routing protected requests to it
+  ansible.builtin.command: docker exec authelia wget -qO- http://127.0.0.1:9091/api/health
+  changed_when: false
+  when: server_reverse_proxy_auth_provider == 'authelia'
+
 - name: Install reverse proxy configuration
   ansible.builtin.template:
     src: Caddyfile.j2

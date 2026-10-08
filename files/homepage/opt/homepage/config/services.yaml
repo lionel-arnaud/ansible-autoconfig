@@ -3,7 +3,7 @@
 # not the way they are deployed.
 #
 # siteMonitor normally points at the INTERNAL container URL: admin tools sit
-# behind Caddy basic auth and their public homepage would report a constant 401.
+# behind the login portal and their public homepage would only test that portal.
 # Umami's public tracker is the exception: it also checks DNS, TLS and routing.
 #
 # `server: local-docker` + `container:` reads container state through the
@@ -56,7 +56,7 @@
     - Trader:
         icon: mdi-chart-line
         href: https://trader.dinnizer.com/
-        description: Trading dashboard (basic auth)
+        description: Trading dashboard (shared login)
         server: local-docker
         container: trader-dashboard
         showStats: true
@@ -80,14 +80,14 @@
     - Frigate:
         icon: frigate.png
         href: https://frigate.dinnizer.com/
-        description: Camera NVR (basic auth)
+        description: Camera NVR (shared login)
         server: local-docker
         container: frigate
         showStats: true
     - Excalidraw:
         icon: mdi-draw
         href: https://draw.dinnizer.com/
-        description: Collaborative whiteboard (basic auth)
+        description: Collaborative whiteboard (shared login)
         server: local-docker
         container: excalidraw
         showStats: true
@@ -95,17 +95,25 @@
     - BentoPDF:
         icon: mdi-file-pdf-box
         href: https://pdf.dinnizer.com/
-        description: Family PDF toolkit (basic auth)
+        description: Family PDF toolkit (shared login)
         server: local-docker
         container: bentopdf
         showStats: true
         siteMonitor: http://bentopdf:8080/
 
 - Infrastructure:
+    - Authelia:
+        icon: authelia.png
+        href: https://auth.dinnizer.com/
+        description: Shared login portal
+        server: local-docker
+        container: authelia
+        showStats: true
+        siteMonitor: https://auth.dinnizer.com/api/health
     - Umami:
         icon: umami.png
         href: https://umami.dinnizer.com/
-        description: Website traffic analytics (basic auth)
+        description: Website traffic analytics (shared login)
         server: local-docker
         container: umami
         showStats: true
@@ -121,7 +129,7 @@
     - Uptime Kuma:
         icon: uptime-kuma.png
         href: https://status.dinnizer.com/
-        description: External checks and cert expiry (basic auth)
+        description: External checks and cert expiry (shared login)
         server: local-docker
         container: uptime-kuma
         showStats: true

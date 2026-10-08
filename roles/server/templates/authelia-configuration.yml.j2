@@ -1,0 +1,54 @@
+---
+# Managed by Ansible. Keep the upstream UI intact for straightforward upgrades.
+theme: auto
+server:
+  address: tcp://:9091/
+log:
+  level: info
+  format: json
+
+authentication_backend:
+  # The same password is managed by Ansible for all services; changing it only
+  # here would create a different password and be undone by the next deployment.
+  password_change:
+    disable: true
+  password_reset:
+    disable: true
+  file:
+    path: /config/users_database.yml
+
+# Start with the same single-factor policy as the old Caddy password prompt.
+totp:
+  disable: true
+webauthn:
+  disable: true
+
+access_control:
+  default_policy: deny
+  rules:
+    - domain:
+{% for site in server_reverse_proxy_sites | selectattr('basic_auth', 'defined') | selectattr('basic_auth') %}
+        - {{ site.hostname | to_json }}
+{% endfor %}
+      policy: one_factor
+      subject: group:admins
+
+session:
+  name: dinnizer_session
+  same_site: lax
+  inactivity: 1h
+  expiration: 12h
+  remember_me: 1M
+  cookies:
+    - domain: {{ authelia_cookie_domain | to_json }}
+      authelia_url: {{ ('https://' ~ authelia_hostname) | to_json }}
+      default_redirection_url: {{ authelia_default_url | to_json }}
+
+storage:
+  local:
+    path: /data/db.sqlite3
+
+# No SMTP credentials needed for this password-only portal.
+notifier:
+  filesystem:
+    filename: /data/notifications.txt

@@ -292,6 +292,13 @@
     - server
     - rclone_gdrive
 
+- name: Deploy the shared login portal
+  ansible.builtin.import_tasks: authelia.yml
+  when: server_authelia_enabled | default(false)
+  tags:
+    - server
+    - authelia
+
 - name: Deploy the Caddy reverse proxy
   ansible.builtin.import_tasks: reverse_proxy.yml
   when: server_reverse_proxy_enabled | default(false)
