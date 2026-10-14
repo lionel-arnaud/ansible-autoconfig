@@ -2,7 +2,7 @@
 - Administration:
     - Ansible Autoconfig:
         - abbr: AA
-          href: https://github.com/djspatule/ansible-autoconfig
+          href: https://github.com/lionel-arnaud/ansible-autoconfig
           description: Source repository
     - Serverannah SSH:
         - abbr: SSH
