@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" font-family="Inter, 'DejaVu Sans', Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#111c33"/>
+    </linearGradient>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- Title -->
+  <text x="80" y="104" font-size="54" font-weight="700" fill="#f8fafc">Homelab as Code</text>
+  <text x="80" y="148" font-size="24" fill="#94a3b8">One command rebuilds every machine from an empty disk, re-applied every night.</text>
+
+  <!-- Source repo -->
+  <rect x="80" y="262" width="300" height="150" rx="16" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+  <text x="230" y="312" font-size="22" font-weight="700" fill="#f8fafc" text-anchor="middle">ansible-autoconfig</text>
+  <text x="230" y="344" font-size="17" fill="#94a3b8" text-anchor="middle">Git repo · ~6 000 lines</text>
+  <text x="230" y="370" font-size="17" fill="#94a3b8" text-anchor="middle">of Ansible, tested</text>
+  <text x="230" y="396" font-size="17" fill="#94a3b8" text-anchor="middle">on every commit</text>
+
+  <!-- Pull label -->
+  <text x="230" y="452" font-size="18" fill="#38bdf8" text-anchor="middle" font-family="'DejaVu Sans Mono', monospace">ansible-pull · nightly</text>
+
+  <!-- Arrows to machines -->
+  <g stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr)">
+    <path d="M380,337 C450,337 500,225 588,225"/>
+    <path d="M380,337 C460,337 500,315 588,315"/>
+    <path d="M380,337 C460,337 500,405 588,405"/>
+    <path d="M380,337 C450,337 500,495 588,495"/>
+  </g>
+
+  <!-- Machines -->
+  <g font-size="19">
+    <rect x="592" y="196" width="262" height="58" rx="12" fill="#1e293b" stroke="#334155"/>
+    <text x="616" y="232" fill="#f8fafc" font-weight="700">Server</text>
+    <text x="836" y="232" fill="#94a3b8" font-size="16" text-anchor="end">Ubuntu · Docker</text>
+
+    <rect x="592" y="286" width="262" height="58" rx="12" fill="#1e293b" stroke="#334155"/>
+    <text x="616" y="322" fill="#f8fafc" font-weight="700">Laptop</text>
+    <text x="836" y="322" fill="#94a3b8" font-size="16" text-anchor="end">Arch · Hyprland</text>
+
+    <rect x="592" y="376" width="262" height="58" rx="12" fill="#1e293b" stroke="#334155"/>
+    <text x="616" y="412" fill="#f8fafc" font-weight="700">Raspberry Pi</text>
+    <text x="836" y="412" fill="#94a3b8" font-size="16" text-anchor="end">AI agents</text>
+
+    <rect x="592" y="466" width="262" height="58" rx="12" fill="#1e293b" stroke="#334155"/>
+    <text x="616" y="502" fill="#f8fafc" font-weight="700">Kids' laptop</text>
+    <text x="836" y="502" fill="#94a3b8" font-size="16" text-anchor="end">Mint</text>
+  </g>
+
+  <!-- Server services -->
+  <path d="M854,225 L900,225" stroke="#64748b" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="904" y="196" width="296" height="328" rx="16" fill="#1e293b" stroke="#334155"/>
+  <text x="926" y="232" font-size="17" font-weight="700" fill="#94a3b8" letter-spacing="1">RUNS</text>
+  <g font-size="16" fill="#e2e8f0">
+    <rect x="926" y="252" width="122" height="36" rx="18" fill="#0c4a6e"/><text x="987" y="276" text-anchor="middle">Caddy</text>
+    <rect x="1060" y="252" width="122" height="36" rx="18" fill="#0c4a6e"/><text x="1121" y="276" text-anchor="middle">Nextcloud</text>
+    <rect x="926" y="300" width="122" height="36" rx="18" fill="#0c4a6e"/><text x="987" y="324" text-anchor="middle">Jellyfin</text>
+    <rect x="1060" y="300" width="122" height="36" rx="18" fill="#0c4a6e"/><text x="1121" y="324" text-anchor="middle">Frigate</text>
+    <rect x="926" y="348" width="122" height="36" rx="18" fill="#0c4a6e"/><text x="987" y="372" text-anchor="middle">Pi-hole</text>
+    <rect x="1060" y="348" width="122" height="36" rx="18" fill="#0c4a6e"/><text x="1121" y="372" text-anchor="middle">Web apps</text>
+    <rect x="926" y="396" width="122" height="36" rx="18" fill="#14532d"/><text x="987" y="420" text-anchor="middle">Borg backup</text>
+    <rect x="1060" y="396" width="122" height="36" rx="18" fill="#14532d"/><text x="1121" y="420" text-anchor="middle">Uptime Kuma</text>
+    <rect x="926" y="444" width="122" height="36" rx="18" fill="#14532d"/><text x="987" y="468" text-anchor="middle">fail2ban</text>
+    <rect x="1060" y="444" width="122" height="36" rx="18" fill="#14532d"/><text x="1121" y="468" text-anchor="middle">Alerts</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="80" y="590" font-size="20" fill="#64748b" font-family="'DejaVu Sans Mono', monospace">github.com/lionel-arnaud/ansible-autoconfig</text>
+  <text x="1200" y="590" font-size="20" fill="#64748b" text-anchor="end">Lionel Arnaud</text>
+</svg>
