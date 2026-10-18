@@ -12,6 +12,19 @@
       Borg backup packages are not defined for {{ ansible_facts.os_family }}.
       Add this OS family to backup_packages_by_family.
 
+# backup_paths in host_vars replaces the role default rather than extending it,
+# and that is how the inbox of pushed Pi/kidsbook state was left out of every
+# archive from 2026-09-13 to 2026-10-18 while the push itself kept succeeding.
+- name: Require the backup inbox to be in the Borg backup set
+  ansible.builtin.assert:
+    that:
+      - backup_inbox_dir in backup_paths
+    fail_msg: >-
+      backup_inbox_enabled is true but {{ backup_inbox_dir }} is not in
+      backup_paths, so state pushed from other hosts would never be backed up.
+      Add it to backup_paths (host_vars replaces the role default list).
+  when: backup_inbox_enabled | default(false) | bool
+
 - name: Install Borg backup packages
   ansible.builtin.package:
     name: "{{ backup_packages_by_family[ansible_facts.os_family] }}"

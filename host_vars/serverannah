@@ -48,6 +48,10 @@ backup_paths:
   # What a bare-metal rebuild needs first.
   - /etc/fstab
   - /etc/netplan
+  # State pushed from raspi and kidsbook. This list replaces the role default,
+  # so the inbox has to be named here too; it was missing from every archive
+  # until 2026-10-18. backup.yml now refuses to run without it.
+  - /var/lib/backup-inbox
 backup_database_dumps:
   - name: umami
     engine: postgres

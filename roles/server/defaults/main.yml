@@ -515,13 +515,23 @@ backup_paths:
   - /opt/reverse-proxy
   # State pushed from other hosts. Nothing else backs the Pi up.
   - /var/lib/backup-inbox
-# Live database files are skipped: a running MariaDB rewrites them while Borg
-# reads, so a raw copy is never consistent, and Borg exits with a warning
-# ("file changed while we backed it up"). Each one is already captured
-# consistently by its dump in backup_database_dumps below.
+# Live database files are skipped: a running MariaDB or Postgres rewrites them
+# while Borg reads, so a raw copy is never consistent, and Borg exits with a
+# warning ("file changed while we backed it up"). Each one is already captured
+# consistently by its dump in backup_database_dumps below. The dinnizer
+# Postgres folder sits inside /opt/dinnizer and went into every archive raw
+# (1,331 files) until 2026-10-18.
+#
+# The live Caddy access log is appended to all day, so reading it races every
+# request (the warning of 2026-10-18). The rotated access-*.log.gz files next
+# to it are complete and still backed up. Keep "file changed" warnings
+# alerting otherwise: twice they were the only sign of a database without a
+# consistent copy.
 backup_exclude_paths:
   - "{{ nextcloud_db_data_dir }}"
   - "{{ aumenuilya_db_data_dir }}"
+  - "{{ dinnizer_db_data_dir }}"
+  - "{{ server_reverse_proxy_data_dir }}/{{ server_reverse_proxy_access_log | basename }}"
 backup_database_dumps:
   - name: aumenuilya
     container: "{{ aumenuilya_db_container_name }}"
