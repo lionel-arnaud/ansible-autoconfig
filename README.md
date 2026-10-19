@@ -1292,7 +1292,12 @@ Fix: `workstation_pacman_holds` (in `host_vars/savannarchome`) holds
 move together because 0.15 bumped the library soname; any package rebuilt
 against the newer libraries joins the hold, or `omarchy update` stops with
 "unable to satisfy dependency" (how hyprland-guiutils joined on 2026-10-19).
-To check before adding one: `pacman -Sup --ignore <pkg>` must resolve. The role installs them from the pacman cache, or from the Arch
+To check before adding one: `pacman -Sup --ignore <pkg>` must resolve.
+
+To see the state of the hold at any time, run `pacman-holds` (no sudo). It
+lists what is held, what is installed and what the repositories offer, then
+does a dry run of the full update and says whether `omarchy update` would go
+through, naming the blocking package if not. The role installs them from the pacman cache, or from the Arch
 Linux Archive when the cache has been cleaned, and adds them to `IgnorePkg` in
 `/etc/pacman.conf` so `omarchy update` cannot undo it. Every run prints the
 held versions next to what the repositories offer. Takes effect at the next

@@ -1,0 +1,59 @@
+#!/bin/bash
+# Managed by Ansible (roles/workstation, workstation_pacman_holds). Edits here
+# are overwritten; change the hold in host_vars instead.
+#
+# Shows the packages held back on purpose and whether `omarchy update` (a full
+# pacman -Syu) would go through right now. Needs no sudo: like checkupdates, it
+# downloads a private copy of the package lists and asks pacman for a dry run.
+set -uo pipefail
+
+held=({% for h in workstation_pacman_holds %} {{ h.name | quote }}{% endfor %} )
+pinned=({% for h in workstation_pacman_holds %} {{ h.version | quote }}{% endfor %} )
+reason={{ workstation_pacman_holds_reason | quote }}
+upstream={{ workstation_pacman_holds_upstream | default('') | quote }}
+
+bold=$'\e[1m'; red=$'\e[31m'; green=$'\e[32m'; yellow=$'\e[33m'; rst=$'\e[0m'
+[ -t 1 ] || { bold=; red=; green=; yellow=; rst=; }
+
+db=$(mktemp -d)
+trap 'rm -rf "$db"' EXIT
+ln -s "$(pacman-conf DBPath)/local" "$db/local"
+online=1
+fakeroot -- pacman -Sy --disable-sandbox-filesystem --dbpath "$db" --logfile /dev/null >/dev/null 2>&1 || online=0
+
+echo "${bold}Packages held back on purpose${rst}"
+echo "Why: $reason"
+echo
+printf '%-20s %-12s %-12s %s\n' PACKAGE "HELD AT" INSTALLED "REPOS OFFER"
+for i in "${!held[@]}"; do
+  name=${held[$i]}
+  installed=$(pacman -Q "$name" 2>/dev/null | awk '{print $2}')
+  offered=$( ((online)) && pacman -Si --dbpath "$db" "$name" 2>/dev/null | awk '/^Version/{print $3; exit}')
+  note=
+  [ "$installed" != "${pinned[$i]}" ] && note="  ${yellow}<- not at the held version: run sudo autoconfig-pull${rst}"
+  printf '%-20s %-12s %-12s %s%s\n' "$name" "${pinned[$i]}" "${installed:-missing}" "${offered:-?}" "$note"
+done
+echo
+
+if (( ! online )); then
+  echo "${yellow}Could not reach the package mirrors, so the update check was skipped.${rst}"
+  exit 2
+fi
+
+out=$(pacman -Sup --dbpath "$db" --logfile /dev/null --print-format '%n' </dev/null 2>&1)
+rc=$?
+if (( rc == 0 )); then
+  count=$(grep -cE '^[a-z0-9@._+-]+$' <<<"$out")
+  echo "${green}omarchy update: OK${rst} ($count packages to upgrade; the held ones are skipped)."
+else
+  echo "${red}omarchy update: WOULD FAIL${rst}"
+  grep -E "required by|conflict|error:" <<<"$out" | sed 's/^/  /'
+  blockers=$(sed -nE "s/.*required by \"?([^\" ]+)\"?.*/\1/p" <<<"$out" | sort -u | paste -sd ' ')
+  echo
+  echo "A package (${blockers:-see above}) was rebuilt against newer versions of the"
+  echo "held libraries. Either add it to workstation_pacman_holds in"
+  echo "host_vars/$(hostname) at its installed version (pacman -Q <name>), or lift"
+  echo "the hold if the bug below is fixed."
+fi
+[ -n "$upstream" ] && echo && echo "Lift the hold once this is fixed: $upstream"
+exit "$rc"

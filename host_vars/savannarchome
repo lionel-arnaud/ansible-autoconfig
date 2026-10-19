@@ -49,8 +49,9 @@ workstation_pacman_holds:
   - { name: hyprtoolkit, version: 0.5.4-4 }
   - { name: hyprland-guiutils, version: 0.2.2-3 }
 workstation_pacman_holds_reason: >-
-  aquamarine 0.15 leaves unplugged monitors' CRTCs active (hyprwm/aquamarine#386);
-  lift when a fixed release ships.
+  aquamarine 0.15 leaves an external monitor black (0x0) after it is unplugged
+  and plugged back in. Held at the last working versions until upstream fixes it.
+workstation_pacman_holds_upstream: https://github.com/hyprwm/aquamarine/issues/431
 
 dotfiles_stow_packages:
   - bash

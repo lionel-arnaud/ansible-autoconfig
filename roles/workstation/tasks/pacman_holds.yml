@@ -69,6 +69,25 @@
       IgnorePkg = {{ workstation_pacman_holds | map(attribute='name') | join(' ') }}
     state: "{{ (workstation_pacman_holds | length > 0) | ternary('present', 'absent') }}"
 
+# A self-service check for the operator: run `pacman-holds` (no sudo) to see
+# what is held and why, what the repositories offer, and whether
+# `omarchy update` would go through right now. pacman's own error on a blocked
+# update never mentions the hold.
+- name: Install the pacman-holds status command
+  ansible.builtin.template:
+    src: pacman-holds.j2
+    dest: /usr/local/bin/pacman-holds
+    owner: root
+    group: root
+    mode: "0755"
+  when: workstation_pacman_holds | length > 0
+
+- name: Remove the pacman-holds status command when nothing is held
+  ansible.builtin.file:
+    path: /usr/local/bin/pacman-holds
+    state: absent
+  when: workstation_pacman_holds | length == 0
+
 # Report-only: makes it visible in every run whether the repositories have moved
 # on, which is the cue to check upstream and lift the hold.
 - name: Read the repository versions of the held packages

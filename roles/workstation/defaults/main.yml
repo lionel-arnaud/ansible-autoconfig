@@ -19,6 +19,8 @@ workstation_keyd_enabled: false
 # lifts every hold. See roles/workstation/tasks/pacman_holds.yml.
 workstation_pacman_holds: []
 workstation_pacman_holds_reason: Held by Ansible.
+# Where to look to know when the hold can be lifted (shown by `pacman-holds`).
+workstation_pacman_holds_upstream: ""
 
 # ufw rules for a LAN workstation. Prefer an application profile shipped by the
 # package over a hard-coded port range; KDEConnect resolves to 1714:1764 on both
