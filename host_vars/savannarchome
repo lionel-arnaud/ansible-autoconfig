@@ -37,12 +37,17 @@ omarchy_allow_ansible_package_installs: true
 # handed the same CRTC fails every modeset with EINVAL, even 640x480. Confirmed
 # here with modetest (DP-3 disconnected yet still holding CRTC 269). Upstream:
 # hyprwm/aquamarine#386 and #431; 0.15.1 is reported not to fix it on Intel.
-# 0.14.0 has no such guard. The three move together: 0.15 bumped the soname
-# (libaquamarine.so 13 -> 14). Lift the hold once a fixed release ships.
+# 0.14.0 has no such guard. They move together: 0.15 bumped the soname
+# (libaquamarine.so 13 -> 14). hyprland-guiutils joined on 2026-10-19, when
+# its 0.2.2-4 rebuild started requiring hyprtoolkit 0.6 (libhyprtoolkit.so=6,
+# itself built on aquamarine 0.15) and so blocked every `omarchy update`.
+# Still unfixed then: 0.15.1 and main keep the guard, #431 open. Lift the
+# hold once a fixed release ships.
 workstation_pacman_holds:
   - { name: aquamarine, version: 0.14.0-2 }
   - { name: hyprland, version: 0.56.2-1 }
   - { name: hyprtoolkit, version: 0.5.4-4 }
+  - { name: hyprland-guiutils, version: 0.2.2-3 }
 workstation_pacman_holds_reason: >-
   aquamarine 0.15 leaves unplugged monitors' CRTCs active (hyprwm/aquamarine#386);
   lift when a fixed release ships.

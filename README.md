@@ -1287,9 +1287,12 @@ hyprmoncfg (it is in unmanaged mode and writes nothing) nor by Omarchy's own
 clamshell handling, which is what recovers the panel on lid open.
 
 Fix: `workstation_pacman_holds` (in `host_vars/savannarchome`) holds
-`aquamarine 0.14.0-2`, `hyprland 0.56.2-1` and `hyprtoolkit 0.5.4-4`, the last
-versions without the regression. They move together because 0.15 bumped the
-library soname. The role installs them from the pacman cache, or from the Arch
+`aquamarine 0.14.0-2`, `hyprland 0.56.2-1`, `hyprtoolkit 0.5.4-4` and
+`hyprland-guiutils 0.2.2-3`, the last versions without the regression. They
+move together because 0.15 bumped the library soname; any package rebuilt
+against the newer libraries joins the hold, or `omarchy update` stops with
+"unable to satisfy dependency" (how hyprland-guiutils joined on 2026-10-19).
+To check before adding one: `pacman -Sup --ignore <pkg>` must resolve. The role installs them from the pacman cache, or from the Arch
 Linux Archive when the cache has been cleaned, and adds them to `IgnorePkg` in
 `/etc/pacman.conf` so `omarchy update` cannot undo it. Every run prints the
 held versions next to what the repositories offer. Takes effect at the next
