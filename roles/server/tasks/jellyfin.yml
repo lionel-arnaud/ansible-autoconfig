@@ -338,15 +338,16 @@
   when: jellyfin_wizard_complete | bool
 
 - name: Create Jellyfin libraries on first run
-  # Jellyfin 10.11 expects Name / CollectionType / Paths / RefreshOptions
+  # Jellyfin expects Name / CollectionType / Paths / refreshLibrary
   # as QUERY PARAMETERS on POST /Library/VirtualFolders, not in the JSON body.
   # Same endpoint, same body schema documented at api.jellyfin.org, but
   # the [FromQuery] binding on the controller in 10.11 means the body
   # fields are ignored and a JSON body with the same field names just
   # produces "The name field is required" — the deserializer sees an
-  # empty form.
+  # empty form. Repeat Paths for each directory (a comma-separated value is
+  # treated as one path), and request a scan after creating the library.
   ansible.builtin.uri:
-    url: "http://{{ jellyfin_lan_ip | default('192.168.1.100') }}:8096/Library/VirtualFolders?Name={{ item.name | urlencode }}&CollectionType={{ item.collection_type }}&Paths={{ item.paths | join(',') | urlencode }}&RefreshOptions=true"
+    url: "http://{{ jellyfin_lan_ip | default('192.168.1.100') }}:8096/Library/VirtualFolders?Name={{ item.name | urlencode }}&CollectionType={{ item.collection_type }}&Paths={{ item.paths | map('urlencode') | join('&Paths=') }}&refreshLibrary=true"
     method: POST
     headers:
       Authorization: 'MediaBrowser Token="{{ jellyfin_access_resp.json.AccessToken | default('''') }}"'
@@ -403,13 +404,20 @@
 # refresh. The role now goes to the SQLite DB directly to clean those up.
 # Stops Jellyfin so it can't write its in-memory state back over the
 # changes, then restarts.
+- name: Build the SQL allowlist from managed Jellyfin libraries
+  ansible.builtin.set_fact:
+    # Escape SQL string literals, including names containing apostrophes.
+    jellyfin_library_names_sql: >-
+      '{{ (jellyfin_canonical_names + ['Playlists']) | map('replace', "'", "''") | join("', '") }}'
+  when: jellyfin_wizard_complete | bool
+
 - name: List remaining duplicate Jellyfin libraries via SQLite (post-API-prune)
   ansible.builtin.command:
     cmd: >-
       sqlite3 {{ jellyfin_config_dir }}/data/data/jellyfin.db
       "SELECT Id, Name FROM BaseItems
        WHERE Type = 'MediaBrowser.Controller.Entities.CollectionFolder'
-         AND Name NOT IN ('Movies', 'TV Shows', 'Music', 'Photos', 'Playlists')"
+         AND Name NOT IN ({{ jellyfin_library_names_sql }})"
   register: jellyfin_db_orphans
   changed_when: false
   when: jellyfin_wizard_complete | bool
@@ -430,10 +438,10 @@
       "DELETE FROM AncestorIds WHERE ItemId IN
         (SELECT Id FROM BaseItems
          WHERE Type = 'MediaBrowser.Controller.Entities.CollectionFolder'
-           AND Name NOT IN ('Movies', 'TV Shows', 'Music', 'Photos', 'Playlists'));
+           AND Name NOT IN ({{ jellyfin_library_names_sql }}));
        DELETE FROM BaseItems
        WHERE Type = 'MediaBrowser.Controller.Entities.CollectionFolder'
-         AND Name NOT IN ('Movies', 'TV Shows', 'Music', 'Photos', 'Playlists')"
+         AND Name NOT IN ({{ jellyfin_library_names_sql }})"
   register: jellyfin_db_delete
   changed_when: true
   when:

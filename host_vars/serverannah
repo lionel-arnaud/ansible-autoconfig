@@ -411,6 +411,24 @@ jellyfin_libraries:
       - /data/Music
     preferred_language: fr
 
+  # Use category paths rather than /data/Books so comics and audiobooks do not
+  # also appear in the Books library.
+  - name: Books
+    collection_type: books
+    paths:
+      - /data/Books/How To
+      - /data/Books/IT
+      - /data/Books/Kids Books
+      - /data/Books/Litterature
+      - /data/Books/Science
+      - /data/Books/Travel
+    preferred_language: fr
+  - name: Comics & Manga
+    collection_type: books
+    paths:
+      - /data/Books/Comics
+    preferred_language: fr
+
 # Do not bind-mount personal photos into Jellyfin. The explicit mount list is
 # also an access boundary: a newly created Jellyfin library cannot expose an
 # unmounted directory from the SSD.
@@ -420,6 +438,13 @@ jellyfin_media_volumes:
   - "{{ jellyfin_media_root }}/Humour:/data/Humour:ro"
   - "{{ jellyfin_media_root }}/TV Shows:/data/TV Shows:ro"
   - "{{ jellyfin_media_root }}/Music:/data/Music:ro"
+  - "{{ jellyfin_media_root }}/Books/How To:/data/Books/How To:ro"
+  - "{{ jellyfin_media_root }}/Books/IT:/data/Books/IT:ro"
+  - "{{ jellyfin_media_root }}/Books/Kids Books:/data/Books/Kids Books:ro"
+  - "{{ jellyfin_media_root }}/Books/Litterature:/data/Books/Litterature:ro"
+  - "{{ jellyfin_media_root }}/Books/Science:/data/Books/Science:ro"
+  - "{{ jellyfin_media_root }}/Books/Travel:/data/Books/Travel:ro"
+  - "{{ jellyfin_media_root }}/Books/Comics:/data/Books/Comics:ro"
 jellyfin_excluded_media_paths:
   - /data/Pictures
 

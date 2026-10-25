@@ -229,7 +229,7 @@ jellyfin_api_key_file: "{{ jellyfin_config_dir }}/data/jellyfin-api.key"
 # if it doesn't already exist. Each entry needs:
 #   name:              display name in the Jellyfin UI
 #   collection_type:   one of 'movies', 'tvshows', 'music', 'musicvideos',
-#                      'homevideos', 'mixed', 'boxsets'
+#                      'homevideos', 'mixed', 'boxsets', 'books'
 #   paths:             list of container-internal paths (the bind mount makes
 #                      /mnt/SSD_1TO appear as /data inside the container, so
 #                      pass /data/Movies, not the host path)
