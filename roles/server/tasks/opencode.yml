@@ -67,9 +67,31 @@
     opencode_server_password: "{{ server_opencode_password_slurp.content | b64decode | trim }}"
   no_log: true
 
-# Reload the user systemd manager so newly-stowed unit files are visible,
-# then enable+start the service. Mirrors the pattern in
-# roles/workstation/tasks/systemd_user.yml.
+# This server service must run even when its owner has no login session.
+# Resolve the UID on the managed host (a pipe lookup runs on the controller),
+# enable lingering, and start the user manager before contacting its bus.
+- name: Resolve the opencode service user UID
+  ansible.builtin.command:
+    argv:
+      - id
+      - -u
+      - "{{ server_opencode_user }}"
+  register: server_opencode_user_uid
+  changed_when: false
+
+- name: Keep the opencode user manager running without a login session
+  ansible.builtin.command:
+    argv:
+      - loginctl
+      - enable-linger
+      - "{{ server_opencode_user }}"
+    creates: "/var/lib/systemd/linger/{{ server_opencode_user }}"
+
+- name: Ensure the opencode systemd user manager is running
+  ansible.builtin.systemd:
+    name: "user@{{ server_opencode_user_uid.stdout | trim }}.service"
+    state: started
+
 - name: Deploy the opencode-web systemd user unit
   ansible.builtin.template:
     src: opencode-web.service.j2
@@ -85,7 +107,8 @@
   become: true
   become_user: "{{ server_opencode_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ server_opencode_user)) }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ server_opencode_user_uid.stdout | trim }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ server_opencode_user_uid.stdout | trim }}/bus"
 
 - name: Enable and start the opencode web service
   ansible.builtin.systemd:
@@ -96,5 +119,5 @@
   become: true
   become_user: "{{ server_opencode_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ server_opencode_user)) }}"
-    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ server_opencode_user)) }}/bus"
+    XDG_RUNTIME_DIR: "/run/user/{{ server_opencode_user_uid.stdout | trim }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ server_opencode_user_uid.stdout | trim }}/bus"
