@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/v2/cli.json",
+  "theme": {
+    "name": "system"
+  },
+  "prompt": {
+    "paste": "full"
+  },
+  "keybinds": {
+    "session.first": "ctrl+g,ctrl+home",
+    "session.last": "ctrl+alt+g,ctrl+end",
+    "input.buffer.home": "home",
+    "input.buffer.end": "end"
+  },
+  "plugins": [
+    "*",
+    "-opencode.notifications"
+  ]
+}

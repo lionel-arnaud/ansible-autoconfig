@@ -8,21 +8,29 @@
 # once the rclone mount is in place). A Docker wrapper would require bind-mount
 # gymnastics for every project — native is simpler and matches the docs.
 
-# The upstream install script (curl ... | bash) is idempotent — re-running it
-# updates to the latest version. We guard on the binary at its actual install
-# location (~/.opencode/bin/opencode — see server_opencode_binary), which keeps
-# the playbook quiet on subsequent runs.
-- name: Check whether opencode is already installed
-  ansible.builtin.stat:
-    path: "{{ server_opencode_binary }}"
-  register: server_opencode_binary_stat
+# V2's installer replaces V1 in the familiar ~/.opencode/bin location. Check
+# the major version rather than only whether a binary exists: V1 installations
+# otherwise make Ansible permanently skip the migration.
+- name: Check the installed OpenCode version
+  ansible.builtin.command:
+    argv:
+      - "{{ server_opencode_binary }}"
+      - --version
+  register: server_opencode_version
+  changed_when: false
+  failed_when: false
+  become: true
+  become_user: "{{ server_opencode_user }}"
 
-- name: Install opencode via the upstream install script
+- name: Install OpenCode V2 via the upstream install script
   ansible.builtin.shell:
     cmd: |
       set -eu
       curl -fsSL "{{ server_opencode_install_script_url }}" | bash
-    creates: "{{ server_opencode_binary }}"
+  when: server_opencode_version.rc != 0 or not (server_opencode_version.stdout is match('^opencode v2\\.'))
+  register: server_opencode_v2_install
+  become: true
+  become_user: "{{ server_opencode_user }}"
 
 # Generate a dedicated HTTP basic-auth password for the opencode web UI. Caddy
 # gates the public hostname, but the in-app password is defense-in-depth: a LAN
@@ -46,10 +54,10 @@
   no_log: true
 
 # Deploy the EnvironmentFile under the desktop user's home so the systemd user
-# unit (in files/dotfiles/systemd/.config/systemd/user/opencode-web.service) can
-# pick it up via `EnvironmentFile=%h/.opencode-server-password`. systemd reads
+# unit can pick it up via `EnvironmentFile=%h/.opencode-server-password`.
+# systemd reads
 # KEY=VALUE lines and exports them into the process environment, which is how
-# opencode consumes OPENCODE_SERVER_PASSWORD.
+# opencode consumes OPENCODE_PASSWORD.
 - name: Read the opencode server password for templating
   ansible.builtin.slurp:
     src: "{{ server_opencode_password_file }}"
@@ -110,11 +118,11 @@
     XDG_RUNTIME_DIR: "/run/user/{{ server_opencode_user_uid.stdout | trim }}"
     DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ server_opencode_user_uid.stdout | trim }}/bus"
 
-- name: Enable and start the opencode web service
+- name: Enable and start the OpenCode V2 service
   ansible.builtin.systemd:
     name: opencode-web.service
     enabled: true
-    state: started
+    state: "{{ 'restarted' if (server_opencode_v2_install.changed | default(false)) else 'started' }}"
     scope: user
   become: true
   become_user: "{{ server_opencode_user }}"

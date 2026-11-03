@@ -278,7 +278,7 @@
     - server
     - aumenuilya
 
-- name: Deploy opencode web
+- name: Deploy OpenCode V2
   ansible.builtin.import_tasks: opencode.yml
   when: server_opencode_enabled | default(false)
   tags:

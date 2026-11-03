@@ -48,7 +48,7 @@ trading_agent_enabled: true
 # opencode over the LAN. serverannah binds 4096 to 192.168.1.100 only, so this
 # never leaves the house and needs no second password through Caddy.
 trading_agent_opencode_url: http://192.168.1.100:4096
-trading_agent_opencode_user: lion
+trading_agent_opencode_user: opencode
 
 # Nightly push of the agent's state to serverannah's backup inbox, where the
 # existing Borg job takes it off-site. This host runs from an SD card and

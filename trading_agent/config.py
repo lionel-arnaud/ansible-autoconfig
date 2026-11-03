@@ -40,7 +40,8 @@ class Config:
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     opencode_url: str = ""
-    opencode_user: str = "lion"
+    # OpenCode V2 fixes the HTTP Basic username to "opencode".
+    opencode_user: str = "opencode"
     opencode_password: str = ""
 
     @property
@@ -78,7 +79,7 @@ class Config:
             telegram_bot_token=os.environ.get("TELEGRAM_BOT_TOKEN", ""),
             telegram_chat_id=os.environ.get("TELEGRAM_CHAT_ID", ""),
             opencode_url=os.environ.get("OPENCODE_URL", ""),
-            opencode_user=os.environ.get("OPENCODE_USER", "lion"),
+            opencode_user=os.environ.get("OPENCODE_USER", "opencode"),
             opencode_password=os.environ.get("OPENCODE_PASSWORD", ""),
         )
 

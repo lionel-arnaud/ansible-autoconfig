@@ -756,21 +756,23 @@ timeshift_managed_config:
   count_hourly: "0"
   count_boot: "0"
 
-# opencode: AI coding agent with a built-in web UI (opencode web). Hosted natively
+# OpenCode V2: AI coding agent with a built-in API and web UI (opencode serve).
+# Hosted natively
 # on serverannah so its sessions live on the same disk as the homelab services
 # and benefit from the existing Borg backup set (see backup_paths).
 #
 # Bound to the LAN address (not 0.0.0.0) so the port is unreachable from outside
 # the home network even if the router accidentally forwards it — the public
 # hostname only exists behind Caddy on 443. The systemd user unit exports
-# OPENCODE_SERVER_PASSWORD (basic auth) so a stray LAN device cannot just open
+# OPENCODE_PASSWORD (basic auth) so a stray LAN device cannot just open
 # the dashboard without the shared Caddy password.
 server_opencode_enabled: false
-# The upstream install script (https://opencode.ai/install) ignores
+# The V2 installer replaces a package-managed V1 binary. It keeps the familiar
+# install location, which the systemd unit uses.
 # OPENCODE_INSTALL_DIR on most recent versions and defaults to
 # `~/.opencode/bin/opencode`. Tracking the real install location keeps the
 # systemd unit's ExecStart in sync with where the binary actually lands.
-server_opencode_install_script_url: https://opencode.ai/install
+server_opencode_install_script_url: https://opencode.ai/v2/install
 server_opencode_user_home: "/home/{{ server_opencode_user }}"
 server_opencode_binary: "{{ server_opencode_user_home }}/.opencode/bin/opencode"
 server_opencode_port: 4096
@@ -778,7 +780,6 @@ server_opencode_port: 4096
 # the container network — same pattern as Jellyfin (see Caddyfile.j2 sites).
 server_opencode_lan_ip: 192.168.1.100
 server_opencode_user: "{{ dotfiles_user | default(desktop_user | default('lion')) }}"
-server_opencode_server_username: lion
 server_opencode_secret_dir: /etc/ansible/secrets
 server_opencode_password_file: "{{ server_opencode_secret_dir }}/opencode-server-password"
 

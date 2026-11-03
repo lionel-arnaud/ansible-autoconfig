@@ -1,6 +1,6 @@
 [Unit]
-Description=opencode web UI (LAN-bind on {{ server_opencode_lan_ip }}:{{ server_opencode_port }})
-Documentation=https://opencode.ai/docs/web
+Description=OpenCode V2 API and web UI (LAN-bind on {{ server_opencode_lan_ip }}:{{ server_opencode_port }})
+Documentation=https://opencode.ai/v2/docs/cli/web
 # Server-side state lives in the user's XDG data home, so the unit must run as
 # the desktop user (root in a user unit breaks DBus / XDG_RUNTIME_DIR lookups
 # and opencode then refuses to write its session store).
@@ -12,10 +12,10 @@ Type=simple
 # Bind explicitly to the LAN IP so the dashboard is reachable from Caddy
 # (192.168.1.100:4096) but never accidentally published on 0.0.0.0. The Caddy
 # basic_auth front-door is the primary gate; the EnvironmentFile below adds
-# OPENCODE_SERVER_PASSWORD so a stray LAN device cannot poke at the API
+# OPENCODE_PASSWORD so a stray LAN device cannot poke at the API
 # directly.
 EnvironmentFile=%h/.opencode-server-password
-ExecStart={{ server_opencode_binary }} web --hostname {{ server_opencode_lan_ip }} --port {{ server_opencode_port }}
+ExecStart={{ server_opencode_binary }} serve --hostname {{ server_opencode_lan_ip }} --port {{ server_opencode_port }}
 Restart=on-failure
 RestartSec=5
 

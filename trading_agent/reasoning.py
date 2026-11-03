@@ -55,32 +55,17 @@ class ReasoningClient:
         """
         import httpx
 
-        auth = (config.opencode_user, config.opencode_password)
+        # OpenCode V2 uses a fixed HTTP Basic username.  Keep the configuration
+        # field for older environment files, but do not let an old "lion" value
+        # make a V2 request authenticate as the wrong user.
+        auth = ("opencode", config.opencode_password)
         base = config.opencode_url.rstrip("/")
 
         def transport(payload: dict) -> str:
             # The caller sets this for prose; proposals keep the default.
             timeout = float(payload.get("timeout") or 180.0)
             with httpx.Client(auth=auth, timeout=timeout) as http:
-                created = http.post(f"{base}/session",
-                                    json={"title": "trading-agent cycle"})
-                created.raise_for_status()
-                session_id = created.json()["id"]
-                try:
-                    reply = http.post(
-                        f"{base}/session/{session_id}/message",
-                        json={"parts": [{"type": "text",
-                                         "text": _build_prompt(payload)}]},
-                    )
-                    reply.raise_for_status()
-                    return _extract_text(reply.json())
-                finally:
-                    # Always clean up, including on failure: an abandoned
-                    # session per failed cycle would accumulate silently.
-                    try:
-                        http.delete(f"{base}/session/{session_id}")
-                    except Exception:  # noqa: BLE001
-                        pass
+                return _request_v2_reply(http, base, _build_prompt(payload))
 
         return cls(transport, url=config.opencode_url)
 
@@ -179,13 +164,58 @@ def _build_prompt(payload: dict) -> str:
     )
 
 
+def _request_v2_reply(http, base: str, prompt: str) -> str:
+    """Send one request through the V2 API and return its final text.
+
+    V2 prompt delivery is asynchronous.  Waiting for the session to settle
+    before reading its messages prevents a trading cycle from treating an
+    accepted inbox item as an answer.  Each temporary session is deleted even
+    when any V2 request fails.
+    """
+    created = http.post(f"{base}/api/session", json={"title": "trading-agent cycle"})
+    created.raise_for_status()
+    data = created.json().get("data") or {}
+    session_id = data["id"]
+    try:
+        submitted = http.post(
+            f"{base}/api/session/{session_id}/prompt",
+            json={"text": prompt},
+        )
+        submitted.raise_for_status()
+
+        settled = http.post(f"{base}/api/experimental/session/{session_id}/wait")
+        settled.raise_for_status()
+
+        messages = http.get(f"{base}/api/session/{session_id}/message")
+        messages.raise_for_status()
+        return _extract_text(messages.json())
+    finally:
+        # A cycle gets a fresh session by design. Do not leave either failed or
+        # successful cycles in the server's history.
+        try:
+            http.delete(f"{base}/api/session/{session_id}")
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def _extract_text(reply: dict) -> str:
     """Pull the assistant's text out of an opencode reply.
 
-    The shape has moved between versions, so this checks the known places
-    rather than assuming one — and returns '' when it finds nothing, which the
-    caller treats as unusable rather than as an empty proposal list.
+    V2 returns a ``data`` list of messages with assistant ``content`` parts.
+    Accept the historic shapes too, so this parsing boundary remains defensive.
+    It returns '' when it finds nothing, which the caller treats as unusable
+    rather than as an empty proposal list.
     """
+    messages = reply.get("data")
+    if isinstance(messages, list):
+        for message in reversed(messages):
+            if message.get("type") != "assistant":
+                continue
+            texts = [part.get("text", "") for part in message.get("content", [])
+                     if part.get("type") == "text"]
+            if texts:
+                return texts[-1].strip()
+
     parts = reply.get("parts") or reply.get("info", {}).get("parts") or []
-    texts = [p.get("text", "") for p in parts if p.get("type") == "text"]
+    texts = [part.get("text", "") for part in parts if part.get("type") == "text"]
     return texts[-1].strip() if texts else ""

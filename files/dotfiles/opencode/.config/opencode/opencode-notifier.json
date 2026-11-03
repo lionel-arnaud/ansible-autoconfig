@@ -4,7 +4,7 @@
     "permission": false,
     "subagent_complete": false,
     "user_cancelled": false,
-    "interrupted": false,
+    "user_cancelled": false,
     "complete": true,
     "error": true,
     "question": true

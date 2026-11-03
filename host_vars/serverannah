@@ -366,7 +366,7 @@ server_fstab_src: "{{ playbook_dir }}/files/serverannah/etc/fstab"
 server_timeshift_enabled: true
 timeshift_device_uuid: ed895069-ac77-4a4b-89c3-78bed9aeff22
 
-# opencode web listens on the LAN address so the dashboard is reachable from
+# OpenCode V2 serves its API and web UI on the LAN address so the dashboard is reachable from
 # Caddy (which sits on the host's docker bridge). The router only forwards
 # 80/443 publicly, so a LAN-only bind keeps port 4096 unreachable from outside
 # the home network even if the router is misconfigured. The systemd unit also
