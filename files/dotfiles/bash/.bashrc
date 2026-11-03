@@ -165,4 +165,5 @@ fi
 # ~/.opencode/bin/opencode and appends this line; committing it here makes the
 # path available without a local modification to the dotfiles checkout (which
 # would otherwise block ansible-pull from updating the repo).
-export PATH="${HOME}/.opencode/bin:${PATH}"
+# Keep this standalone install as a fallback so Mise's managed version wins.
+export PATH="${PATH}:${HOME}/.opencode/bin"
