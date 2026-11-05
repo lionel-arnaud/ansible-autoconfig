@@ -1,28 +1,12 @@
 {
   "bar": {
-    "centerAnchor": "omarchy.clock",
     "layout": {
       "center": [
-        {
-          "id": "omarchy.indicators"
-        },
-        {
-          "id": "omarchy.keyboard-layout"
-        },
         {
           "id": "omarchy.clock",
           "format": "ddd d MMM HH:mm",
           "formatAlt": "d MMMM 'W'ww yyyy",
           "verticalFormat": "HH\n—\nmm"
-        },
-        {
-          "id": "omarchy.weather"
-        },
-        {
-          "id": "omarchy.media"
-        },
-        {
-          "id": "omarchy.system-update"
         }
       ],
       "left": [
@@ -38,7 +22,81 @@
           "id": "omarchy.tray"
         },
         {
-          "id": "omarchy.agents"
+          "id": "omarchy.keyboard-layout"
+        },
+        {
+          "id": "lion.agents",
+          "providers": {
+            "claude": {
+              "enabled": false
+            },
+            "grok": {
+              "enabled": false
+            },
+            "kimi": {
+              "enabled": false
+            },
+            "cursor": {
+              "enabled": false
+            },
+            "grokbot": {
+              "enabled": false
+            },
+            "copilot": {
+              "enabled": false
+            },
+            "muse": {
+              "enabled": false
+            },
+            "agy": {
+              "enabled": false
+            },
+            "kimchi": {
+              "enabled": false
+            },
+            "hermes": {
+              "enabled": false
+            },
+            "devin": {
+              "enabled": false
+            },
+            "vibe": {
+              "enabled": false
+            },
+            "qwen": {
+              "enabled": false
+            },
+            "opencode": {
+              "enabled": false
+            },
+            "zai": {
+              "enabled": false
+            },
+            "ollama": {
+              "enabled": false
+            },
+            "minimax": {
+              "enabled": false
+            },
+            "openrouter": {
+              "enabled": false
+            },
+            "deepseek": {
+              "enabled": false
+            },
+            "fireworks": {
+              "enabled": false
+            },
+            "synthetic": {
+              "enabled": false
+            },
+            "local": {
+              "enabled": false
+            },
+            "codex": {
+              "enabled": true
+            }
+          }
         },
         {
           "id": "omarchy.bluetooth"
@@ -54,6 +112,41 @@
         },
         {
           "id": "omarchy.power"
+        }
+      ],
+      "centerBegin": [
+        {
+          "id": "omarchy.indicators"
+        }
+      ],
+      "centerEnd": [
+        {
+          "id": "omarchy.elsewhen",
+          "cities": [
+            {
+              "name": "Paris",
+              "zone": "Europe/Paris"
+            },
+            {
+              "name": "Los Angeles",
+              "zone": "America/Los_Angeles"
+            },
+            {
+              "name": "New York",
+              "zone": "America/New_York"
+            }
+          ],
+          "units": "C",
+          "hour24": true
+        },
+        {
+          "id": "omarchy.weather"
+        },
+        {
+          "id": "omarchy.media"
+        },
+        {
+          "id": "omarchy.system-update"
         }
       ]
     },

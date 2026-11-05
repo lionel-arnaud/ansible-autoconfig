@@ -157,6 +157,10 @@ dotfiles_managed_paths:
   - package: omarchy
     path: .config/omarchy/shell.json
   - package: omarchy
+    path: .config/omarchy/plugins/lion.agents
+  - package: omarchy
+    path: .config/omarchy/plugins/lion.lock
+  - package: omarchy
     path: .config/omarchy/plugins/lion.workspaces
   - package: wireplumber
     path: .config/wireplumber
