@@ -382,6 +382,30 @@
   # unchanged rather than flag churn on every pull.
   changed_when: false
 
+# Some applications migrate their configuration by atomically replacing the
+# file. A Stow symlink cannot survive that write safely: the application turns
+# it into a regular file while Stow is rebuilding links, producing a conflict
+# on the next pull. Keep these files out of Stow and copy them after each run.
+- name: Ensure parent directories for copied dotfiles exist
+  ansible.builtin.file:
+    path: "{{ (dotfiles_home ~ '/' ~ item.dest) | dirname }}"
+    state: directory
+    owner: "{{ dotfiles_user }}"
+    group: "{{ dotfiles_user }}"
+    mode: '0700'
+  loop: "{{ dotfiles_copied_files | default([]) }}"
+  when: "item.package in dotfiles_stow_packages"
+
+- name: Copy dotfiles that applications rewrite in place
+  ansible.builtin.copy:
+    src: "{{ dotfiles_source_dir }}/{{ item.package }}/{{ item.src }}"
+    dest: "{{ dotfiles_home }}/{{ item.dest }}"
+    owner: "{{ dotfiles_user }}"
+    group: "{{ dotfiles_user }}"
+    mode: "{{ item.mode | default('0600') }}"
+  loop: "{{ dotfiles_copied_files | default([]) }}"
+  when: "item.package in dotfiles_stow_packages"
+
 # After Stow rebuilds the dotfile symlinks, Hyprland's inotify watcher can
 # surface a stale "cannot open ~/.config/hypr/hyprland.lua" overlay because
 # the per-file mtime churn during Stow's --restow can race with the live

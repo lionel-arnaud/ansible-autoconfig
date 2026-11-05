@@ -155,8 +155,6 @@ dotfiles_managed_paths:
   - package: hypr
     path: .config/hypr
   - package: omarchy
-    path: .config/omarchy/shell.json
-  - package: omarchy
     path: .config/omarchy/plugins/lion.agents
   - package: omarchy
     path: .config/omarchy/plugins/lion.lock
@@ -199,6 +197,14 @@ dotfiles_managed_paths:
 # home), and optional mode/dir_mode. Empty by default; hosts opt in.
 dotfiles_secret_source_dir: "{{ playbook_dir }}/files/dotfiles-secret"
 dotfiles_secret_files: []
+
+# Programs that rewrite their own configuration must receive a regular file,
+# not a Stow symlink. Omarchy migrates shell.json during upgrades.
+dotfiles_copied_files:
+  - package: omarchy
+    src: .config/omarchy/shell.json
+    dest: .config/omarchy/shell.json
+    mode: '0600'
 base_starship_prompt_enabled: true
 
 base_lazydocker_enabled: true
