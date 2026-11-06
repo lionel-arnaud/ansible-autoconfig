@@ -29,6 +29,7 @@ o.window("org.gnome.Calculator", { float = true })
 o.window("org.gnome.Calculator", { center = true })
 
 o.bind("SUPER + SHIFT + H", "Email", { launch = "thunderbird" })
+o.bind("SUPER + SHIFT + O", "Obsidian", { launch = "obsidian" })
 
 o.bind("SUPER + SHIFT + V", "Speak clipboard", "tts-clip")
 

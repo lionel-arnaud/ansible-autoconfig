@@ -5,8 +5,9 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("[workspace 1 silent] " .. o.launch("thunderbird"))
   hl.exec_cmd("[workspace 2 silent] " .. o.launch("chromium"))
   hl.exec_cmd("[workspace 3 silent] " .. o.launch("beeper"))
-  hl.exec_cmd("[workspace 4 silent] " .. o.launch("alacritty"))
+  hl.exec_cmd("[workspace 4 silent] " .. o.launch("alacritty -e btop"))
   hl.exec_cmd("[workspace 6 silent] " .. o.launch("nautilus"))
+  hl.exec_cmd("[workspace 7 silent] " .. o.launch("obsidian"))
   -- Google Drive is mounted by the rclone-gdrive-mount systemd user service
   -- (roles/workstation/tasks/rclone_gdrive.yml), not launched here. Running
   -- both raced for the same mountpoint and crash-looped the systemd unit.
