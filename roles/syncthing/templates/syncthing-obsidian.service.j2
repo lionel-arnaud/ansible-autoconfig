@@ -1,0 +1,14 @@
+[Unit]
+Description=Syncthing for the Obsidian vault
+After=network.target
+
+[Service]
+User={{ syncthing_user }}
+Group={{ syncthing_user }}
+ExecStart=/usr/bin/syncthing serve --no-browser --no-restart --home={{ syncthing_home }} --gui-address=127.0.0.1:8384
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

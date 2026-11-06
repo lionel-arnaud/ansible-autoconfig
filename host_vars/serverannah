@@ -1,6 +1,15 @@
 ---
 ansible_connection: local
+ansible_host: 192.168.1.100
 ansible_python_interpreter: auto_silent
+syncthing_enabled: true
+syncthing_folder: /home/lion/Obsidian/Lion
+syncthing_peers:
+  # The phone syncs through the always-on server. A Syncthing device ID is a
+  # public identifier; certificates and API keys stay outside this repository.
+  - deviceID: JFXJDAR-RW7H6V7-KWM2IRN-ODYXXWE-66EIG6Z-QNXSFTJ-SLXMGHJ-X7RG6QI
+    name: Pixel 11
+    addresses: [dynamic]
 
 # serverannah pulls and applies its own config locally.
 autoconfig_branch: main

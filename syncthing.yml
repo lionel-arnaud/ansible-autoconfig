@@ -1,0 +1,44 @@
+---
+# Standalone deployment avoids the full playbook's distribution upgrades.
+- name: Configure the Obsidian sync peers
+  hosts: savannarchome:serverannah
+  tags: syncthing_install
+  become: true
+  vars:
+    ansible_connection: "{{ 'local' if inventory_hostname == lookup('pipe', 'hostname') else 'ssh' }}"
+  roles:
+    - syncthing
+
+- name: Pair the two existing devices
+  hosts: savannarchome:serverannah
+  tags: syncthing_pair
+  become: false
+  vars:
+    ansible_connection: "{{ 'local' if inventory_hostname == lookup('pipe', 'hostname') else 'ssh' }}"
+    sync_peer: "{{ 'serverannah' if inventory_hostname == 'savannarchome' else 'savannarchome' }}"
+  tasks:
+    - name: Read the existing device identities
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/configure-obsidian-sync
+          - "{{ syncthing_home | default('/home/lion/.local/state/syncthing-obsidian') }}"
+          - "{{ syncthing_folder }}"
+          - "[]"
+      register: syncthing_identity
+      changed_when: "'CHANGED' in syncthing_identity.stdout"
+
+    - name: Record peer identity for pairing
+      ansible.builtin.set_fact:
+        syncthing_device_id: "{{ syncthing_identity.stdout_lines[-1] }}"
+
+    - name: Share the vault with the other configured host
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/configure-obsidian-sync
+          - "{{ syncthing_home | default('/home/lion/.local/state/syncthing-obsidian') }}"
+          - "{{ syncthing_folder }}"
+          - >-
+            {{ [{'deviceID': hostvars[sync_peer].syncthing_device_id,
+                 'name': sync_peer, 'addresses': ['dynamic']}] | to_json }}
+      register: syncthing_pairing
+      changed_when: "'CHANGED' in syncthing_pairing.stdout"

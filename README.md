@@ -1,5 +1,44 @@
 # 🏠 Homelab as Code
 
+## Obsidian / Syncthing
+
+`syncthing.yml` installs dedicated `syncthing-obsidian` system services on
+`savannarchome` and `serverannah` and pairs their device IDs automatically.
+It avoids the full playbook's unrelated package upgrades. Run from the laptop:
+
+```bash
+ansible-playbook syncthing.yml --ask-become-pass
+```
+
+The laptop shares `/home/lion/Documents/notion-obsidian-pilot/Perso`;
+the server shares `/home/lion/Obsidian/Lion` under the same `lion-obsidian` ID.
+Device certificates and API keys stay in each machine's private
+`/home/lion/.local/state/syncthing-obsidian` directory, outside the repository.
+The main playbook also maintains the service on enabled hosts. Existing peers
+are retained when rerunning the role. For a bare-metal rebuild, rerun the
+two-host playbook to pair regenerated device IDs.
+
+The management UI binds only to localhost: `http://127.0.0.1:8384` on the laptop.
+For the server UI, use `ssh -L 8385:127.0.0.1:8384 serverannah`, then visit
+`http://127.0.0.1:8385`. The GUI stays localhost-only: do not create a DNS name
+or reverse proxy for it. Declare permanent peers under `syncthing_peers` in the
+appropriate host variables, then apply `syncthing.yml`; the dedicated vault is
+always ordinary `sendreceive`, never receive-encrypted. Open the receiving
+folder as an Obsidian vault. Devices communicate directly or through Syncthing's
+encrypted relay transport; no web hosting/domain is required.
+
+The SSH tunnel is only for temporary browser administration of the *server* GUI.
+It can and should be closed when not needed; it has no role in synchronization.
+`syncthing-obsidian.service` runs independently on each enabled machine. The
+server remains available to phone peers while the laptop is asleep or powered
+off, and the laptop catches up when it next starts.
+Android needs a compatible Syncthing client; iOS needs a third-party compatible
+client and has background-sync restrictions.
+
+Notes, attachments, bookmarks, settings and CSS sync. Window layouts, caches,
+trash and Git metadata do not. Thirty-day staggered versioning retains remotely
+replaced/deleted files; it is not a complete backup. Notion API refresh is separate.
+
 **One command rebuilds my entire home infrastructure — a family server, a
 laptop, a Raspberry Pi and the kids' machine — from an empty disk.**
 

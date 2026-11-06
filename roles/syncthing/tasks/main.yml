@@ -1,0 +1,58 @@
+---
+- name: Install Syncthing
+  ansible.builtin.package:
+    name: syncthing
+    state: present
+
+- name: Create Syncthing state and vault directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ syncthing_user }}"
+    group: "{{ syncthing_user }}"
+    mode: "0700"
+  loop:
+    - "{{ syncthing_home }}"
+    - "{{ syncthing_folder }}"
+
+- name: Install dedicated Obsidian Syncthing service
+  ansible.builtin.template:
+    src: syncthing-obsidian.service.j2
+    dest: /etc/systemd/system/syncthing-obsidian.service
+    mode: "0644"
+  register: syncthing_unit
+
+- name: Start Syncthing
+  ansible.builtin.systemd_service:
+    name: syncthing-obsidian
+    enabled: true
+    daemon_reload: "{{ syncthing_unit.changed }}"
+    state: "{{ 'restarted' if syncthing_unit.changed else 'started' }}"
+
+- name: Wait for local management API
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 8384
+    timeout: 60
+
+- name: Install Syncthing vault configurator
+  ansible.builtin.copy:
+    src: configure.py
+    dest: /usr/local/bin/configure-obsidian-sync
+    mode: "0755"
+
+- name: Configure vault sharing
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/configure-obsidian-sync
+      - "{{ syncthing_home }}"
+      - "{{ syncthing_folder }}"
+      - "{{ syncthing_peers | to_json }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  register: syncthing_configuration
+  changed_when: "'CHANGED' in syncthing_configuration.stdout"
+
+- name: Record this device identity
+  ansible.builtin.set_fact:
+    syncthing_device_id: "{{ syncthing_configuration.stdout_lines[-1] }}"

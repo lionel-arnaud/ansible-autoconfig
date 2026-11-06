@@ -70,6 +70,14 @@
     - role: kids
       when: kids_enabled | default(false)
 
+- name: Configure Obsidian vault synchronization
+  hosts: all
+  tags: syncthing
+  become: true
+  roles:
+    - role: syncthing
+      when: syncthing_enabled | default(false)
+
 # end of run cleanup
 - name: Clean up the package cache after the run
   hosts: all

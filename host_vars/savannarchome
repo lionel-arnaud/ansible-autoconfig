@@ -1,4 +1,6 @@
 ---
+syncthing_enabled: true
+syncthing_folder: /home/lion/Documents/notion-obsidian-pilot/Perso
 # Production Omarchy/Arch workstation. Runs the playbook locally (no SSH hop).
 ansible_connection: local
 ansible_user: lion
