@@ -61,6 +61,7 @@ two small businesses.
 | | Service | What it does |
 |---|---|---|
 | ☁️ | **Nextcloud** | Private Google-Drive replacement. Family photos, documents and calendars, on hardware we own. |
+| 📝 | **Obsidian vault sync** | Private Markdown knowledge vault, synchronized between laptop, server and phone with Syncthing. |
 | 🎬 | **Jellyfin** | The household's own Netflix — films, series and music streamed to any TV, tablet or phone. |
 | 📹 | **Frigate** | Security camera recording with on-device AI person detection. No footage ever leaves the house. |
 | 🛡️ | **Pi-hole** | Network-wide ad and tracker blocking. Every device on the WiFi is protected automatically. |
