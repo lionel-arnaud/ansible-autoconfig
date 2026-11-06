@@ -9,8 +9,8 @@
   "keybinds": {
     "session.first": "ctrl+g,ctrl+home",
     "session.last": "ctrl+alt+g,ctrl+end",
-    "input.buffer.home": "home",
-    "input.buffer.end": "end"
+    "input.line.home": "home",
+    "input.line.end": "end"
   },
   "plugins": [
     "*",
