@@ -208,6 +208,11 @@ dotfiles_copied_files:
     src: .config/omarchy/shell.json
     dest: .config/omarchy/shell.json
     mode: '0600'
+  # Voxtype's supported config CLI rewrites config.toml in place.
+  - package: voxtype
+    src: .config/voxtype/config.toml
+    dest: .config/voxtype/config.toml
+    mode: '0600'
 base_starship_prompt_enabled: true
 
 base_lazydocker_enabled: true

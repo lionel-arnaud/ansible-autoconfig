@@ -71,6 +71,7 @@ dotfiles_stow_packages:
   - systemd
   - scripts
   - espanso
+  - voxtype
 
 # Secret dotfiles deployed by copy-decrypt (not Stow). The vaulted source holds
 # the real SSH host aliases; the public ssh package only ships the sanitized

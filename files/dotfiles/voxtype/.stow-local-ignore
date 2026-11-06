@@ -1,0 +1,3 @@
+# Voxtype's supported config CLI rewrites this file in place. Ansible copies it
+# after Stow so edits survive without turning a symlink into a regular file.
+^/\.config/voxtype/config\.toml$
