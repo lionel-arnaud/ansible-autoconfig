@@ -160,6 +160,9 @@ dotfiles_managed_paths:
     path: .config/omarchy/plugins/lion.lock
   - package: omarchy
     path: .config/omarchy/plugins/lion.workspaces
+  # The selected/custom screensaver artwork is a user-owned branding file.
+  - package: omarchy
+    path: .config/omarchy/branding/screensaver.txt
   - package: wireplumber
     path: .config/wireplumber
   - package: systemd
