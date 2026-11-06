@@ -148,7 +148,8 @@
         {
           "id": "omarchy.system-update"
         }
-      ]
+      ],
+      "tray": []
     },
     "position": "top",
     "transparent": false
@@ -157,6 +158,16 @@
     "lock": 1200,
     "screensaver": 300
   },
-  "plugins": [],
-  "version": 1
+  "plugins": [
+    {
+      "id": "lion.lock"
+    }
+  ],
+  "version": 1,
+  "disabledPlugins": [
+    "omarchy.lock"
+  ],
+  "cloneSourceRestores": [
+    "lion.lock"
+  ]
 }
