@@ -240,6 +240,8 @@
       - name: "{{ nextcloud_network_name }}"
     volumes:
       - "{{ nextcloud_db_data_dir }}:/var/lib/mysql"
+    command:
+      - "--innodb-log-file-size={{ nextcloud_db_innodb_log_file_size }}"
     env:
       MYSQL_ROOT_PASSWORD: "{{ nextcloud_db_root_password }}"
       MYSQL_DATABASE: "{{ nextcloud_db_name }}"

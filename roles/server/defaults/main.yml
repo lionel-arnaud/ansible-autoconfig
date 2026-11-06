@@ -285,6 +285,10 @@ nextcloud_data_dir: "{{ nextcloud_root_dir }}/data"
 nextcloud_secret_dir: /etc/ansible/secrets
 nextcloud_db_container_name: nextcloud-db
 nextcloud_db_image: mariadb:11
+# Nextcloud's database checker recommends at least 128 MB. A 256 MB redo log
+# reduces checkpoint pressure during file syncs and upgrades without consuming
+# meaningful space on the server.
+nextcloud_db_innodb_log_file_size: 256M
 nextcloud_container_name: nextcloud
 # Pinned to the major version only, not :latest. An unpinned tag jumped a full
 # major version (33 -> 34) on an ordinary nightly pull on 2026-09-13: the app
