@@ -193,6 +193,13 @@
     - server
     - game_timer
 
+- name: Mirror the parental interphone recovery source
+  ansible.builtin.import_tasks: parental_broadcast.yml
+  when: server_parental_broadcast_enabled | default(false)
+  tags:
+    - server
+    - parental_broadcast
+
 - name: Deploy toki-suli
   ansible.builtin.import_tasks: toki_suli.yml
   when: server_toki_suli_enabled | default(false)

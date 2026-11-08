@@ -1,0 +1,26 @@
+---
+# The ESP32 itself serves the intercom UI on the home LAN. This is a source and
+# recovery mirror only: the server must not proxy or expose the appliance.
+- name: Create the parental-broadcast recovery directory
+  ansible.builtin.file:
+    path: "{{ parental_broadcast_root_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Mirror the parental-broadcast source repository
+  ansible.builtin.git:
+    repo: "{{ parental_broadcast_repo_url }}"
+    dest: "{{ parental_broadcast_source_dir }}"
+    version: "{{ parental_broadcast_repo_version }}"
+    update: true
+    force: false
+  register: parental_broadcast_repo
+
+- name: Report parental-broadcast source revision
+  ansible.builtin.debug:
+    msg: >-
+      parental-broadcast recovery source is at
+      {{ parental_broadcast_source_dir }}
+      (changed={{ parental_broadcast_repo.changed }}).

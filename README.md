@@ -28,6 +28,7 @@ two small businesses.
 | 🛡️ | **Pi-hole** | Network-wide ad and tracker blocking. Every device on the WiFi is protected automatically. |
 | 🎲 | **Tabletop Timer** | A board-game turn timer, live at [tabletop-timer.com](https://tabletop-timer.com). |
 | 👧 | **Parental controls** | Screen-time limits and a curated app set on the kids' laptop. |
+| 📣 | **Parental interphone** | ESP32 speaker in the kids' room, controlled directly over home Wi-Fi; its recovery source is mirrored to the server. |
 
 ### 💼 For the businesses
 
@@ -133,6 +134,7 @@ anyone (human or agent) changing this repo.
 - [Testing On A VM](#testing-on-a-vm)
 - [Storage Model](#storage-model) · [Disaster Recovery](#disaster-recovery) · [Off-Site Backups](#off-site-backups)
 - [Adding A New Public Site](#adding-a-new-public-site) · [Seeding Uptime Kuma Monitors](#seeding-uptime-kuma-monitors) · [Dead-Man's Switch](#dead-mans-switch) · [Dotfiles Model](#dotfiles-model) · [Pi-hole Source Of Truth](#pi-hole-source-of-truth)
+- [Parental Interphone](#parental-interphone) — ESP32 ownership, recovery mirror and safe operation
 - [Serverannah Notes](#serverannah-notes) · [Conventions](#conventions-for-future-changes) · [Known Reality](#known-reality)
 
 ## Credits and lineage
@@ -1126,6 +1128,27 @@ Pi-hole policy import now reads from:
 - `files/pihole/policy/allowlist_exact.txt`
 
 Raw backups are not meant to be the long-term source of truth.
+
+### Parental Interphone
+
+The kids' interphone is an ESP32 appliance, not a service hosted by
+`serverannah`. After it has been flashed and is powered from a USB power
+adapter, it connects to the home Wi-Fi and serves its own LAN-only control page
+at `http://interphone-enfants.local`. It continues working when the laptop and
+server are off.
+
+The `server` role mirrors the public firmware source repository to
+`/opt/parental-broadcast/source` whenever `server_parental_broadcast_enabled`
+is true (enabled on `serverannah`). The directory is included in the encrypted
+Borg backup. This mirror is for recovery and audit only: it creates no Docker
+container, reverse-proxy route, public DNS record, or server-side copy of the
+Wi-Fi credentials and family voice recordings. Those private inputs must be
+kept in a separately backed-up local location before reflashing the device.
+
+To update a device, connect it to a computer with a **data-capable** USB cable,
+use the `parental-broadcast` project to build/flash firmware and LittleFS audio,
+then verify `/status` and the LAN page. Do not port-forward or reverse-proxy the
+ESP32.
 
 ### Serverannah Notes
 

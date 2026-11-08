@@ -51,6 +51,9 @@ backup_paths:
   # Jellyfin users, watch state and the seeded libraries.
   - /opt/jellyfin/config
   - /opt/game-timer/site
+  # Recovery source for the ESP32 parental interphone. The ESP32 itself serves
+  # the LAN UI, never this server.
+  - /opt/parental-broadcast
   - /opt/excalidraw
   - /opt/uptime-kuma
   - /opt/authelia
@@ -131,6 +134,7 @@ homepage_published_ports:
   - "192.168.1.100:3000:3000"
 server_bentopdf_enabled: true
 server_game_timer_enabled: true
+server_parental_broadcast_enabled: true
 server_toki_suli_enabled: true
 server_dinnizer_enabled: true
 server_nextcloud_enabled: true
