@@ -131,7 +131,7 @@ game_timer_published_ports: []
 # container, or Internet exposure is created here.
 server_parental_broadcast_enabled: false
 parental_broadcast_repo_url: https://github.com/lionel-arnaud/parental-broadcast.git
-parental_broadcast_repo_version: main
+parental_broadcast_repo_version: master
 parental_broadcast_root_dir: /opt/parental-broadcast
 parental_broadcast_source_dir: "{{ parental_broadcast_root_dir }}/source"
 
