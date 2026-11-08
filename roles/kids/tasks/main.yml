@@ -35,6 +35,10 @@
   ansible.builtin.import_tasks: platform.yml
   tags: [kids, kids_platform]
 
+- name: Configure child desktop sessions
+  ansible.builtin.import_tasks: desktop.yml
+  tags: [kids, kids_desktop]
+
 - name: Set up timekpr-next parental controls
   ansible.builtin.import_tasks: timekpr.yml
   when: kids_timekpr_enabled | default(true)

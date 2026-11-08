@@ -1,0 +1,33 @@
+---
+- name: Create child desktop configuration directories
+  ansible.builtin.file:
+    path: "/home/{{ item.0.name }}/{{ item.1 }}"
+    state: directory
+    owner: "{{ item.0.name }}"
+    group: "{{ item.0.name }}"
+    mode: "0755"
+  loop: "{{ kids_managed_users | product(kids_keyboard_directories) | list }}"
+  loop_control:
+    label: "{{ item.0.name }}: {{ item.1 }}"
+
+- name: Install French AZERTY session helper for child accounts
+  ansible.builtin.template:
+    src: force-french-keyboard.sh.j2
+    dest: "/home/{{ item.name }}/{{ kids_keyboard_helper_path }}"
+    owner: "{{ item.name }}"
+    group: "{{ item.name }}"
+    mode: "0755"
+  loop: "{{ kids_managed_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Start French AZERTY session helper for child accounts
+  ansible.builtin.template:
+    src: force-french-keyboard.desktop.j2
+    dest: "/home/{{ item.name }}/.config/autostart/force-french-keyboard.desktop"
+    owner: "{{ item.name }}"
+    group: "{{ item.name }}"
+    mode: "0644"
+  loop: "{{ kids_managed_users }}"
+  loop_control:
+    label: "{{ item.name }}"

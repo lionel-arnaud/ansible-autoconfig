@@ -1,0 +1,3 @@
+#!/bin/sh
+# Keep child desktop sessions on the configured physical keyboard layout.
+exec setxkbmap -layout {{ kids_keyboard_layout }} -variant {{ kids_keyboard_variant }} -option terminate:ctrl_alt_bksp

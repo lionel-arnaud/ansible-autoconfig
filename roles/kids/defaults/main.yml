@@ -18,6 +18,14 @@ kids_supported_desktops:
   - gnome
 kids_desktop: any
 
+# Keep child GUI sessions on the French Macintosh AZERTY layout. The desktop
+# session helper removes any accidental US/QWERTY fallback group before games
+# start, so Proton inherits the intended layout.
+kids_keyboard_layout: fr
+kids_keyboard_variant: mac
+kids_keyboard_directories: [.local/bin, .config/autostart]
+kids_keyboard_helper_path: .local/bin/force-french-keyboard
+
 # --- Accounts & groups --------------------------------------------------------
 # Two custom groups were created by hand on the machine. We pin their GIDs so a
 # rebuilt machine keeps the same numeric IDs (matters for any file shares / ACLs).
