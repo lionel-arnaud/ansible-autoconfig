@@ -1,4 +1,12 @@
 ---
+- name: Configure the system French keyboard layout
+  ansible.builtin.template:
+    src: keyboard.j2
+    dest: /etc/default/keyboard
+    owner: root
+    group: root
+    mode: "0644"
+
 - name: Create child desktop configuration directories
   ansible.builtin.file:
     path: "/home/{{ item.0.name }}/{{ item.1 }}"
