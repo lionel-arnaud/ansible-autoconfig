@@ -16,6 +16,7 @@ kids_desktop: cinnamon
 # old MacBook keyboard variant for its key mapping.
 kids_keyboard_layout: fr
 kids_keyboard_variant: ""
+kids_parent_remote_desktop_enabled: true
 base_dotfiles_enabled: false
 base_starship_prompt_enabled: false
 base_lazydocker_enabled: false
