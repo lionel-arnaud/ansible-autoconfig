@@ -20,13 +20,20 @@
 
 # Steam's native package ships only as 32-bit, so i386 must be enabled before apt
 # can resolve it. Ubuntu uses the Flatpak delivery path instead (see defaults).
-- name: Enable the i386 architecture for Steam
-  ansible.builtin.command: dpkg --add-architecture i386
-  register: kids_dpkg_i386
-  changed_when: "'i386' not in kids_dpkg_i386.stdout"
+- name: Check whether the i386 architecture is enabled for Steam
+  ansible.builtin.command: dpkg --print-foreign-architectures
+  register: kids_dpkg_foreign_architectures
+  changed_when: false
   when:
     - kids_steam_enabled | default(true)
     - kids_steam_install_method == 'apt'
+
+- name: Enable the i386 architecture for Steam
+  ansible.builtin.command: dpkg --add-architecture i386
+  when:
+    - kids_steam_enabled | default(true)
+    - kids_steam_install_method == 'apt'
+    - "'i386' not in kids_dpkg_foreign_architectures.stdout_lines"
 
 - name: Refresh apt cache after adding i386
   ansible.builtin.apt:
