@@ -1,27 +1,4 @@
 ---
-- name: Install parent remote desktop packages
-  ansible.builtin.apt:
-    name: "{{ kids_parent_remote_desktop_packages }}"
-    state: present
-  when: kids_parent_remote_desktop_enabled | bool
-
-- name: Configure the parent remote desktop to listen only on loopback
-  ansible.builtin.ini_file:
-    path: /etc/xrdp/xrdp.ini
-    section: Globals
-    option: port
-    value: "tcp://{{ kids_parent_remote_desktop_bind_address }}:{{ kids_parent_remote_desktop_port }}"
-    mode: "0644"
-  register: kids_xrdp_config
-  when: kids_parent_remote_desktop_enabled | bool
-
-- name: Enable the parent remote desktop service
-  ansible.builtin.systemd_service:
-    name: xrdp
-    state: "{{ kids_xrdp_config.changed | ternary('restarted', 'started') }}"
-    enabled: true
-  when: kids_parent_remote_desktop_enabled | bool
-
 - name: Configure the system French keyboard layout
   ansible.builtin.template:
     src: keyboard.j2
