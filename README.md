@@ -43,7 +43,7 @@ two small businesses.
 
 | | Service | What it does |
 |---|---|---|
-| 🧬 | **Biotech research assistant** | An AI analyst that follows upcoming clinical-trial results, briefs me on each one — teaching the vocabulary as it goes — asks for my call over Telegram, and keeps score of how often I am right. |
+| 🧬 | **Biotech trading agent** | Monitors biotech catalysts, researches them with AI, consults me on Telegram, and autonomously paper-trades qualifying opportunities within hard-coded risk limits—while scoring my trial-outcome calls. |
 | 📈 | **Practice trading account** | Acts on those calls in a paper-money account, inside hard limits written in code that the AI cannot change. |
 | 📋 | **Daily report** | A private page with positions, open questions, my past calls and the scoreboard, refreshed every night. |
 
