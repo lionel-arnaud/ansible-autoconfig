@@ -630,6 +630,13 @@ pihole_kids_profile_allow_regex:
   - '(^|\.)wikipedia\.org$'
   - '(^|\.)wikimedia\.org$'
   - '(^|\.)wikidata\.org$'
+  # Curated child-safe browsing and search. These remain subject to the
+  # client-specific default-deny rule below, unlike a broad general search
+  # engine that could lead directly to unsuitable sites.
+  - '(^|\.)kiddle\.co$'
+  - '(^|\.)vikidia\.org$'
+  - '(^|\.)lumni\.fr$'
+  - '(^|\.)1jour1actu\.com$'
   # Mint, Ubuntu, the Timekpr PPA, and signed package metadata.
   - '(^|\.)linuxmint\.com$'
   - '(^|\.)ubuntu\.com$'

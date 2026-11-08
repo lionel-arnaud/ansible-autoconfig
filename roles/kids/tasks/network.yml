@@ -113,9 +113,20 @@
     content: |
       {
         "policies": {
+          "DisablePrivateBrowsing": true,
           "DNSOverHTTPS": {
             "Enabled": false,
             "Locked": true
+          },
+          "Preferences": {
+            "network.proxy.type": {
+              "Value": 0,
+              "Status": "locked"
+            },
+            "network.trr.mode": {
+              "Value": 5,
+              "Status": "locked"
+            }
           }
         }
       }

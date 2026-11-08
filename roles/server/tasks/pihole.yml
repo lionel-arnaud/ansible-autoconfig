@@ -563,3 +563,13 @@
       - "{{ pihole_container_name }}"
   changed_when: true
   when: pihole_kids_profile.changed
+
+- name: Ensure Pi-hole blocking is enabled
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - "{{ pihole_container_name }}"
+      - pihole
+      - enable
+  changed_when: false
