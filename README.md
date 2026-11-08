@@ -1137,6 +1137,15 @@ adapter, it connects to the home Wi-Fi and serves its own LAN-only control page
 at `http://interphone-enfants.local`. It continues working when the laptop and
 server are off.
 
+The normal station-network address is assigned by DHCP (currently
+`http://192.168.1.80`), so it must not be treated as permanent. A classic ESP32
+can use 2.4 GHz only; it cannot join the household's 5 GHz SSID. The appliance
+also starts its own WPA2 fallback network, **`Interphone-Enfants`**, to remain
+usable when the router isolates Wi-Fi clients or fails to carry mDNS between
+bands. Connect a phone to that fallback network with the locally configured
+passphrase, then open `http://192.168.4.1`. The fallback and station modes run
+at the same time; neither requires the laptop or server to be online.
+
 The `server` role mirrors the public firmware source repository to
 `/opt/parental-broadcast/source` whenever `server_parental_broadcast_enabled`
 is true (enabled on `serverannah`). The directory is included in the encrypted
@@ -1148,7 +1157,9 @@ kept in a separately backed-up local location before reflashing the device.
 To update a device, connect it to a computer with a **data-capable** USB cable,
 use the `parental-broadcast` project to build/flash firmware and LittleFS audio,
 then verify `/status` and the LAN page. Do not port-forward or reverse-proxy the
-ESP32.
+ESP32. Keep the source's `src/secrets.h` and private recordings out of Git, but
+in a secure backup: the public recovery mirror contains a `secrets.example.h`,
+not the real Wi-Fi configuration.
 
 ### Serverannah Notes
 
