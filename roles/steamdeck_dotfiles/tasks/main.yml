@@ -47,12 +47,10 @@
   when:
     - item.stat.exists
     - not (item.stat.islnk | default(false))
-    - >-
-      item.stat.checksum != (
-        lookup('ansible.builtin.file', steamdeck_dotfiles_source_dir ~ '/' ~ item.item.src)
-        | hash('sha1')
-      )
+    - item.stat.checksum != steamdeck_dotfile_sources.results[steamdeck_dotfile_index].stat.checksum
   loop: "{{ steamdeck_dotfile_targets.results }}"
+  loop_control:
+    index_var: steamdeck_dotfile_index
 
 - name: Deploy portable Steam Deck dotfiles
   ansible.builtin.copy:
