@@ -10,6 +10,14 @@ syncthing_peers:
   - deviceID: JFXJDAR-RW7H6V7-KWM2IRN-ODYXXWE-66EIG6Z-QNXSFTJ-SLXMGHJ-X7RG6QI
     name: Pixel 11
     addresses: [dynamic]
+syncthing_extra_folders:
+  - id: biomemory-obsidian
+    label: Biomemory — Obsidian
+    path: /home/lion/Obsidian/Biomemory
+    peers:
+      - deviceID: JFXJDAR-RW7H6V7-KWM2IRN-ODYXXWE-66EIG6Z-QNXSFTJ-SLXMGHJ-X7RG6QI
+        name: Pixel 11
+        addresses: [dynamic]
 
 # serverannah pulls and applies its own config locally.
 autoconfig_branch: main
@@ -24,6 +32,7 @@ base_dotfiles_enabled: true
 # phone can subscribe.
 notify_enabled: true
 server_fail2ban_enabled: true
+server_tuios_enabled: true
 fail2ban_caddy_basic_auth_enabled: true
 server_backup_enabled: true
 # Off-site copy of the Borg repo to Google Drive after each run. The repo is
@@ -64,6 +73,13 @@ backup_paths:
   # so the inbox has to be named here too; it was missing from every archive
   # until 2026-10-18. backup.yml now refuses to run without it.
   - /var/lib/backup-inbox
+  # Syncthing's live vault copies are the backup source; .stversions is
+  # intentionally excluded below because Borg provides versioned retention.
+  - /home/lion/Obsidian/Lion
+  - /home/lion/Obsidian/Biomemory
+backup_exclude_paths:
+  - /home/lion/Obsidian/Lion/.stversions
+  - /home/lion/Obsidian/Biomemory/.stversions
 backup_database_dumps:
   - name: umami
     engine: postgres

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Configure only the Obsidian share via the local authenticated REST API."""
+"""Configure a named Obsidian share via the local authenticated REST API."""
 import json
 from pathlib import Path
 import sys
@@ -8,7 +8,15 @@ import xml.etree.ElementTree as ET
 
 
 def main():
-    home, folder, peer_json = sys.argv[1:]
+    args = sys.argv[1:]
+    if len(args) == 3:
+        # Backwards-compatible command line for an existing Lion-only setup.
+        home, folder, peer_json = args
+        folder_id, label = 'lion-obsidian', 'Lion — Obsidian'
+    elif len(args) == 5:
+        home, folder, peer_json, folder_id, label = args
+    else:
+        raise SystemExit('usage: configure-obsidian-sync HOME PATH PEERS [FOLDER_ID LABEL]')
     key = ET.parse(Path(home) / 'config.xml').findtext('gui/apikey')
     def api(path, body=None, method=None):
         request = urllib.request.Request(
@@ -28,10 +36,10 @@ def main():
             device = api('config/defaults/device')
             device.update(peer)
             config['devices'].append(device)
-    share = next((f for f in config['folders'] if f['id'] == 'lion-obsidian'), None)
+    share = next((f for f in config['folders'] if f['id'] == folder_id), None)
     if share is None:
         share = api('config/defaults/folder')
-        share.update(id='lion-obsidian', label='Lion — Obsidian', path=folder,
+        share.update(id=folder_id, label=label, path=folder,
                      type='sendreceive', fsWatcherEnabled=True, rescanIntervalS=3600)
         share['versioning'] = {'type': 'staggered', 'params': {'maxAge': '2592000', 'cleanInterval': '3600'}}
         config['folders'].append(share)
@@ -39,6 +47,7 @@ def main():
     # local vault rename, so updating only the path preserves its peer/database.
     if share['path'] != folder:
         share['path'] = folder
+    share['label'] = label
     # Obsidian needs ordinary Markdown files on every peer. Receive-encrypted
     # shares cannot be opened as a vault and are not supported for this folder.
     share['type'] = 'sendreceive'
@@ -53,10 +62,10 @@ def main():
     # Merge ignore rules; don't overwrite user rules. Settings/bookmarks/CSS
     # sync, while each device retains its own window layout and caches.
     rules = ['/.obsidian/workspace*.json', '/.obsidian/cache', '/.trash', '/.git', '*.refresh-part']
-    existing = api('db/ignores?folder=lion-obsidian').get('ignore') or []
+    existing = api('db/ignores?folder=' + urllib.parse.quote(folder_id, safe='')).get('ignore') or []
     wanted = existing + [r for r in rules if r not in existing]
     if wanted != existing:
-        api('db/ignores?folder=lion-obsidian', {'ignore': wanted})
+        api('db/ignores?folder=' + urllib.parse.quote(folder_id, safe=''), {'ignore': wanted})
         print('CHANGED')
     print(identity)
 

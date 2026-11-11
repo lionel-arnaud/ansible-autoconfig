@@ -206,8 +206,12 @@ It avoids the full playbook's unrelated package upgrades. Run from the laptop:
 ansible-playbook syncthing.yml --ask-become-pass
 ```
 
-The laptop shares `/home/lion/Documents/notion-obsidian-pilot/Perso`; the
-server shares `/home/lion/Obsidian/Lion` under the same `lion-obsidian` ID.
+The primary vault shares `/home/lion/Documents/notion-obsidian-pilot/Perso`
+with `/home/lion/Obsidian/Lion` under the `lion-obsidian` ID. Biomemory is a
+separate vault: `/home/lion/Documents/Biomemory` shares with
+`/home/lion/Obsidian/Biomemory` under `biomemory-obsidian`. The server also
+shares both vaults with the configured Android peer, so it remains available
+while the laptop sleeps.
 Device certificates and API keys stay in each machine's private
 `/home/lion/.local/state/syncthing-obsidian` directory, outside the repository.
 The main playbook also maintains the service on enabled hosts. Existing peers
@@ -233,8 +237,10 @@ background-sync restrictions.
 
 Notes, attachments, bookmarks, settings and CSS sync. Window layouts, caches,
 trash and Git metadata do not. Thirty-day staggered versioning retains remotely
-replaced/deleted files; it is not a complete backup. Notion API refresh is
-separate.
+replaced/deleted files; it is not a complete backup. The server's encrypted
+Borg backup includes both live vault replicas but excludes Syncthing's
+`.stversions`, because Borg provides the retained version history. Notion API
+refresh is separate.
 
 ## ToDo
 

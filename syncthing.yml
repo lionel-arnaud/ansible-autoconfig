@@ -9,7 +9,7 @@
   roles:
     - syncthing
 
-- name: Pair the two existing devices
+- name: Pair the two hosts for every managed vault
   hosts: savannarchome:serverannah
   tags: syncthing_pair
   become: false
@@ -24,6 +24,8 @@
           - "{{ syncthing_home | default('/home/lion/.local/state/syncthing-obsidian') }}"
           - "{{ syncthing_folder }}"
           - "[]"
+          - "{{ syncthing_folder_id | default('lion-obsidian') }}"
+          - "{{ syncthing_folder_label | default('Lion — Obsidian') }}"
       register: syncthing_identity
       changed_when: "'CHANGED' in syncthing_identity.stdout"
 
@@ -31,14 +33,29 @@
       ansible.builtin.set_fact:
         syncthing_device_id: "{{ syncthing_identity.stdout_lines[-1] }}"
 
-    - name: Share the vault with the other configured host
+    - name: Define managed vaults for pairing
+      ansible.builtin.set_fact:
+        syncthing_managed_folders: >-
+          {{ [{'id': syncthing_folder_id | default('lion-obsidian'),
+               'label': syncthing_folder_label | default('Lion — Obsidian'),
+               'path': syncthing_folder,
+               'peers': syncthing_peers | default([])}]
+             + (syncthing_extra_folders | default([])) }}
+
+    - name: Share each managed vault with the other configured host
       ansible.builtin.command:
         argv:
           - /usr/local/bin/configure-obsidian-sync
           - "{{ syncthing_home | default('/home/lion/.local/state/syncthing-obsidian') }}"
-          - "{{ syncthing_folder }}"
+          - "{{ item.path }}"
           - >-
-            {{ [{'deviceID': hostvars[sync_peer].syncthing_device_id,
-                 'name': sync_peer, 'addresses': ['dynamic']}] | to_json }}
+            {{ ((item.peers | default([]))
+                + [{'deviceID': hostvars[sync_peer].syncthing_device_id,
+                    'name': sync_peer, 'addresses': ['dynamic']}]) | to_json }}
+          - "{{ item.id }}"
+          - "{{ item.label }}"
+      loop: "{{ syncthing_managed_folders }}"
+      loop_control:
+        label: "{{ item.label }}"
       register: syncthing_pairing
       changed_when: "'CHANGED' in syncthing_pairing.stdout"

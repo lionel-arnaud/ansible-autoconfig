@@ -2,4 +2,9 @@
 syncthing_user: lion
 syncthing_home: /home/lion/.local/state/syncthing-obsidian
 syncthing_folder: /home/lion/Obsidian/Lion
+syncthing_folder_id: lion-obsidian
+syncthing_folder_label: Lion — Obsidian
 syncthing_peers: []
+# Additional independently-openable Obsidian vaults handled by the same
+# Syncthing service. Each item has id, label, path and optional peers.
+syncthing_extra_folders: []

@@ -11,9 +11,7 @@
     owner: "{{ syncthing_user }}"
     group: "{{ syncthing_user }}"
     mode: "0700"
-  loop:
-    - "{{ syncthing_home }}"
-    - "{{ syncthing_folder }}"
+  loop: "{{ [syncthing_home, syncthing_folder] + (syncthing_extra_folders | map(attribute='path') | list) }}"
 
 - name: Install dedicated Obsidian Syncthing service
   ansible.builtin.template:
@@ -48,10 +46,29 @@
       - "{{ syncthing_home }}"
       - "{{ syncthing_folder }}"
       - "{{ syncthing_peers | to_json }}"
+      - "{{ syncthing_folder_id }}"
+      - "{{ syncthing_folder_label }}"
   become: true
   become_user: "{{ syncthing_user }}"
   register: syncthing_configuration
   changed_when: "'CHANGED' in syncthing_configuration.stdout"
+
+- name: Configure additional vault sharing
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/configure-obsidian-sync
+      - "{{ syncthing_home }}"
+      - "{{ item.path }}"
+      - "{{ item.peers | default([]) | to_json }}"
+      - "{{ item.id }}"
+      - "{{ item.label }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  loop: "{{ syncthing_extra_folders }}"
+  loop_control:
+    label: "{{ item.label }}"
+  register: syncthing_extra_configurations
+  changed_when: "'CHANGED' in syncthing_extra_configurations.stdout"
 
 - name: Record this device identity
   ansible.builtin.set_fact:

@@ -1,6 +1,11 @@
 ---
 syncthing_enabled: true
 syncthing_folder: /home/lion/Documents/notion-obsidian-pilot/Perso
+syncthing_extra_folders:
+  - id: biomemory-obsidian
+    label: Biomemory — Obsidian
+    path: /home/lion/Documents/Biomemory
+    peers: []
 # Production Omarchy/Arch workstation. Runs the playbook locally (no SSH hop).
 ansible_connection: local
 ansible_user: lion
@@ -89,6 +94,12 @@ dotfiles_secret_files:
 workstation_systemd_user_services:
   - audio-policy.service
   - freebox-mount.service
+# The OpenCode maintenance unit is deployed by the systemd Stow package but is
+# intentionally not enabled until this host has an unattended-capable provider.
+# Both its configured Anthropic balance and OpenCode's free tier were exhausted
+# when the unit was verified on 2026-11-11. Add the timer here after connecting
+# a provider or renewing capacity:
+#   - opencode-autonomous-maintenance.timer
 
 # Google Drive mounted at ~/Google Drive Perso. The remote is already authorised
 # for lion on this machine.
