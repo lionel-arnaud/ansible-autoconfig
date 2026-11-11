@@ -179,6 +179,23 @@ _remember that ansible-pull is just a wrapper for ansible-playbook....so both
 cmds are kinda similar ... and the check option allows to test on a system
 without implementing anything ('dry run')._
 
+### Steam Deck
+
+SteamOS is immutable, so the Deck is intentionally **not** part of the normal
+inventory or `local.yml`: it receives no package changes, privileged system
+configuration, services, or scheduled `ansible-pull`. Its dedicated local play
+only copies the portable Bash files to the `deck` user's home and saves any
+previous regular file once as `*.pre-steamdeck-backup`.
+
+From a checkout on the Deck in Desktop Mode, run it as `deck` (not with sudo):
+
+```bash
+ansible-playbook -i inventories/steamdeck steamdeck.yml
+```
+
+The play refuses to overwrite symlinks and refuses to run as another user. To
+use a deliberately different Deck account, override `steamdeck_user` explicitly.
+
 ## Obsidian Vault Sync
 
 `syncthing.yml` installs dedicated `syncthing-obsidian` system services on

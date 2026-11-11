@@ -1,0 +1,12 @@
+---
+# SteamOS has an immutable operating-system image. This intentionally manages
+# only selected files in the Deck user's home directory; it never uses become,
+# installs packages, or enables services/timers.
+#
+# Run locally on the Deck in Desktop Mode:
+#   ansible-playbook -i inventories/steamdeck steamdeck.yml
+- name: Apply portable user dotfiles on Steam Deck
+  hosts: steamdeck
+  gather_facts: true
+  roles:
+    - steamdeck_dotfiles

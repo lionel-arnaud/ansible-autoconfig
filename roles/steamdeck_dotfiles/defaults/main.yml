@@ -1,0 +1,14 @@
+---
+# SteamOS's default Desktop Mode account is "deck". Override only when the Deck
+# has deliberately been configured with a different local user.
+steamdeck_user: deck
+steamdeck_home: "/home/{{ steamdeck_user }}"
+steamdeck_dotfiles_source_dir: "{{ playbook_dir }}/files/dotfiles"
+
+# Keep this deliberately short. Add only portable, user-owned files; SteamOS
+# packages, system configuration, services, and auto-pull do not belong here.
+steamdeck_dotfiles:
+  - src: bash/.bashrc
+    dest: .bashrc
+  - src: bash/.inputrc
+    dest: .inputrc

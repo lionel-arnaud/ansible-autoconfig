@@ -1,0 +1,62 @@
+---
+- name: Verify this play is running as the Steam Deck user
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.user_id == steamdeck_user
+    fail_msg: >-
+      Run steamdeck.yml locally as {{ steamdeck_user }}, without sudo. It only
+      manages files under {{ steamdeck_home }} and must not target another host.
+
+- name: Verify the portable dotfile sources are present
+  ansible.builtin.stat:
+    path: "{{ steamdeck_dotfiles_source_dir }}/{{ item.src }}"
+  loop: "{{ steamdeck_dotfiles }}"
+  register: steamdeck_dotfile_sources
+
+- name: Refuse to continue if a portable dotfile source is missing
+  ansible.builtin.assert:
+    that: item.stat.exists and item.stat.isreg
+    fail_msg: "Missing portable dotfile source: {{ item.item.src }}"
+  loop: "{{ steamdeck_dotfile_sources.results }}"
+
+- name: Inspect existing Steam Deck dotfiles
+  ansible.builtin.stat:
+    path: "{{ steamdeck_home }}/{{ item.dest }}"
+    follow: false
+  loop: "{{ steamdeck_dotfiles }}"
+  register: steamdeck_dotfile_targets
+
+# Do not replace a symlink blindly: it may be a deliberate user-managed setup.
+- name: Refuse to overwrite symlinked Steam Deck dotfiles
+  ansible.builtin.assert:
+    that: >-
+      not (item.stat.islnk | default(false))
+      or item.stat.lnk_source == steamdeck_dotfiles_source_dir ~ '/' ~ item.item.src
+    fail_msg: >-
+      {{ item.item.dest }} is a symlink. Resolve it manually before this role
+      manages the file, so no user-managed target is overwritten.
+  loop: "{{ steamdeck_dotfile_targets.results }}"
+
+- name: Preserve each pre-existing Steam Deck dotfile once
+  ansible.builtin.copy:
+    src: "{{ steamdeck_home }}/{{ item.item.dest }}"
+    dest: "{{ steamdeck_home }}/{{ item.item.dest }}.pre-steamdeck-backup"
+    remote_src: true
+    mode: preserve
+    force: false
+  when:
+    - item.stat.exists
+    - not (item.stat.islnk | default(false))
+    - >-
+      item.stat.checksum != (
+        lookup('ansible.builtin.file', steamdeck_dotfiles_source_dir ~ '/' ~ item.item.src)
+        | hash('sha1')
+      )
+  loop: "{{ steamdeck_dotfile_targets.results }}"
+
+- name: Deploy portable Steam Deck dotfiles
+  ansible.builtin.copy:
+    src: "{{ steamdeck_dotfiles_source_dir }}/{{ item.src }}"
+    dest: "{{ steamdeck_home }}/{{ item.dest }}"
+    mode: "0644"
+  loop: "{{ steamdeck_dotfiles }}"

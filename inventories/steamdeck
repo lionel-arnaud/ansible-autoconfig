@@ -1,0 +1,4 @@
+[steamdeck]
+# Deliberately kept out of the default inventory: this is a local, occasional
+# configuration action on the Deck, not a normally reachable Ansible host.
+steamdeck-local ansible_connection=local
