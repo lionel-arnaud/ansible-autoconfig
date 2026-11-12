@@ -261,6 +261,16 @@ notify_body_max_bytes: 3500
 # topic is a credential, so set it false once every phone is subscribed.
 notify_show_subscribe_hint: true
 
+# Disk monitoring is deliberately opt-in per host: monitor the root filesystem
+# and any local data disks, not transient tmpfs filesystems or network mounts.
+# Alerts fire only on a state transition, so they stay actionable.
+disk_monitor_enabled: false
+disk_monitor_mounts: []
+disk_monitor_warning_percent: 80
+disk_monitor_critical_percent: 90
+disk_monitor_timer_on_calendar: hourly
+disk_monitor_state_dir: /var/lib/autoconfig-disk-monitor
+
 # Hard cap on a single ansible-pull run. The serverannah run takes ~5 minutes;
 # 45 lets a slow dist-upgrade finish while still catching a genuine hang.
 autoconfig_pull_timeout: 45min

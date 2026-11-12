@@ -43,10 +43,13 @@ backup_offsite_enabled: true
 # enabled because its legacy Borg repository has only 12 GiB free; its preflight
 # upper bound is 168 GiB of changed files since April 2026.
 backup_retention_keep_monthly: 1
-server_disk_monitor_enabled: true
-server_disk_monitor_mounts:
+disk_monitor_enabled: true
+disk_monitor_mounts:
+  - /
   - /mnt/back-up
   - /mnt/SSD_1TO
+  - /mnt/SSD_512
+  - /mnt/verbatim
 backup_paths:
   - /opt/aumenuilya
   - /opt/nextcloud

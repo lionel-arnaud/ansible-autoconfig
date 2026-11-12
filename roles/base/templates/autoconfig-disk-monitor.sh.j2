@@ -3,9 +3,9 @@
 # urgent, but reporting it every hour teaches the operator to ignore alerts.
 set -eu
 
-state_dir='{{ server_disk_monitor_state_dir }}'
-warning={{ server_disk_monitor_warning_percent | int }}
-critical={{ server_disk_monitor_critical_percent | int }}
+state_dir='{{ disk_monitor_state_dir }}'
+warning={{ disk_monitor_warning_percent | int }}
+critical={{ disk_monitor_critical_percent | int }}
 
 mkdir -p "$state_dir"
 chmod 700 "$state_dir"
@@ -14,7 +14,7 @@ notify() {
   /usr/local/sbin/autoconfig-notify "$1" "$2" "$3"
 }
 
-for mount in {% for mount in server_disk_monitor_mounts %}'{{ mount }}' {% endfor %}; do
+for mount in {% for mount in disk_monitor_mounts %}'{{ mount }}' {% endfor %}; do
   state_file="$state_dir/$(printf '%s' "$mount" | tr '/' '_').state"
   previous=$(cat "$state_file" 2>/dev/null || printf 'unknown')
 

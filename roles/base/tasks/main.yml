@@ -29,5 +29,14 @@
   tags:
     - notify
 
+- name: Monitor local disk capacity
+  ansible.builtin.import_tasks: disk_monitor.yml
+  when:
+    - disk_monitor_enabled | default(false)
+    - notify_enabled | default(false)
+  tags:
+    - monitoring
+    - disk
+
 - name: Install the self-managing ansible-pull timer
   ansible.builtin.import_tasks: autopull.yml

@@ -7,6 +7,9 @@ ansible_python_interpreter: /usr/bin/python3
 # Failure notifications. Its own topic, separate from serverannah's, so one
 # leaked topic does not expose both machines.
 notify_enabled: true
+disk_monitor_enabled: true
+disk_monitor_mounts:
+  - /
 
 # The vault password lives at ~/secret.txt here, not the role's default
 # ~/.ansible-vault-pass. Without this the nightly pull cannot decrypt
