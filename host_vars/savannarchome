@@ -66,6 +66,7 @@ dotfiles_stow_packages:
   - claude
   - ssh
   - opencode
+  - tuios
   - nvim
   - git
   - gh

@@ -1,0 +1,10 @@
+# Keep workspace cycling consistent with Omarchy, without depending on the
+# shifted number row of an AZERTY keyboard. Global bindings work in both TUIOS
+# window-management and terminal modes.
+[keybindings.global]
+next_workspace = ["alt+tab"]
+prev_workspace = ["alt+shift+tab"]
+
+[startup]
+tiled = true
+daemon = true

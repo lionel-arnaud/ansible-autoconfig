@@ -119,6 +119,8 @@ dotfiles_managed_paths:
   # is a turn counter the plugin rewrites constantly, so it stays unmanaged.
   - package: opencode
     path: .config/opencode/opencode-notifier.json
+  - package: tuios
+    path: .config/tuios/config.toml
   - package: claude
     path: .claude/settings.json
   # The status line script settings.json points to. Both need this protection:

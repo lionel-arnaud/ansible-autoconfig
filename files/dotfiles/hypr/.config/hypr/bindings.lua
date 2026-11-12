@@ -4,6 +4,11 @@
 -- See current bindings and descriptions:
 --   omarchy menu keybindings --print
 
+-- Reserve Alt+Tab for cycling TUIOS workspaces. Omarchy's workspace cycling
+-- remains on Super+Tab / Super+Shift+Tab.
+hl.unbind("ALT + TAB")
+hl.unbind("ALT + SHIFT + TAB")
+
 -- Personal bindings ported from the pre-quattro Hyprland .conf config.
 hl.unbind("SUPER + SHIFT + F")
 hl.unbind("SUPER + SHIFT + E")
