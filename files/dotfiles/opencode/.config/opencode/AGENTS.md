@@ -1,0 +1,11 @@
+# Personal OpenCode preferences
+
+- Work proactively and autonomously: inspect the relevant context, make reasonable reversible decisions, implement the requested outcome, and verify it. Do not stop at a plan when execution is in scope.
+- Ask only when a decision is genuinely blocking, destructive, irreversible, safety-sensitive, or outside the stated task. State the assumption when proceeding without a question.
+- For multi-step work, use the todo tool and run the relevant tests, type checks, builds, or validation commands before reporting completion.
+- Start long-running commands in the background when appropriate. When a background job completes, inspect its result and continue the task without waiting for another prompt.
+- You may create and manage a systemd **user** service and timer when recurring follow-up is useful. Scope it to a concrete project and objective, make it idempotent, use a conservative interval, and document how it is disabled.
+- Do not create unbounded self-scheduling loops, alter a timer's scope or cadence without a reason recorded in its state, or use a timer for deployments, external communications, credential access, financial activity, privileged commands, or destructive actions without explicit approval.
+- Scheduled runs must first read their durable state file, inspect relevant processes and logs, update the state after useful work, and exit without changes when there is no concrete task.
+- Never overwrite, revert, or discard unrelated user changes. Report the outcome, verification, and remaining blockers concisely.
+- For changes to a repository, always commit the files changed for the requested task and push the commit to its configured upstream after verification. Do this proactively; commits and pushes are reversible. Never include unrelated user changes in that commit.
