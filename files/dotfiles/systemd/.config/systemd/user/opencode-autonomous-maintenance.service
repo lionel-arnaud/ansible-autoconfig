@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenCode autonomous maintenance for ansible-autoconfig
+Documentation=https://opencode.ai/v2/docs/cli
+ConditionPathExists=%h/Documents/ansible-autoconfig/.opencode/autonomous-state.md
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Documents/ansible-autoconfig
+# mise resolves the current OpenCode release without pinning this unit to a versioned path.
+# Use the available free model for unattended work; the interactive default may have no paid-provider credit.
+ExecStart=/usr/bin/mise exec opencode@latest -- opencode run --auto --model opencode/glm-5.3-flash-free --session ses_autonomous_ansible_maintenance --agent build Resume the scheduled ansible-autoconfig maintenance cycle. Read .opencode/autonomous-state.md first. Inspect relevant background jobs and logs, resume only an explicitly recorded task, verify useful changes, update the state file, and exit without changing anything when no concrete task is pending. Never push, use privilege escalation, deploy, send external messages, access credentials, or discard existing work.
+TimeoutStartSec=25min
+Nice=10

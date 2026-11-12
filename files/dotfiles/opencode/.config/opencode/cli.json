@@ -9,6 +9,9 @@
   "tabs": {
     "mode": "on"
   },
+  "session": {
+    "permissions": "autoaccept"
+  },
   "keybinds": {
     "session.first": "ctrl+g,ctrl+home",
     "session.last": "ctrl+alt+g,ctrl+end",

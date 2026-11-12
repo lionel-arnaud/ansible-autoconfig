@@ -292,6 +292,13 @@
     - server
     - opencode
 
+- name: Install TUIOS
+  ansible.builtin.import_tasks: tuios.yml
+  when: server_tuios_enabled | default(false)
+  tags:
+    - server
+    - tuios
+
 - name: Configure the rclone Google Drive mount
   ansible.builtin.import_tasks: rclone_gdrive.yml
   when: server_rclone_gdrive_enabled | default(false)

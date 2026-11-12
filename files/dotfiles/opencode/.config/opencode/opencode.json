@@ -4,6 +4,15 @@
   "plugins": [
     "@mohak34/opencode-notifier@latest"
   ],
+  "experimental": {
+    "todo": true,
+    "background_compaction": true
+  },
+  "policies": [
+    { "action": "tool.use", "resource": "shell:git push *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:sudo *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:pkexec *", "effect": "deny" }
+  ],
   "permissions": [
     { "action": "read", "resource": "*", "effect": "allow" },
     { "action": "read", "resource": "*.env", "effect": "deny" },

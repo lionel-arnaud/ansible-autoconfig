@@ -1,0 +1,12 @@
+[Unit]
+Description=Schedule conservative OpenCode autonomous maintenance
+
+[Timer]
+OnBootSec=10min
+OnUnitInactiveSec=30min
+Persistent=true
+RandomizedDelaySec=2min
+Unit=opencode-autonomous-maintenance.service
+
+[Install]
+WantedBy=timers.target

@@ -803,6 +803,18 @@ server_opencode_user: "{{ dotfiles_user | default(desktop_user | default('lion')
 server_opencode_secret_dir: /etc/ansible/secrets
 server_opencode_password_file: "{{ server_opencode_secret_dir }}/opencode-server-password"
 
+# TUIOS is a self-contained Go binary released upstream.  Pin both its version
+# and archive checksum so the homelab's interactive sessions are reproducible.
+server_tuios_enabled: false
+server_tuios_version: 0.12.1
+server_tuios_arch: x86_64
+server_tuios_archive: "tuios_{{ server_tuios_version }}_Linux_{{ server_tuios_arch }}.tar.gz"
+server_tuios_url: >-
+  https://github.com/Gaurav-Gosain/tuios/releases/download/v{{ server_tuios_version }}/{{ server_tuios_archive }}
+server_tuios_checksum: sha256:4f68bac6e05d826b8c59b671b565c61b859dacedcb5d889160ba6d8624589b50
+server_tuios_download_path: "/var/tmp/{{ server_tuios_archive }}"
+server_tuios_binary: /usr/local/bin/tuios
+
 # rclone Google Drive mount: the same remote that lives on savannarchome
 # (Google Drive Perso) is mounted under the desktop user's home, so opencode's
 # @-file search picks up the cloud files. The systemd user unit guards against

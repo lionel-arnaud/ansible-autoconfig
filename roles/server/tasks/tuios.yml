@@ -1,0 +1,38 @@
+---
+# TUIOS is launched through the normal SSH service (rather than its optional
+# SSH server), so no additional network listener or systemd service is needed.
+- name: Gather the server architecture
+  ansible.builtin.setup:
+    gather_subset:
+      - '!all'
+      - hardware
+
+- name: Verify that the server architecture has a pinned TUIOS archive
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['architecture'] == 'x86_64'
+      - server_tuios_arch == 'x86_64'
+    fail_msg: >-
+      No pinned TUIOS release archive is configured for {{ ansible_facts['architecture'] }}.
+
+- name: Download the pinned TUIOS release archive
+  ansible.builtin.get_url:
+    url: "{{ server_tuios_url }}"
+    dest: "{{ server_tuios_download_path }}"
+    checksum: "{{ server_tuios_checksum }}"
+    mode: "0644"
+
+- name: Install the TUIOS binary
+  ansible.builtin.unarchive:
+    src: "{{ server_tuios_download_path }}"
+    dest: /usr/local/bin
+    remote_src: true
+    include:
+      - tuios
+
+- name: Ensure the TUIOS binary is executable
+  ansible.builtin.file:
+    path: "{{ server_tuios_binary }}"
+    owner: root
+    group: root
+    mode: "0755"
