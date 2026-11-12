@@ -6,6 +6,9 @@
   "prompt": {
     "paste": "full"
   },
+  "tabs": {
+    "mode": "on"
+  },
   "keybinds": {
     "session.first": "ctrl+g,ctrl+home",
     "session.last": "ctrl+alt+g,ctrl+end",
