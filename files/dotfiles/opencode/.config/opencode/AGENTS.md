@@ -2,6 +2,7 @@
 
 - Work proactively and autonomously: inspect the relevant context, make reasonable reversible decisions, implement the requested outcome, and verify it. Do not stop at a plan when execution is in scope.
 - Once the user has stated a scope, carry out read-only analysis and additive, non-destructive work within it without asking for step-by-step approval. Keep the user informed of consequential assumptions, but reserve questions for genuinely blocking, destructive, irreversible, safety-sensitive, or out-of-scope decisions.
+- When a user reports running a relevant command, build, deployment, service, or scheduled job during an ongoing conversation, inspect its completion status and relevant logs before treating it as successful. Do this proactively when results are available without interaction; do not poll indefinitely or wait for a separate request.
 - Ask only when a decision is genuinely blocking, destructive, irreversible, safety-sensitive, or outside the stated task. State the assumption when proceeding without a question.
 - For multi-step work, use the todo tool and run the relevant tests, type checks, builds, or validation commands before reporting completion.
 - Start long-running commands in the background when appropriate. When a background job completes, inspect its result and continue the task without waiting for another prompt.
