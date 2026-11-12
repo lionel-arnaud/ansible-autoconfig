@@ -222,15 +222,21 @@ Item {
   property string pendingUpdateKind: ""
 
   // A fifteen-minute interval can't catch an account crossing its switch
-  // threshold, so while any provider with several accounts has its active one
-  // within 15 points of that threshold (80% at the default 95%), the limits
-  // are checked every three minutes. Those runs
+  // threshold or Codex crossing a notification threshold, so while any
+  // provider with several accounts has its active one within 15 points of its
+  // threshold (80% at the default 95%), or Codex is within five points of 70%,
+  // the limits are checked every three minutes. Those runs
   // reuse the transcript scans; only the limits probes are new, and any more
   // often than this Anthropic starts refusing them.
   readonly property bool nearLimit: {
     var rev = dataRevision
     for (var i = 0; i < agents.length; i++) {
       var record = agents[i] ? agents[i].record : null
+      if (record && String(record.id || "") === "codex") {
+        var codexLimits = Array.isArray(record.limits) ? record.limits : []
+        for (var c = 0; c < codexLimits.length; c++)
+          if (isCodexFiveHourWindow(codexLimits[c]) && Number(codexLimits[c].percent) >= 0.65) return true
+      }
       if (!record || !Array.isArray(record.accounts) || record.accounts.length < 2) continue
       var limits = Array.isArray(record.limits) ? record.limits : []
       var threshold = Number(record.accountSwitch && record.accountSwitch.threshold || 95)
