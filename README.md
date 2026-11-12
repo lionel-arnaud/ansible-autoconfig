@@ -206,9 +206,9 @@ It avoids the full playbook's unrelated package upgrades. Run from the laptop:
 ansible-playbook syncthing.yml --ask-become-pass
 ```
 
-The primary vault shares `/home/lion/Documents/notion-obsidian-pilot/Perso`
+The primary vault shares `/home/lion/Documents/Obsidian/Perso`
 with `/home/lion/Obsidian/Lion` under the `lion-obsidian` ID. Biomemory is a
-separate vault: `/home/lion/Documents/Biomemory` shares with
+separate vault: `/home/lion/Documents/Obsidian/Biomemory` shares with
 `/home/lion/Obsidian/Biomemory` under `biomemory-obsidian`. The server also
 shares both vaults with the configured Android peer, so it remains available
 while the laptop sleeps.

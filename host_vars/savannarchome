@@ -1,10 +1,10 @@
 ---
 syncthing_enabled: true
-syncthing_folder: /home/lion/Documents/notion-obsidian-pilot/Perso
+syncthing_folder: /home/lion/Documents/Obsidian/Perso
 syncthing_extra_folders:
   - id: biomemory-obsidian
     label: Biomemory — Obsidian
-    path: /home/lion/Documents/Biomemory
+    path: /home/lion/Documents/Obsidian/Biomemory
     peers: []
 # Production Omarchy/Arch workstation. Runs the playbook locally (no SSH hop).
 ansible_connection: local
