@@ -19,7 +19,7 @@ Every subscription on one page, limits first.
   or accounts to show gets one; local history alone only feeds the hero's
   line. Its mark, name, and plan, then a compact line
   per limit window: its meter and the time until it resets (the exact percentage
-  on hover). A model-scoped allowance on the same clock (Claude's Fable weekly
+  and local reset date/time on hover). A model-scoped allowance on the same clock (Claude's Fable weekly
   limit) is a tick on that window's meter rather than a line of its own; the
   row's tooltip names it. A lapsed or missing Claude, Codex, or Grok sign-in
   shows a _Sign-in required_ link that signs that account in again from the
@@ -68,7 +68,8 @@ on its refresh timer and whenever you ask for a refresh, and picks up any
 record that lands in the directory regardless of who wrote it.
 
 For Codex, the widget sends a desktop notification once at 70% and once at
-80% of each rolling five-hour window. Alert state is kept in
+80% of each rolling five-hour window, including when its first successful
+refresh finds that the current window already crossed a threshold. Alert state is kept in
 `~/.local/state/omarchy/agents/codex-limit-alerts.json`, so shell reloads do
 not repeat a warning; a new Codex reset starts a new pair of alerts.
 

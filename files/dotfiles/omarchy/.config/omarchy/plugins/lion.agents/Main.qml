@@ -83,11 +83,14 @@ Item {
 
       var key = "codex-5h"
       var entry = alertState[key]
-      // First observation is a baseline, not a retrospective alert.
+      // A panel can start, or its first successful limits refresh can land,
+      // after Codex has already crossed a threshold. Start at zero so the
+      // current window still receives the promised warnings rather than
+      // silently recording a high-water mark until its next reset.
       if (!entry) {
-        alertState[key] = { resetAt: resetAt, percent: percent, alerted70: false, alerted80: false }
+        entry = { resetAt: resetAt, percent: 0, alerted70: false, alerted80: false }
+        alertState[key] = entry
         changed = true
-        continue
       }
       if (entry.resetAt !== resetAt) {
         entry = { resetAt: resetAt, percent: 0, alerted70: false, alerted80: false }

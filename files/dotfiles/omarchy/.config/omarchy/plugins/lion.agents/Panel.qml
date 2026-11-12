@@ -601,6 +601,14 @@ Panel {
     return isFinite(ms) ? ms - root.nowMs : -1
   }
 
+  // The countdown is useful at a glance, while the local date and time save
+  // someone from mentally adding it to the clock when they hover a limit.
+  function formatResetAt(w) {
+    if (!w || w.resetAt === "") return ""
+    var date = new Date(w.resetAt)
+    return isFinite(date.getTime()) ? Qt.formatDateTime(date, "ddd d MMM yyyy, HH:mm") : ""
+  }
+
   function formatDuration(ms) {
     if (!(ms > 0)) return Commons.I18n.t("agents.durationNow")
     var minutes = Math.floor(ms / 60000)
@@ -2004,6 +2012,8 @@ Panel {
           lines.push(compact.resetMs > 0
             ? Commons.I18n.t("agents.windowUsedResets").arg(windowName).arg(used).arg(root.formatDuration(compact.resetMs))
             : Commons.I18n.t("agents.windowUsed").arg(windowName).arg(used))
+          var resetAt = root.formatResetAt(compact.window)
+          if (resetAt !== "") lines.push("Resets at " + resetAt)
         }
         if (compact.stale)
           lines.push(compact.fetchedAt > 0 && root.nowMs - compact.fetchedAt > 60000
