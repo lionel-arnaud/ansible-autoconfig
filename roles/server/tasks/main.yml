@@ -155,6 +155,16 @@
     - server
     - backup
 
+- name: Monitor server storage capacity
+  ansible.builtin.import_tasks: disk_monitor.yml
+  when:
+    - server_disk_monitor_enabled | default(false)
+    - notify_enabled | default(false)
+  tags:
+    - server
+    - monitoring
+    - disk
+
 # Must precede Homepage: Homepage's docker.yaml points at this proxy by service
 # name, so the proxy has to exist before Homepage starts reading from it.
 - name: Deploy the filtered Docker socket proxy

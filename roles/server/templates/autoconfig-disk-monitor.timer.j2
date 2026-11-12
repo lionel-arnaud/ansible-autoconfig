@@ -1,0 +1,9 @@
+[Unit]
+Description=Schedule managed filesystem capacity checks
+
+[Timer]
+OnCalendar={{ server_disk_monitor_timer_on_calendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

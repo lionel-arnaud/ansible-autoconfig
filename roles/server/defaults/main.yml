@@ -503,6 +503,14 @@ backup_timer_on_calendar: daily
 backup_retention_keep_daily: 7
 backup_retention_keep_weekly: 4
 backup_retention_keep_monthly: 6
+# The monitor tracks source and backup volumes independently and only alerts on
+# a state transition, so a full disk is actionable without becoming noise.
+server_disk_monitor_enabled: false
+server_disk_monitor_mounts: []
+server_disk_monitor_warning_percent: 80
+server_disk_monitor_critical_percent: 90
+server_disk_monitor_timer_on_calendar: hourly
+server_disk_monitor_state_dir: /var/lib/autoconfig-disk-monitor
 # Backups pushed here by other hosts (see tasks/backup_inbox.yml).
 backup_inbox_enabled: false
 backup_inbox_user: backup-inbox

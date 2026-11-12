@@ -1,0 +1,61 @@
+---
+- name: Validate disk-monitor thresholds
+  ansible.builtin.assert:
+    that:
+      - server_disk_monitor_mounts | length > 0
+      - server_disk_monitor_warning_percent | int > 0
+      - server_disk_monitor_warning_percent | int < server_disk_monitor_critical_percent | int
+      - server_disk_monitor_critical_percent | int < 100
+    fail_msg: >-
+      Disk monitoring needs at least one mount and thresholds satisfying
+      0 < warning < critical < 100.
+
+- name: Ensure the disk-monitor state directory exists
+  ansible.builtin.file:
+    path: "{{ server_disk_monitor_state_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install the disk-monitor runner
+  ansible.builtin.template:
+    src: autoconfig-disk-monitor.sh.j2
+    dest: /usr/local/sbin/autoconfig-disk-monitor
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install the disk-monitor service
+  ansible.builtin.template:
+    src: autoconfig-disk-monitor.service.j2
+    dest: /etc/systemd/system/autoconfig-disk-monitor.service
+    owner: root
+    group: root
+    mode: "0644"
+  register: disk_monitor_service
+
+- name: Install the disk-monitor timer
+  ansible.builtin.template:
+    src: autoconfig-disk-monitor.timer.j2
+    dest: /etc/systemd/system/autoconfig-disk-monitor.timer
+    owner: root
+    group: root
+    mode: "0644"
+  register: disk_monitor_timer
+
+- name: Reload systemd for disk monitoring
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: disk_monitor_service.changed or disk_monitor_timer.changed
+
+- name: Enable the disk-monitor timer
+  ansible.builtin.systemd:
+    name: autoconfig-disk-monitor.timer
+    enabled: true
+    state: started
+
+- name: Evaluate disk capacity now
+  ansible.builtin.systemd:
+    name: autoconfig-disk-monitor.service
+    state: started

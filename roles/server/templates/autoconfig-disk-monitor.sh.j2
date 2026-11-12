@@ -1,0 +1,61 @@
+#!/bin/sh
+# Alert only when a monitored filesystem changes state. A full backup disk is
+# urgent, but reporting it every hour teaches the operator to ignore alerts.
+set -eu
+
+state_dir='{{ server_disk_monitor_state_dir }}'
+warning={{ server_disk_monitor_warning_percent | int }}
+critical={{ server_disk_monitor_critical_percent | int }}
+
+mkdir -p "$state_dir"
+chmod 700 "$state_dir"
+
+notify() {
+  /usr/local/sbin/autoconfig-notify "$1" "$2" "$3"
+}
+
+for mount in {% for mount in server_disk_monitor_mounts %}'{{ mount }}' {% endfor %}; do
+  state_file="$state_dir/$(printf '%s' "$mount" | tr '/' '_').state"
+  previous=$(cat "$state_file" 2>/dev/null || printf 'unknown')
+
+  if ! findmnt --mountpoint "$mount" >/dev/null 2>&1; then
+    state=unmounted
+    detail="$mount is not mounted"
+  else
+    usage=$(df -P "$mount" | awk 'NR == 2 { gsub(/%/, "", $5); print $5 }')
+    case "$usage" in
+      ''|*[!0-9]*)
+        state=unknown
+        detail="could not determine usage for $mount"
+        ;;
+      *)
+        if [ "$usage" -ge "$critical" ]; then
+          state=critical
+        elif [ "$usage" -ge "$warning" ]; then
+          state=warning
+        else
+          state=normal
+        fi
+        detail="$mount is ${usage}% full (warning ${warning}%, critical ${critical}%)"
+        ;;
+    esac
+  fi
+
+  if [ "$state" != "$previous" ]; then
+    case "$state" in
+      critical|unmounted|unknown)
+        notify "Disk critical: $mount" high "$detail"
+        ;;
+      warning)
+        notify "Disk warning: $mount" default "$detail"
+        ;;
+      normal)
+        if [ "$previous" != unknown ] && [ "$previous" != normal ]; then
+          notify "Disk recovered: $mount" default "$detail"
+        fi
+        ;;
+    esac
+    printf '%s\n' "$state" > "$state_file"
+    chmod 600 "$state_file"
+  fi
+done

@@ -1,0 +1,7 @@
+[Unit]
+Description=Evaluate managed filesystem capacity
+After=local-fs.target network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/autoconfig-disk-monitor
