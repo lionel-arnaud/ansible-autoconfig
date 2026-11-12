@@ -838,5 +838,6 @@ server_steamdeck_ludusavi_backup_destination_remote: "{{ server_rclone_gdrive_re
 server_steamdeck_ludusavi_backup_destination_path: backups/steam-deck-ludusavi
 server_steamdeck_ludusavi_backup_ssh_key: "/home/{{ server_steamdeck_ludusavi_backup_user }}/.ssh/deck-ludusavi-sync"
 server_steamdeck_ludusavi_backup_timer_name: deck-ludusavi-google-sync
-server_steamdeck_ludusavi_backup_on_calendar: "*-*-* 03:30:00"
+# Keep the schedule in the user's local timezone, including CET/CEST changes.
+server_steamdeck_ludusavi_backup_on_calendar: "*-*-* 10:30:00 Europe/Paris"
 server_steamdeck_ludusavi_backup_randomized_delay: 20m
