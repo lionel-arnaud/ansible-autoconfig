@@ -221,6 +221,7 @@ server_reverse_proxy_auth_provider: authelia
 server_aumenuilya_enabled: true
 server_opencode_enabled: true
 server_rclone_gdrive_enabled: true
+server_steamdeck_ludusavi_backup_enabled: true
 homepage_extra_allowed_hosts:
   # Caddy already adds X-Forwarded-Host on every request, so the public hostname
   # is the only strictly required entry. The LAN IP stays as a fallback so the

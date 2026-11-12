@@ -299,6 +299,14 @@
     - server
     - rclone_gdrive
 
+- name: Configure the Steam Deck Ludusavi Google Drive backup
+  ansible.builtin.import_tasks: steamdeck_ludusavi_backup.yml
+  when: server_steamdeck_ludusavi_backup_enabled | default(false)
+  tags:
+    - server
+    - backup
+    - steamdeck_ludusavi
+
 - name: Deploy the shared login portal
   ansible.builtin.import_tasks: authelia.yml
   when: server_authelia_enabled | default(false)

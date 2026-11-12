@@ -824,3 +824,19 @@ server_rclone_gdrive_options:
   - full
   - --vfs-cache-max-age
   - 72h
+
+# Steam Deck Ludusavi off-site copy. Ludusavi writes versioned backups to the
+# Deck SD card; this server-side user timer copies them to Google Drive through
+# rclone's API. It is deliberately one-way (`rclone copy`, never `sync`), so it
+# cannot delete the remote backup or restore data onto the Deck.
+server_steamdeck_ludusavi_backup_enabled: false
+server_steamdeck_ludusavi_backup_user: "{{ server_rclone_gdrive_user }}"
+server_steamdeck_ludusavi_backup_deck_host: 192.168.1.49
+server_steamdeck_ludusavi_backup_source_remote: deck-ludusavi-sftp
+server_steamdeck_ludusavi_backup_source_path: /run/media/deck/0a997658-fbf2-42c1-a580-9611f85f0743/Ludusavi-backup
+server_steamdeck_ludusavi_backup_destination_remote: "{{ server_rclone_gdrive_remote }}"
+server_steamdeck_ludusavi_backup_destination_path: backups/steam-deck-ludusavi
+server_steamdeck_ludusavi_backup_ssh_key: "/home/{{ server_steamdeck_ludusavi_backup_user }}/.ssh/deck-ludusavi-sync"
+server_steamdeck_ludusavi_backup_timer_name: deck-ludusavi-google-sync
+server_steamdeck_ludusavi_backup_on_calendar: "*-*-* 03:30:00"
+server_steamdeck_ludusavi_backup_randomized_delay: 20m

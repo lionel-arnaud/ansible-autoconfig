@@ -1,0 +1,122 @@
+---
+# Ludusavi itself owns backup creation on the Deck. This role only mirrors its
+# completed SD-card backup tree to Google Drive from serverannah. The SFTP
+# remote and key are deliberately pre-provisioned bootstrap state: no private
+# key or OAuth token is committed to this repository.
+- name: Require the Steam Deck Ludusavi SFTP key
+  ansible.builtin.stat:
+    path: "{{ server_steamdeck_ludusavi_backup_ssh_key }}"
+  register: steamdeck_ludusavi_key
+
+- name: Refuse to schedule a backup without its dedicated key
+  ansible.builtin.assert:
+    that: steamdeck_ludusavi_key.stat.exists
+    fail_msg: >-
+      Missing {{ server_steamdeck_ludusavi_backup_ssh_key }}. Bootstrap the
+      restricted serverannah-to-Deck SFTP key before enabling this timer.
+
+- name: Ensure Steam Deck Ludusavi backup state directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ server_steamdeck_ludusavi_backup_user }}"
+    group: "{{ server_steamdeck_ludusavi_backup_user }}"
+    mode: "0700"
+  loop:
+    - "/home/{{ server_steamdeck_ludusavi_backup_user }}/.local/bin"
+    - "/home/{{ server_steamdeck_ludusavi_backup_user }}/.local/state/{{ server_steamdeck_ludusavi_backup_timer_name }}"
+    - "/home/{{ server_steamdeck_ludusavi_backup_user }}/.config/systemd/user"
+
+- name: Install the one-way Steam Deck Ludusavi backup runner
+  ansible.builtin.copy:
+    dest: "/home/{{ server_steamdeck_ludusavi_backup_user }}/.local/bin/{{ server_steamdeck_ludusavi_backup_timer_name }}"
+    owner: "{{ server_steamdeck_ludusavi_backup_user }}"
+    group: "{{ server_steamdeck_ludusavi_backup_user }}"
+    mode: "0700"
+    content: |
+      #!/usr/bin/env bash
+      set -u -o pipefail
+
+      state_dir="$HOME/.local/state/{{ server_steamdeck_ludusavi_backup_timer_name }}"
+      state_file="$state_dir/state"
+      lock_file="$state_dir/lock"
+      source_remote="{{ server_steamdeck_ludusavi_backup_source_remote }}:{{ server_steamdeck_ludusavi_backup_source_path }}"
+      destination_remote="{{ server_steamdeck_ludusavi_backup_destination_remote }}:{{ server_steamdeck_ludusavi_backup_destination_path }}"
+
+      mkdir -p "$state_dir"
+      exec 9>"$lock_file"
+      if ! flock -n 9; then
+        echo "A Ludusavi backup sync is already running; exiting."
+        exit 0
+      fi
+
+      previous="never"
+      [[ -f "$state_file" ]] && previous=$(tr '\n' ';' < "$state_file")
+      echo "Previous state: $previous"
+      pgrep -af 'rclone.*{{ server_steamdeck_ludusavi_backup_source_remote }}' || true
+
+      write_state() {
+        cat > "$state_file" <<STATE
+      last_attempt_utc=$(date -u +%FT%TZ)
+      last_result=$1
+      STATE
+      }
+
+      # One-way by design: `copy` does not delete from Google Drive or write to
+      # the Deck. rclone queries Drive directly rather than traversing its FUSE
+      # mount, so a no-change run remains fast.
+      if rclone copy "$source_remote" "$destination_remote" \
+          --fast-list --transfers 4 --checkers 8 --stats-one-line-date; then
+        write_state success
+        echo "Ludusavi Google Drive backup sync completed."
+      else
+        status=$?
+        write_state "failed-rclone-$status"
+        exit "$status"
+      fi
+
+- name: Install the Steam Deck Ludusavi backup service
+  ansible.builtin.copy:
+    dest: "/home/{{ server_steamdeck_ludusavi_backup_user }}/.config/systemd/user/{{ server_steamdeck_ludusavi_backup_timer_name }}.service"
+    owner: "{{ server_steamdeck_ludusavi_backup_user }}"
+    group: "{{ server_steamdeck_ludusavi_backup_user }}"
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=One-way Steam Deck Ludusavi backup sync to Google Drive
+
+      [Service]
+      Type=oneshot
+      ExecStart=%h/.local/bin/{{ server_steamdeck_ludusavi_backup_timer_name }}
+
+- name: Install the Steam Deck Ludusavi backup timer
+  ansible.builtin.copy:
+    dest: "/home/{{ server_steamdeck_ludusavi_backup_user }}/.config/systemd/user/{{ server_steamdeck_ludusavi_backup_timer_name }}.timer"
+    owner: "{{ server_steamdeck_ludusavi_backup_user }}"
+    group: "{{ server_steamdeck_ludusavi_backup_user }}"
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Daily Steam Deck Ludusavi Google Drive backup sync
+
+      [Timer]
+      OnCalendar={{ server_steamdeck_ludusavi_backup_on_calendar }}
+      RandomizedDelaySec={{ server_steamdeck_ludusavi_backup_randomized_delay }}
+      Persistent=true
+      Unit={{ server_steamdeck_ludusavi_backup_timer_name }}.service
+
+      [Install]
+      WantedBy=timers.target
+
+- name: Enable the Steam Deck Ludusavi backup timer
+  ansible.builtin.systemd:
+    name: "{{ server_steamdeck_ludusavi_backup_timer_name }}.timer"
+    enabled: true
+    state: started
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ server_steamdeck_ludusavi_backup_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' ~ server_steamdeck_ludusavi_backup_user) }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ lookup('pipe', 'id -u ' ~ server_steamdeck_ludusavi_backup_user) }}/bus"
