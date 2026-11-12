@@ -22,6 +22,101 @@ Item {
   property var agents: []
   property int dataRevision: 0
 
+  // Codex's rolling five-hour allowance is the one that limits an active
+  // coding session. Keep alert state on disk so a shell reload cannot repeat
+  // a warning; a new rate-limit reset starts a fresh pair of warnings.
+  readonly property string alertStatePath: (Quickshell.env("XDG_STATE_HOME") || home + "/.local/state") + "/omarchy/agents/codex-limit-alerts.json"
+  property var alertState: ({})
+  property bool alertStateReady: false
+
+  FileView {
+    id: alertStateFile
+    path: root.alertStatePath
+    watchChanges: false
+    atomicWrites: true
+    printErrors: false
+    onLoaded: {
+      try {
+        var parsed = JSON.parse(text())
+        root.alertState = parsed && typeof parsed === "object" ? parsed : ({})
+      } catch (e) {
+        root.alertState = ({})
+      }
+      root.alertStateReady = true
+      root.checkCodexLimitAlerts()
+    }
+    onLoadFailed: {
+      root.alertState = ({})
+      root.alertStateReady = true
+      root.checkCodexLimitAlerts()
+    }
+  }
+
+  function isCodexFiveHourWindow(limit) {
+    var label = String(limit && limit.label || "").toLowerCase()
+    return /(^|\s)5\s*-?\s*h(?:our)?\b/.test(label)
+  }
+
+  function saveAlertState() {
+    alertStateFile.setText(JSON.stringify(alertState) + "\n")
+  }
+
+  function checkCodexLimitAlerts() {
+    if (!alertStateReady) return
+    var record = null
+    for (var i = 0; i < agents.length; i++) {
+      var candidate = agents[i] ? agents[i].record : null
+      if (candidate && String(candidate.id || "") === "codex") {
+        record = candidate
+        break
+      }
+    }
+    if (!record || !Array.isArray(record.limits)) return
+
+    var changed = false
+    for (var j = 0; j < record.limits.length; j++) {
+      var limit = record.limits[j] || {}
+      if (!isCodexFiveHourWindow(limit)) continue
+      var percent = Number(limit.percent)
+      var resetAt = String(limit.resetsAt || "")
+      if (!isFinite(percent) || percent < 0 || resetAt === "") continue
+
+      var key = "codex-5h"
+      var entry = alertState[key]
+      // First observation is a baseline, not a retrospective alert.
+      if (!entry) {
+        alertState[key] = { resetAt: resetAt, percent: percent, alerted70: false, alerted80: false }
+        changed = true
+        continue
+      }
+      if (entry.resetAt !== resetAt) {
+        entry = { resetAt: resetAt, percent: 0, alerted70: false, alerted80: false }
+        alertState[key] = entry
+      }
+
+      var thresholds = [0.7, 0.8]
+      for (var t = 0; t < thresholds.length; t++) {
+        var threshold = thresholds[t]
+        var alertedKey = threshold === 0.7 ? "alerted70" : "alerted80"
+        if (Number(entry.percent) < threshold && percent >= threshold && entry[alertedKey] !== true) {
+          var percentText = Math.round(percent * 100) + "%"
+          Quickshell.execDetached([
+            "omarchy-notification-send",
+            "Codex 5-hour limit warning",
+            "You have used " + percentText + " of your current five-hour Codex limit."
+          ])
+          entry[alertedKey] = true
+          changed = true
+        }
+      }
+      if (Number(entry.percent) !== percent) {
+        entry.percent = percent
+        changed = true
+      }
+    }
+    if (changed) saveAlertState()
+  }
+
   Process {
     id: listProcess
     running: false
@@ -84,6 +179,7 @@ Item {
 
   function recordsChanged() {
     dataRevision++
+    checkCodexLimitAlerts()
     scheduleLimitsRetry()
     scheduleSync()
   }
