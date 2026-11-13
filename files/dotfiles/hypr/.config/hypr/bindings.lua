@@ -9,6 +9,10 @@
 hl.unbind("ALT + TAB")
 hl.unbind("ALT + SHIFT + TAB")
 
+-- TUIOS owns Alt+Space for its terminal command launcher. Dictation remains
+-- available through the preferred F9 push-to-talk binding below.
+hl.unbind("ALT + SPACE")
+
 -- Personal bindings ported from the pre-quattro Hyprland .conf config.
 hl.unbind("SUPER + SHIFT + F")
 hl.unbind("SUPER + SHIFT + E")
