@@ -5,6 +5,9 @@
 next_workspace = ["alt+tab"]
 prev_workspace = ["alt+shift+tab"]
 
+[keybindings.window_management]
+copy_mode_search_forward = ["/"]
+
 [startup]
 tiled = true
 daemon = true
