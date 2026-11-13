@@ -5,7 +5,9 @@ hl.on("hyprland.start", function()
 	hl.exec_cmd("[workspace 1 silent] " .. o.launch("thunderbird"))
 	hl.exec_cmd("[workspace 2 silent] " .. o.launch("chromium"))
 	hl.exec_cmd("[workspace 3 silent] " .. o.launch("beeper"))
-	hl.exec_cmd("[workspace 4 silent] " .. o.launch("alacritty -e tuios attach default"))
+	-- `attach` without a name restores and attaches the most recently used
+	-- session. Session names are case-sensitive (the saved one is `Default`).
+	hl.exec_cmd("[workspace 4 silent] " .. o.launch("alacritty -e tuios attach"))
 	hl.exec_cmd("[workspace 6 silent] " .. o.launch("nautilus"))
 	hl.exec_cmd("[workspace 5 silent] " .. o.launch("obsidian"))
 	-- Google Drive is mounted by the rclone-gdrive-mount systemd user service
