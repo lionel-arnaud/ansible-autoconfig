@@ -109,12 +109,8 @@ dotfiles_managed_paths:
     path: .config/starship.toml
   - package: opencode
     path: .config/opencode/opencode.json
-  # cli.json is the V2 terminal-client config separated from opencode.json
-  # (theme, keybinds, terminal plugins). It is listed on its own rather than widening the entry to
-  # .config/opencode, because opencode writes runtime files into that same
-  # directory (bun.lock, node_modules, the notifier state) that must stay local.
-  - package: opencode
-    path: .config/opencode/cli.json
+  # cli.json is copy-managed below: OpenCode rewrites it in place, which would
+  # replace a Stow symlink and make future pulls fail.
   # The notifier plugin's own config. Its sibling opencode-notifier-state.json
   # is a turn counter the plugin rewrites constantly, so it stays unmanaged.
   - package: opencode
@@ -212,6 +208,12 @@ dotfiles_secret_files: []
 # Programs that rewrite their own configuration must receive a regular file,
 # not a Stow symlink. Omarchy migrates shell.json during upgrades.
 dotfiles_copied_files:
+  # OpenCode rewrites its V2 terminal-client config in place. A regular copied
+  # file survives that behavior; the source is excluded from Stow.
+  - package: opencode
+    src: .config/opencode/cli.json
+    dest: .config/opencode/cli.json
+    mode: '0600'
   - package: omarchy
     src: .config/omarchy/shell.json
     dest: .config/omarchy/shell.json

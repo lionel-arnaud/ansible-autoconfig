@@ -3,6 +3,9 @@
   "theme": {
     "name": "system"
   },
+  "diffs": {
+    "wrap": "word"
+  },
   "prompt": {
     "paste": "full"
   },
@@ -10,8 +13,12 @@
     "mode": "on"
   },
   "session": {
-    "permissions": "autoaccept"
+    "permissions": "autoaccept",
+    "sidebar": "auto",
+    "scrollbar": true,
+    "thinking": "show"
   },
+  "animations": true,
   "keybinds": {
     "session.first": "ctrl+g,ctrl+home",
     "session.last": "ctrl+alt+g,ctrl+end",
