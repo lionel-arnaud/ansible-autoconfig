@@ -4,6 +4,9 @@
 [keybindings.global]
 next_workspace = ["alt+tab"]
 prev_workspace = ["alt+shift+tab"]
+# Leave Ctrl+P to programs in panes (notably OpenCode). TUIOS's command
+# palette remains available through the leader: Ctrl+B, then P.
+command_palette = []
 
 [keybindings.window_management]
 copy_mode_search_forward = ["/"]
