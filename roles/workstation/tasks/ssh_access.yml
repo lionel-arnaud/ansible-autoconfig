@@ -1,0 +1,20 @@
+---
+- name: Ensure the workstation SSH authorized-keys file exists
+  ansible.builtin.file:
+    path: "{{ workstation_home }}/.ssh/authorized_keys"
+    state: touch
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0600"
+    access_time: preserve
+    modification_time: preserve
+
+- name: Authorize configured LAN SSH keys
+  ansible.builtin.lineinfile:
+    path: "{{ workstation_home }}/.ssh/authorized_keys"
+    line: "{{ item }}"
+    state: present
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0600"
+  loop: "{{ workstation_ssh_authorized_keys }}"

@@ -46,6 +46,10 @@ workstation_ufw_port_rules:
   - port: "53317"
     proto: udp
 
+# Public keys allowed to SSH to this workstation. Entries may include OpenSSH
+# restrictions such as from="192.168.1.100"; unmanaged keys are preserved.
+workstation_ssh_authorized_keys: []
+
 # Arch/Omarchy and Debian (trixie+) CLI/TUI tooling. Debian names differ where
 # noted: github-cli -> gh, fd -> fd-find (binary is fdfind on Debian).
 workstation_cli_packages_by_family:

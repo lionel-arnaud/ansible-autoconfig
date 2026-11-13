@@ -7,6 +7,13 @@
     - server
     - server_docker
 
+- name: Configure LAN access to workstations
+  ansible.builtin.import_tasks: workstation_access.yml
+  when: server_workstation_ssh_enabled | default(false)
+  tags:
+    - server
+    - server_ssh
+
 - name: Configure the network with netplan
   ansible.builtin.import_tasks: netplan.yml
   when: server_netplan_enabled | default(false)

@@ -815,6 +815,16 @@ server_tuios_checksum: sha256:4f68bac6e05d826b8c59b671b565c61b859dacedcb5d889160
 server_tuios_download_path: "/var/tmp/{{ server_tuios_archive }}"
 server_tuios_binary: /usr/local/bin/tuios
 
+# Opt-in LAN SSH access to a workstation. mDNS keeps the laptop address out of
+# server configuration, while the pinned host key prevents first-connect trust.
+server_workstation_ssh_enabled: false
+server_workstation_ssh_user: lion
+server_workstation_ssh_home: "/home/{{ server_workstation_ssh_user }}"
+server_workstation_ssh_alias: savannarchome
+server_workstation_ssh_hostname: savannarchome.local
+server_workstation_ssh_identity_file: "{{ server_workstation_ssh_home }}/.ssh/deck-ludusavi-sync"
+server_workstation_ssh_known_host_key: ""
+
 # rclone Google Drive mount: the same remote that lives on savannarchome
 # (Google Drive Perso) is mounted under the desktop user's home, so opencode's
 # @-file search picks up the cloud files. The systemd user unit guards against

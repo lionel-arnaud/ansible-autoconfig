@@ -19,6 +19,9 @@ workstation_cli_enabled: true
 workstation_dotfiles_enabled: true
 workstation_espanso_enabled: true
 workstation_keyd_enabled: true
+workstation_ssh_authorized_keys:
+  # Existing server key, restricted to the server's fixed LAN address.
+  - 'from="192.168.1.100" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGZzObPq8yodB0aiOw31xJKkVdP15xh9Q4QpcPPhQtzV serverannah Deck Ludusavi one-way backup'
 # Failure notifications. Generates its own topic, separate from the server's, so
 # one leaked topic does not expose both machines.
 notify_enabled: true

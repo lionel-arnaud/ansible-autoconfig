@@ -1,0 +1,54 @@
+---
+- name: Install mDNS support for LAN workstation discovery
+  ansible.builtin.package:
+    name:
+      - avahi-daemon
+      - libnss-mdns
+    state: present
+
+- name: Enable mDNS service
+  ansible.builtin.systemd:
+    name: avahi-daemon.service
+    enabled: true
+    state: started
+
+- name: Create SSH include directory
+  ansible.builtin.file:
+    path: "{{ server_workstation_ssh_home }}/.ssh/config.d"
+    state: directory
+    owner: "{{ server_workstation_ssh_user }}"
+    group: "{{ server_workstation_ssh_user }}"
+    mode: "0700"
+
+- name: Include managed SSH aliases before user settings
+  ansible.builtin.blockinfile:
+    path: "{{ server_workstation_ssh_home }}/.ssh/config"
+    create: true
+    insertbefore: BOF
+    owner: "{{ server_workstation_ssh_user }}"
+    group: "{{ server_workstation_ssh_user }}"
+    mode: "0600"
+    marker: "# {mark} ANSIBLE MANAGED WORKSTATION SSH ALIASES"
+    block: |
+      Include ~/.ssh/config.d/*
+
+- name: Configure SSH alias for the workstation
+  ansible.builtin.copy:
+    dest: "{{ server_workstation_ssh_home }}/.ssh/config.d/workstation"
+    owner: "{{ server_workstation_ssh_user }}"
+    group: "{{ server_workstation_ssh_user }}"
+    mode: "0600"
+    content: |
+      Host {{ server_workstation_ssh_alias }}
+        HostName {{ server_workstation_ssh_hostname }}
+        User {{ server_workstation_ssh_user }}
+        IdentityFile {{ server_workstation_ssh_identity_file }}
+        IdentitiesOnly yes
+
+- name: Pin the workstation SSH host key
+  ansible.builtin.known_hosts:
+    path: "{{ server_workstation_ssh_home }}/.ssh/known_hosts"
+    name: "{{ server_workstation_ssh_alias }}"
+    key: "{{ server_workstation_ssh_known_host_key }}"
+    state: present
+    hash_host: false
