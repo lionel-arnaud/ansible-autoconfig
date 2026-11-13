@@ -10,7 +10,8 @@ hl.on("hyprland.start", function()
 	hl.exec_cmd("[workspace 4 silent] " .. o.launch("alacritty -e tuios attach"))
 	hl.exec_cmd("[workspace 6 silent] " .. o.launch("nautilus"))
 	hl.exec_cmd("[workspace 5 silent] " .. o.launch("obsidian"))
-	hl.exec_cmd("[workspace 0 silent] " .. o.launch(omarchy - launch - webapp("https://music.youtube.com/")))
+	-- Run YouTube Music as an Omarchy web app directly in Workspace 0.
+	hl.exec_cmd("[workspace 0 silent] " .. o.launch("omarchy-launch-webapp https://music.youtube.com/"))
 	-- Google Drive is mounted by the rclone-gdrive-mount systemd user service
 	-- (roles/workstation/tasks/rclone_gdrive.yml), not launched here. Running
 	-- both raced for the same mountpoint and crash-looped the systemd unit.
