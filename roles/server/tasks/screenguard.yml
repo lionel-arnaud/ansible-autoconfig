@@ -74,6 +74,13 @@
   changed_when: false
   no_log: true
 
+- name: Ensure ScreenGuard JWT secret exists
+  ansible.builtin.shell: |
+    test -s {{ (screenguard_secret_dir ~ '/screenguard-jwt-secret') | quote }} || \
+      (umask 077 && tr -dc 'A-Za-z0-9' </dev/urandom | head -c 64 > {{ (screenguard_secret_dir ~ '/screenguard-jwt-secret') | quote }})
+  changed_when: false
+  no_log: true
+
 - name: Configure ScreenGuard server
   ansible.builtin.copy:
     dest: "{{ screenguard_config_dir }}/server.toml"
@@ -84,6 +91,7 @@
       listen_addr = "{{ screenguard_server_bind }}"
       listen_port = {{ screenguard_server_port }}
       db_path = "{{ screenguard_data_dir }}/server.db"
+      jwt_secret = "{{ lookup('ansible.builtin.file', screenguard_secret_dir ~ '/screenguard-jwt-secret') | trim }}"
       enable_mdns = false
   notify: Restart ScreenGuard server
 

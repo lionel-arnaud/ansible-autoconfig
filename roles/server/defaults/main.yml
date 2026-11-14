@@ -44,7 +44,7 @@ screenguard_secret_dir: /etc/ansible/secrets
 screenguard_admin_password_file: "{{ screenguard_secret_dir }}/screenguard-admin-password"
 screenguard_admin_username: lion
 screenguard_server_bind: 192.168.1.100
-screenguard_server_port: 8080
+screenguard_server_port: 8088
 screenguard_webui_port: 5000
 screenguard_timezone: Europe/Paris
 # Mirrors Timekpr but is deliberately looser for the overlap: Timekpr remains

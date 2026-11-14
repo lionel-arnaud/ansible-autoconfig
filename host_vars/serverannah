@@ -210,6 +210,7 @@ pihole_published_ports:
   - "192.168.1.100:53:53/udp"
   - "192.168.1.100:8089:80"
 server_lan_only_published_ports:
+  - 8088
   - 5000
   - 3000
   - 8089
