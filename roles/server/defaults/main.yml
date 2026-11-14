@@ -36,7 +36,9 @@ server_lan_only_published_ports: []
 server_tailscale_enabled: false
 # Serve uses Tailscale's HTTPS proxy, not Funnel: the dashboard is visible only
 # to authenticated devices in the owner's tailnet.
-server_tailscale_screenguard_port: 443
+# Port 443 is already owned by the public reverse proxy.  A dedicated tailnet
+# HTTPS port keeps Serve reachable from both Tailscale IPv4 and IPv6 clients.
+server_tailscale_screenguard_port: 8444
 # The native Android app connects straight to the ScreenGuard REST API.  Keep
 # it separate from the browser dashboard so both have a stable root path.
 server_tailscale_screenguard_api_port: 8443
