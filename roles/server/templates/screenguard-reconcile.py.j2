@@ -30,6 +30,15 @@ def main():
     token = request("/auth/login", "POST", {"username": USERNAME, "password": PASSWORD})["token"]
     existing = {p["display_name"]: p for p in request("/profiles", token=token)["profiles"]}
     agents = request("/agents", token=token)["agents"]
+    if len(sys.argv) == 2:
+        pending = [a for a in agents if a["pairing_requested"]]
+        if len(pending) != 1:
+            sys.exit("expected exactly one pending ScreenGuard agent, found %d" % len(pending))
+        request(f"/agents/{pending[0]['id']}/accept", "POST",
+                {"pairing_code": sys.argv[1]}, token)
+        agents = request("/agents", token=token)["agents"]
+    elif len(sys.argv) != 1:
+        sys.exit("usage: screenguard-reconcile [pairing-code]")
     for wanted in PROFILES:
         profile = existing.get(wanted["display_name"])
         if profile is None:
