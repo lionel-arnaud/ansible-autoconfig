@@ -49,7 +49,13 @@
     - server_tailscale_screenguard_port != 443
     - server_tailscale_status.rc == 0
     - (server_tailscale_status.stdout | from_json).BackendState == 'Running'
+  register: server_tailscale_legacy_serve
   changed_when: false
+  # `tailscale serve ... off` exits 1 when no listener exists, which is the
+  # desired end state on a first run or after an earlier successful cleanup.
+  failed_when: >-
+    server_tailscale_legacy_serve.rc != 0
+    and 'handler does not exist' not in server_tailscale_legacy_serve.stderr
 
 - name: Publish ScreenGuard dashboard privately through Tailscale Serve
   ansible.builtin.command:
