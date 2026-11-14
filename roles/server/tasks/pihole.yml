@@ -573,3 +573,10 @@
       - pihole
       - enable
   changed_when: false
+  # A client-profile change restarts the container immediately beforehand. FTL
+  # can take a few seconds to accept CLI commands after Docker reports the
+  # container started, so wait for the daemon instead of failing the full pull.
+  retries: 12
+  delay: 2
+  until: pihole_blocking_enable.rc == 0
+  register: pihole_blocking_enable
