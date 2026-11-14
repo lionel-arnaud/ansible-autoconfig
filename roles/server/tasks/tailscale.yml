@@ -42,6 +42,7 @@
     argv:
       - tailscale
       - serve
+      - --bg
       - --https={{ server_tailscale_screenguard_port }}
       - http://{{ screenguard_server_bind }}:{{ screenguard_webui_port }}
   when:
