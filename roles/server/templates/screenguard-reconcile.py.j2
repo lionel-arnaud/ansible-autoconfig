@@ -6,7 +6,7 @@ import sys
 import urllib.error
 import urllib.request
 
-BASE = "http://127.0.0.1:{{ screenguard_server_port }}/api/v1"
+BASE = "http://{{ screenguard_server_bind }}:{{ screenguard_server_port }}/api/v1"
 PASSWORD = pathlib.Path("{{ screenguard_admin_password_file }}").read_text().strip()
 USERNAME = "{{ screenguard_admin_username }}"
 PROFILES = {{ screenguard_profiles | to_json }}

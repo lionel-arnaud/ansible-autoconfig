@@ -102,7 +102,7 @@
     group: root
     mode: '0600'
     content: |
-      SERVER_URL=http://127.0.0.1:{{ screenguard_server_port }}
+      SERVER_URL=http://{{ screenguard_server_bind }}:{{ screenguard_server_port }}
       SECRET_KEY={{ lookup('ansible.builtin.file', screenguard_secret_dir ~ '/screenguard-webui-secret') | trim }}
       UI_PORT={{ screenguard_webui_port }}
   no_log: true
