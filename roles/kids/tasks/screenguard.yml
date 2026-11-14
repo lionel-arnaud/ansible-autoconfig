@@ -6,11 +6,14 @@
 
 - name: Ensure ScreenGuard configuration directory exists
   ansible.builtin.file:
-    path: /etc/screenguard
+    path: "{{ item }}"
     state: directory
     owner: root
     group: root
     mode: '0755'
+  loop:
+    - /etc/screenguard
+    - /var/lib/screenguard
 
 - name: Install pinned ScreenGuard agent binary
   ansible.builtin.get_url:
