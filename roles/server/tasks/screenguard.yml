@@ -141,5 +141,5 @@
 
 - name: Reconcile ScreenGuard profiles and trial policy
   ansible.builtin.command: /usr/local/sbin/screenguard-reconcile
-  changed_when: false
-  no_log: true
+  register: screenguard_reconcile
+  changed_when: screenguard_reconcile.stdout != 'unchanged'

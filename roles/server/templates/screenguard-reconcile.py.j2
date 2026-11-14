@@ -22,11 +22,24 @@ def request(path, method="GET", body=None, token=None):
     with urllib.request.urlopen(req, timeout=10) as response:
         return json.loads(response.read() or b"{}")
 
+def schedule_set(entries):
+    return {(int(entry["day_of_week"]), entry["start_time"], entry["end_time"])
+            for entry in entries}
+
+def limit_set(entries):
+    return {(int(entry["day_of_week"]), int(entry["allowed_minutes"]))
+            for entry in entries}
+
+def domain_set(entries):
+    return {(entry["domain"], bool(entry["enabled"])) for entry in entries}
+
 def main():
+    changes = []
     status = request("/auth/status")
     if status["setup_needed"]:
         request("/auth/setup", "POST", {"username": USERNAME, "password": PASSWORD,
                                           "timezone": "{{ screenguard_timezone }}"})
+        changes.append("admin setup")
     token = request("/auth/login", "POST", {"username": USERNAME, "password": PASSWORD})["token"]
     existing = {p["display_name"]: p for p in request("/profiles", token=token)["profiles"]}
     agents = request("/agents", token=token)["agents"]
@@ -36,6 +49,7 @@ def main():
             sys.exit("expected exactly one pending ScreenGuard agent, found %d" % len(pending))
         request(f"/agents/{pending[0]['id']}/accept", "POST",
                 {"pairing_code": sys.argv[1]}, token)
+        changes.append("agent paired")
         agents = request("/agents", token=token)["agents"]
     elif len(sys.argv) != 1:
         sys.exit("usage: screenguard-reconcile [pairing-code]")
@@ -43,18 +57,33 @@ def main():
         profile = existing.get(wanted["display_name"])
         if profile is None:
             profile = request("/profiles", "POST", {"display_name": wanted["display_name"]}, token)
+            changes.append("profile " + wanted["display_name"])
         pid = profile["id"]
-        request(f"/profiles/{pid}", "PATCH", {"preserve_tasks_on_lock": True,
-                                                 "lockout_grace_minutes": 5}, token)
-        request(f"/profiles/{pid}/schedules", "PUT", {"schedules": SCHEDULES}, token)
-        request(f"/profiles/{pid}/daily-limits", "PUT", {"limits": LIMITS}, token)
+        current = request(f"/profiles/{pid}", token=token)
+        if (current["preserve_tasks_on_lock"] is not True or
+                int(current["lockout_grace_minutes"]) != 5):
+            request(f"/profiles/{pid}", "PATCH", {"preserve_tasks_on_lock": True,
+                                                      "lockout_grace_minutes": 5}, token)
+            changes.append(wanted["display_name"] + " enforcement")
+        if schedule_set(current["schedules"]) != schedule_set(SCHEDULES):
+            request(f"/profiles/{pid}/schedules", "PUT", {"schedules": SCHEDULES}, token)
+            changes.append(wanted["display_name"] + " schedule")
+        if limit_set(current["daily_limits"]) != limit_set(LIMITS):
+            request(f"/profiles/{pid}/daily-limits", "PUT", {"limits": LIMITS}, token)
+            changes.append(wanted["display_name"] + " limits")
         # Empty list keeps ScreenGuard's experimental DNS filter completely off.
-        request(f"/profiles/{pid}/blocked-domains", "PUT", {"blocked_domains": []}, token)
+        blocked = request(f"/profiles/{pid}/blocked-domains", token=token)["blocked_domains"]
+        if domain_set(blocked):
+            request(f"/profiles/{pid}/blocked-domains", "PUT", {"blocked_domains": []}, token)
+            changes.append(wanted["display_name"] + " web filter disabled")
         for agent in agents:
             for au in request(f"/agents/{agent['id']}/users", token=token)["users"]:
                 if au["local_username"] == wanted["username"]:
-                    request(f"/agent-users/{au['id']}", "PATCH",
-                            {"profile_id": pid, "status": "managed"}, token)
+                    if au["profile_id"] != pid or au["status"] != "managed":
+                        request(f"/agent-users/{au['id']}", "PATCH",
+                                {"profile_id": pid, "status": "managed"}, token)
+                        changes.append(wanted["display_name"] + " user assignment")
+    print("changed: " + ", ".join(changes) if changes else "unchanged")
 
 if __name__ == "__main__":
     try:
