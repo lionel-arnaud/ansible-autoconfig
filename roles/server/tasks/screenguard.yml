@@ -128,6 +128,9 @@
     group: root
     mode: '0700'
 
+- name: Apply ScreenGuard service changes before API reconciliation
+  ansible.builtin.meta: flush_handlers
+
 - name: Enable ScreenGuard server and dashboard
   ansible.builtin.systemd_service:
     name: "{{ item }}"
