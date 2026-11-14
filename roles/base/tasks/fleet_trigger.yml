@@ -1,0 +1,42 @@
+---
+- name: Require a fleet-pull trigger public key
+  ansible.builtin.assert:
+    that:
+      - autoconfig_fleet_trigger_public_key | length > 0
+    fail_msg: >-
+      autoconfig_fleet_trigger_public_key is required when the restricted
+      fleet-pull trigger is enabled.
+
+- name: Ensure the fleet-pull user's SSH directory exists
+  ansible.builtin.file:
+    path: "{{ autoconfig_fleet_trigger_home }}/.ssh"
+    state: directory
+    owner: "{{ autoconfig_fleet_trigger_user }}"
+    group: "{{ autoconfig_fleet_trigger_user }}"
+    mode: "0700"
+
+- name: Install the restricted fleet-pull command
+  ansible.builtin.template:
+    src: autoconfig-fleet-trigger.sh.j2
+    dest: /usr/local/sbin/autoconfig-fleet-trigger
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Allow the restricted command to start the local pull
+  ansible.builtin.template:
+    src: autoconfig-fleet-trigger.sudoers.j2
+    dest: /etc/sudoers.d/autoconfig-fleet-trigger
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/bin/visudo -cf %s
+
+- name: Authorize the laptop-only forced fleet-pull key
+  ansible.builtin.lineinfile:
+    path: "{{ autoconfig_fleet_trigger_home }}/.ssh/authorized_keys"
+    create: true
+    owner: "{{ autoconfig_fleet_trigger_user }}"
+    group: "{{ autoconfig_fleet_trigger_user }}"
+    mode: "0600"
+    line: 'from="{{ autoconfig_fleet_trigger_source_address }}",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding,command="/usr/local/sbin/autoconfig-fleet-trigger" {{ autoconfig_fleet_trigger_public_key }}'

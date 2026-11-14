@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# This command is selected by a forced SSH key entry. It deliberately accepts
+# one exact remote command, so the controller cannot obtain a shell on targets.
+set -euo pipefail
+
+case "${SSH_ORIGINAL_COMMAND:-}" in
+  start)
+    exec /usr/bin/sudo -n /usr/bin/systemctl start {{ autoconfig_timer_name }}.service
+    ;;
+  *)
+    logger -t autoconfig-fleet-trigger -- "rejected SSH command: ${SSH_ORIGINAL_COMMAND:-<empty>}"
+    echo "Only the fleet-pull start command is permitted." >&2
+    exit 64
+    ;;
+esac

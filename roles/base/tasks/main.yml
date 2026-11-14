@@ -22,6 +22,13 @@
   tags:
     - autoconfig
     - autoconfig_fleet
+
+- name: Authorize the restricted fleet-pull trigger
+  ansible.builtin.import_tasks: fleet_trigger.yml
+  when: autoconfig_fleet_trigger_enabled | default(false)
+  tags:
+    - autoconfig
+    - autoconfig_fleet
 # Before autopull: the pull unit references autoconfig-notify@.service via
 # OnFailure=, so the notifier must be installed first.
 - name: Authenticate the GitHub CLI when a token is present

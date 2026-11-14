@@ -117,6 +117,52 @@ lazyg() {
   git push
 }
 
+# Trigger each machine's local Ansible pull in parallel from the laptop. The
+# dedicated SSH key is forced on targets to this action only; wait for each
+# systemd job so the notification reports the actual final result.
+if [[ $(hostname -s) == savannarchome && -r $HOME/.ssh/autoconfig-fleet-trigger ]]; then
+  fleet-pull() {
+    local host logdir status=0 summary
+    local -a hosts=(serverannah raspi kidsbook)
+    local -A pids logs
+
+    sudo -v || return
+    logdir=$(mktemp -d "${TMPDIR:-/tmp}/fleet-pull.XXXXXX") || return
+
+    printf 'Starting local and remote Ansible pulls...\n'
+    sudo -n /usr/bin/systemctl start autoconfig-pull.service >"$logdir/laptop" 2>&1 &
+    pids[laptop]=$!
+    logs[laptop]="$logdir/laptop"
+
+    for host in "${hosts[@]}"; do
+      ssh -i "$HOME/.ssh/autoconfig-fleet-trigger" -o BatchMode=yes -o IdentitiesOnly=yes "$host" start >"$logdir/$host" 2>&1 &
+      pids["$host"]=$!
+      logs["$host"]="$logdir/$host"
+    done
+
+    for host in laptop "${hosts[@]}"; do
+      if wait "${pids[$host]}"; then
+        printf '✓ %s\n' "$host"
+      else
+        printf '✗ %s\n' "$host" >&2
+        sed -n '1,12p' "${logs[$host]}" >&2
+        status=1
+      fi
+    done
+
+    if ((status == 0)); then
+      summary='Ansible fleet pull completed successfully.'
+    else
+      summary='Ansible fleet pull completed with failures.'
+    fi
+    if command -v notify-send >/dev/null 2>&1; then
+      notify-send -a 'Ansible fleet' -u "$([[ $status -eq 0 ]] && echo normal || echo critical)" 'Fleet pull complete' "$summary"
+    fi
+    rm -rf -- "$logdir"
+    return "$status"
+  }
+fi
+
 #######################################################
 # ALIASES
 #######################################################

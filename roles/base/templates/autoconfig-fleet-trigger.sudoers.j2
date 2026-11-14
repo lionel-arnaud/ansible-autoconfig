@@ -1,0 +1,2 @@
+# Managed by Ansible. The forced SSH command is the only passwordless action.
+{{ autoconfig_fleet_trigger_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl start {{ autoconfig_timer_name }}.service

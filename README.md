@@ -179,6 +179,20 @@ _remember that ansible-pull is just a wrapper for ansible-playbook....so both
 cmds are kinda similar ... and the check option allows to test on a system
 without implementing anything ('dry run')._
 
+### Run the home fleet from the laptop
+
+On Savannarchome, `fleet-pull` starts the laptop, Serverannah, Raspberry Pi and
+Kidsbook pulls in parallel, waits for their actual systemd jobs to finish, then
+shows an Omarchy desktop notification with the final result:
+
+```bash
+fleet-pull
+```
+
+The SSH key used for this is generated only on the laptop. Each target accepts
+it only from the laptop LAN address, without shell, forwarding or PTY access,
+and its forced command can start only `autoconfig-pull.service`.
+
 ### Steam Deck
 
 SteamOS is immutable, so the Deck is intentionally **not** part of the normal
