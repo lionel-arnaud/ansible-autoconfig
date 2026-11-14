@@ -44,6 +44,11 @@
   when: kids_timekpr_enabled | default(true)
   tags: [kids, kids_timekpr]
 
+- name: Set up ScreenGuard trial agent
+  ansible.builtin.import_tasks: screenguard.yml
+  when: kids_screenguard_enabled | default(false)
+  tags: [kids, kids_screenguard]
+
 - name: Enforce the Pi-hole DNS path
   ansible.builtin.import_tasks: network.yml
   when: kids_dns_enforcement_enabled | default(false)

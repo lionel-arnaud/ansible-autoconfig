@@ -1,0 +1,71 @@
+---
+- name: Install ScreenGuard agent prerequisites
+  ansible.builtin.apt:
+    name: [nftables]
+    state: present
+
+- name: Ensure ScreenGuard configuration directory exists
+  ansible.builtin.file:
+    path: /etc/screenguard
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Install pinned ScreenGuard agent binary
+  ansible.builtin.get_url:
+    url: "{{ kids_screenguard_release_base_url }}/screenguard-agent-{{ kids_screenguard_arch }}"
+    dest: /usr/local/bin/screenguard-agent
+    owner: root
+    group: root
+    mode: '0755'
+    checksum: sha256:f44373397375b947ffac2203c9d6f21c73d03b7f0d093aed7d889071dfa462be
+  notify: Restart ScreenGuard agent
+
+- name: Configure ScreenGuard agent without DNS filtering
+  ansible.builtin.copy:
+    dest: /etc/screenguard/agent.toml
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      # Managed by ansible-autoconfig. Pi-hole remains the DNS filter.
+      server_url = "{{ kids_screenguard_server_url }}"
+      webui_url = "{{ kids_screenguard_webui_url }}"
+      app_tracking = true
+      min_uid = 1000
+  notify: Restart ScreenGuard agent
+
+- name: Install ScreenGuard agent systemd unit
+  ansible.builtin.copy:
+    src: screenguard-agent.service
+    dest: /etc/systemd/system/screenguard-agent.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart ScreenGuard agent
+
+- name: Install safe Proton-prefix recovery helper
+  ansible.builtin.copy:
+    dest: /usr/local/sbin/reset-steam-proton-prefix
+    owner: root
+    group: root
+    mode: '0755'
+    content: |
+      #!/bin/sh
+      # Archive an interrupted prefix once; Steam recreates it on next launch.
+      set -eu
+      appid="$1"; user="$2"
+      root="/home/$user/.steam/debian-installation/steamapps/compatdata/$appid"
+      test -d "$root" || exit 0
+      test -f "$root/pfx.lock" || exit 0
+      stamp=$(date +%Y%m%d-%H%M%S)
+      mv "$root" "${root}.interrupted-${stamp}"
+      chown -R "$user:$user" "${root}.interrupted-${stamp}"
+
+- name: Ensure ScreenGuard agent is enabled and running
+  ansible.builtin.systemd_service:
+    name: screenguard-agent
+    enabled: true
+    state: started
+    daemon_reload: true

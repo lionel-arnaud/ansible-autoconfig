@@ -1,0 +1,134 @@
+---
+- name: Install ScreenGuard web UI prerequisites
+  ansible.builtin.apt:
+    name: [python3-venv]
+    state: present
+
+- name: Ensure ScreenGuard directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - "{{ screenguard_config_dir }}"
+    - "{{ screenguard_data_dir }}"
+    - "{{ screenguard_root_dir }}/webui"
+
+- name: Install pinned ScreenGuard server binary
+  ansible.builtin.get_url:
+    url: "{{ screenguard_release_base_url }}/screenguard-server-{{ screenguard_arch }}"
+    dest: /usr/local/bin/screenguard-server
+    owner: root
+    group: root
+    mode: '0755'
+    checksum: sha256:122eb6467d86fae84f6c00b59701c520ed67c2f73b8edcd2dc99f1094b6cfd8a
+  notify: Restart ScreenGuard server
+
+- name: Install ScreenGuard web UI archive
+  ansible.builtin.unarchive:
+    src: "{{ screenguard_release_base_url }}/screenguard-webui.tar.gz"
+    dest: "{{ screenguard_root_dir }}/webui"
+    remote_src: true
+    creates: "{{ screenguard_root_dir }}/webui/app.py"
+  notify: Restart ScreenGuard web UI
+
+- name: Create ScreenGuard web UI virtual environment
+  ansible.builtin.command:
+    argv: [python3, -m, venv, "{{ screenguard_root_dir }}/webui/venv"]
+    creates: "{{ screenguard_root_dir }}/webui/venv/bin/gunicorn"
+
+- name: Install ScreenGuard web UI Python dependencies
+  ansible.builtin.pip:
+    requirements: "{{ screenguard_root_dir }}/webui/requirements.txt"
+    virtualenv: "{{ screenguard_root_dir }}/webui/venv"
+  notify: Restart ScreenGuard web UI
+
+- name: Check ScreenGuard admin secret
+  ansible.builtin.stat:
+    path: "{{ screenguard_admin_password_file }}"
+  register: screenguard_admin_password_stat
+  no_log: true
+
+- name: Generate ScreenGuard admin secret
+  ansible.builtin.shell: "tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32"
+  register: screenguard_admin_password_generated
+  when: not screenguard_admin_password_stat.stat.exists
+  no_log: true
+
+- name: Save ScreenGuard admin secret
+  ansible.builtin.copy:
+    content: "{{ screenguard_admin_password_generated.stdout }}\n"
+    dest: "{{ screenguard_admin_password_file }}"
+    owner: root
+    group: root
+    mode: '0600'
+  when: not screenguard_admin_password_stat.stat.exists
+  no_log: true
+
+- name: Ensure ScreenGuard web session secret exists
+  ansible.builtin.shell: |
+    test -s {{ (screenguard_secret_dir ~ '/screenguard-webui-secret') | quote }} || \
+      (umask 077 && tr -dc 'A-Za-z0-9' </dev/urandom | head -c 64 > {{ (screenguard_secret_dir ~ '/screenguard-webui-secret') | quote }})
+  changed_when: false
+  no_log: true
+
+- name: Configure ScreenGuard server
+  ansible.builtin.copy:
+    dest: "{{ screenguard_config_dir }}/server.toml"
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      listen_addr = "{{ screenguard_server_bind }}"
+      listen_port = {{ screenguard_server_port }}
+      db_path = "{{ screenguard_data_dir }}/server.db"
+      enable_mdns = false
+  notify: Restart ScreenGuard server
+
+- name: Configure ScreenGuard web UI
+  ansible.builtin.copy:
+    dest: "{{ screenguard_config_dir }}/webui.env"
+    owner: root
+    group: root
+    mode: '0600'
+    content: |
+      SERVER_URL=http://127.0.0.1:{{ screenguard_server_port }}
+      SECRET_KEY={{ lookup('ansible.builtin.file', screenguard_secret_dir ~ '/screenguard-webui-secret') | trim }}
+      UI_PORT={{ screenguard_webui_port }}
+  no_log: true
+  notify: Restart ScreenGuard web UI
+
+- name: Install ScreenGuard server and web UI units
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: [screenguard-server.service, screenguard-webui.service]
+  notify:
+    - Restart ScreenGuard server
+    - Restart ScreenGuard web UI
+
+- name: Install ScreenGuard reconciliation helper
+  ansible.builtin.template:
+    src: screenguard-reconcile.py.j2
+    dest: /usr/local/sbin/screenguard-reconcile
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Enable ScreenGuard server and dashboard
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop: [screenguard-server, screenguard-webui]
+
+- name: Reconcile ScreenGuard profiles and trial policy
+  ansible.builtin.command: /usr/local/sbin/screenguard-reconcile
+  changed_when: false
+  no_log: true

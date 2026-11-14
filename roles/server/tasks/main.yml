@@ -285,6 +285,13 @@
     - server
     - pihole
 
+- name: Deploy ScreenGuard parental-control server
+  ansible.builtin.import_tasks: screenguard.yml
+  when: server_screenguard_enabled | default(false)
+  tags:
+    - server
+    - screenguard
+
 - name: Deploy AuMenuIlYA
   ansible.builtin.import_tasks: aumenuilya.yml
   when: server_aumenuilya_enabled | default(false)

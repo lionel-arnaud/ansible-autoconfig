@@ -87,6 +87,9 @@ backup_paths:
   - /opt/excalidraw
   - /opt/uptime-kuma
   - /opt/authelia
+  # ScreenGuard schedules, pairing tokens, usage history, and dashboard secrets.
+  - /var/lib/screenguard
+  - /etc/screenguard
   # What a bare-metal rebuild needs first.
   - /etc/fstab
   - /etc/netplan
@@ -181,6 +184,7 @@ server_jellyfin_enabled: true
 # Keep Pi-hole on the LAN address so systemd-resolved can continue to own the
 # host loopback resolver while household clients use serverannah directly.
 server_pihole_enabled: true
+server_screenguard_enabled: true
 pihole_policy_import_enabled: true
 # The restrictive Pi-hole profile applies only to Kidsbook's static DHCP lease.
 # The role removes Pi-hole's implicit Default-group link before assigning rules.
@@ -206,6 +210,7 @@ pihole_published_ports:
   - "192.168.1.100:53:53/udp"
   - "192.168.1.100:8089:80"
 server_lan_only_published_ports:
+  - 5000
   - 3000
   - 8089
   - 8080

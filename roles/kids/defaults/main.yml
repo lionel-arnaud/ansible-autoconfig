@@ -67,6 +67,15 @@ kids_timekpr_config_src_dir: "{{ playbook_dir }}/files/kids/timekpr/config"
 # oscar/romy = 15 min weekdays / 30 min weekends, allowed 16-20h on school days.
 kids_timekpr_user_confs: [daddy, oscar, romy]
 
+# Additional, non-authoritative ScreenGuard trial.  Pi-hole remains responsible
+# for child DNS filtering, so no ScreenGuard DNS interception is configured.
+kids_screenguard_enabled: false
+kids_screenguard_version: v0.10.18
+kids_screenguard_arch: x86_64
+kids_screenguard_release_base_url: "https://github.com/adambie/screenguard/releases/download/{{ kids_screenguard_version }}"
+kids_screenguard_server_url: http://192.168.1.100:8080
+kids_screenguard_webui_url: http://192.168.1.100:5000
+
 # A strict Pi-hole profile only works when the laptop cannot use DNS supplied by
 # the router alongside Pi-hole. The network address remains DHCP-managed; only
 # the resolver list is pinned. Firefox DoH is disabled separately so it cannot

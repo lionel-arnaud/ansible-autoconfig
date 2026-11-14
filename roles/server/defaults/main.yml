@@ -33,6 +33,41 @@ server_lan_only_protocols:
 server_lan_cidrs:
   - 192.168.1.0/24
 server_lan_only_published_ports: []
+server_screenguard_enabled: false
+screenguard_version: v0.10.18
+screenguard_release_base_url: "https://github.com/adambie/screenguard/releases/download/{{ screenguard_version }}"
+screenguard_arch: x86_64
+screenguard_root_dir: /opt/screenguard
+screenguard_config_dir: /etc/screenguard
+screenguard_data_dir: /var/lib/screenguard
+screenguard_secret_dir: /etc/ansible/secrets
+screenguard_admin_password_file: "{{ screenguard_secret_dir }}/screenguard-admin-password"
+screenguard_admin_username: lion
+screenguard_server_bind: 192.168.1.100
+screenguard_server_port: 8080
+screenguard_webui_port: 5000
+screenguard_timezone: Europe/Paris
+# Mirrors Timekpr but is deliberately looser for the overlap: Timekpr remains
+# active at 15/30 minutes and its narrower permitted hours.
+screenguard_profiles:
+  - {username: oscar, display_name: Oscar}
+  - {username: romy, display_name: Romy}
+screenguard_trial_schedules:
+  - {day_of_week: 0, start_time: '15:30', end_time: '21:30'}
+  - {day_of_week: 1, start_time: '15:30', end_time: '21:30'}
+  - {day_of_week: 2, start_time: '15:30', end_time: '21:30'}
+  - {day_of_week: 3, start_time: '15:30', end_time: '21:30'}
+  - {day_of_week: 4, start_time: '15:30', end_time: '21:30'}
+  - {day_of_week: 5, start_time: '07:00', end_time: '21:30'}
+  - {day_of_week: 6, start_time: '07:00', end_time: '21:30'}
+screenguard_trial_daily_limits:
+  - {day_of_week: 0, allowed_minutes: 30}
+  - {day_of_week: 1, allowed_minutes: 30}
+  - {day_of_week: 2, allowed_minutes: 30}
+  - {day_of_week: 3, allowed_minutes: 30}
+  - {day_of_week: 4, allowed_minutes: 30}
+  - {day_of_week: 5, allowed_minutes: 45}
+  - {day_of_week: 6, allowed_minutes: 45}
 server_netplan_enabled: false
 server_netplan_file: /etc/netplan/00-installer-config.yaml
 server_netplan_config: ""

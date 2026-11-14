@@ -1,0 +1,21 @@
+[Unit]
+Description=ScreenGuard Enforcement Agent
+After=network-online.target dbus.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/screenguard-agent
+ExecStopPost=/bin/sh -c 'nft delete table inet screenguard 2>/dev/null; exit 0'
+Restart=always
+RestartSec=5
+ProtectSystem=strict
+ReadWritePaths=/var/lib/screenguard
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+ProtectKernelModules=true
+ProtectKernelTunables=true
+
+[Install]
+WantedBy=multi-user.target
