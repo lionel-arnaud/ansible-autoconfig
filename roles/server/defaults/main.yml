@@ -645,12 +645,18 @@ pihole_kids_profile_allow_regex:
   - '(^|\.)launchpadcontent\.net$'
   - '(^|\.)launchpad\.net$'
   - '(^|\.)keyserver\.ubuntu\.com$'
-  # Flatpak, Steam, Firefox, and Snap update delivery.
+  # Flatpak, Steam, Firefox, and Snap update delivery. Steam Cloud uses
+  # region-specific storage buckets on several cloud providers, so whitelist
+  # only hostnames with Steam's `steamcloud` prefix rather than the providers'
+  # broad domains.
   - '(^|\.)flathub\.org$'
   - '(^|\.)steampowered\.com$'
   - '(^|\.)steamstatic\.com$'
   - '(^|\.)steamcontent\.com$'
   - '(^|\.)akamaihd\.net$'
+  - '^steamcloud[^.]*\.blob\.core\.windows\.net$'
+  - '^steamcloud[^.]*\.s3\.dualstack\.[a-z0-9-]+\.amazonaws\.com$'
+  - '^steamcloud[^.]*\.storage\.googleapis\.com$'
   - '(^|\.)mozilla\.(org|net|com)$'
   - '(^|\.)snapcraft\.io$'
   - '(^|\.)snapcraftcontent\.com$'
