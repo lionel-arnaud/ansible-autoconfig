@@ -50,3 +50,17 @@
     - server_tailscale_status.rc == 0
     - (server_tailscale_status.stdout | from_json).BackendState == 'Running'
   changed_when: false
+
+- name: Publish ScreenGuard mobile API privately through Tailscale Serve
+  ansible.builtin.command:
+    argv:
+      - tailscale
+      - serve
+      - --bg
+      - --https={{ server_tailscale_screenguard_api_port }}
+      - http://{{ screenguard_server_bind }}:{{ screenguard_server_port }}
+  when:
+    - server_screenguard_enabled | default(false)
+    - server_tailscale_status.rc == 0
+    - (server_tailscale_status.stdout | from_json).BackendState == 'Running'
+  changed_when: false
