@@ -50,14 +50,6 @@
     - kids_steam_enabled | default(true)
     - kids_steam_install_method == 'apt'
 
-- name: Reset interrupted Guacamelee 2 Proton prefixes without touching saves
-  ansible.builtin.command:
-    argv: [/usr/local/sbin/reset-steam-proton-prefix, '534550', '{{ item.name }}']
-  loop: "{{ kids_managed_users }}"
-  loop_control:
-    label: "{{ item.name }}"
-  when: kids_steam_enabled | default(true)
-
 - name: Ensure Guacamelee 2 Proton prefix parents remain available
   ansible.builtin.file:
     path: "/home/{{ item.name }}/.steam/debian-installation/steamapps/compatdata/534550"

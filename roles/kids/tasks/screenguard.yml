@@ -56,12 +56,16 @@
     mode: '0755'
     content: |
       #!/bin/sh
-      # Archive an interrupted prefix once; Steam recreates it on next launch.
+      # Explicit recovery tool only.  Proton deliberately keeps pfx.lock while
+      # a prefix exists, so never use that file as a corruption signal.
       set -eu
       appid="$1"; user="$2"
       root="/home/$user/.steam/debian-installation/steamapps/compatdata/$appid"
       test -d "$root" || exit 0
-      test -f "$root/pfx.lock" || exit 0
+      if pgrep -u "$user" -f "(proton|wine|Guac2)" >/dev/null; then
+        echo "Refusing to archive an active Proton prefix for $user" >&2
+        exit 1
+      fi
       stamp=$(date +%Y%m%d-%H%M%S)
       mv "$root" "${root}.interrupted-${stamp}"
       chown -R "$user:$user" "${root}.interrupted-${stamp}"
