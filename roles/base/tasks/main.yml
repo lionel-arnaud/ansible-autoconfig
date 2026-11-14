@@ -15,6 +15,13 @@
   when: base_dotfiles_enabled | default(false)
   tags:
     - dotfiles
+
+- name: Create the dedicated fleet-pull controller key
+  ansible.builtin.import_tasks: fleet_controller.yml
+  when: autoconfig_fleet_controller_enabled | default(false)
+  tags:
+    - autoconfig
+    - autoconfig_fleet
 # Before autopull: the pull unit references autoconfig-notify@.service via
 # OnFailure=, so the notifier must be installed first.
 - name: Authenticate the GitHub CLI when a token is present

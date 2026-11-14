@@ -1,0 +1,25 @@
+---
+- name: Ensure the fleet-pull SSH directory exists
+  ansible.builtin.file:
+    path: "{{ autoconfig_fleet_controller_home }}/.ssh"
+    state: directory
+    owner: "{{ autoconfig_fleet_controller_user }}"
+    group: "{{ autoconfig_fleet_controller_user }}"
+    mode: "0700"
+
+- name: Generate the dedicated fleet-pull SSH key
+  ansible.builtin.command:
+    argv:
+      - ssh-keygen
+      - -q
+      - -t
+      - ed25519
+      - -f
+      - "{{ autoconfig_fleet_controller_key_path }}"
+      - -N
+      - ""
+      - -C
+      - autoconfig-fleet-trigger@savannarchome
+    creates: "{{ autoconfig_fleet_controller_key_path }}"
+  become: true
+  become_user: "{{ autoconfig_fleet_controller_user }}"

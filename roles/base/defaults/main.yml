@@ -247,6 +247,14 @@ autoconfig_randomized_delay: 30m
 autoconfig_persistent: true
 autoconfig_vault_password_file: "/home/{{ desktop_user | default('lion') }}/.ansible-vault-pass"
 
+# The fleet-pull controller uses a dedicated SSH key rather than a general
+# login key. Its public half is added to other hosts only with a forced command
+# that can start this host's autoconfig-pull service and nothing else.
+autoconfig_fleet_controller_enabled: false
+autoconfig_fleet_controller_user: "{{ desktop_user | default('lion') }}"
+autoconfig_fleet_controller_home: "/home/{{ autoconfig_fleet_controller_user }}"
+autoconfig_fleet_controller_key_path: "{{ autoconfig_fleet_controller_home }}/.ssh/autoconfig-fleet-trigger"
+
 # Failure notifications (roles/base/tasks/notify.yml). Off by default so a new
 # host does not start emitting alerts before anyone has subscribed to them.
 notify_enabled: false
