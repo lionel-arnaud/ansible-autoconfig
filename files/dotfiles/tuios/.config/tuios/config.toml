@@ -11,6 +11,11 @@ command_palette = []
 [keybindings.window_management]
 copy_mode_search_forward = ["/"]
 
+[keybindings.mode_control]
+# Temporarily enter window-management mode while F8 is held, then return to
+# terminal mode when released. Requires Kitty keyboard protocol support.
+hold_window_mode = ["f8"]
+
 [startup]
 tiled = true
 daemon = true
