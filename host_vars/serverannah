@@ -41,7 +41,19 @@ fail2ban_bantime_maxtime: 1w
 fail2ban_dbpurgeage: 30d
 server_tuios_enabled: true
 server_workstation_ssh_enabled: true
-server_workstation_ssh_known_host_key: "savannarchome,savannarchome.local ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJDr/VpCnrN/vKrgMDaQZot9oSX6HQVnQMBmkkk3fV3p"
+server_workstation_ssh_aliases:
+  - alias: savannarchome
+    hostname: savannarchome.local
+    user: lion
+    identity_file: /home/lion/.ssh/deck-ludusavi-sync
+    known_host_key: "savannarchome,savannarchome.local ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJDr/VpCnrN/vKrgMDaQZot9oSX6HQVnQMBmkkk3fV3p"
+  # Password-authenticated administrative access; there is intentionally no
+  # private key on Serverannah for this alias.
+  - alias: kidsbook
+    hostname: 192.168.1.41
+    user: daddy
+    identity_file: ""
+    known_host_key: "kidsbook,192.168.1.41 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK8Ta0lhNxazlok+M2zsEAPV5h14JdbI/8tZDQpqmRxc"
 fail2ban_caddy_basic_auth_enabled: true
 server_backup_enabled: true
 # Off-site copy of the Borg repo to Google Drive after each run. The repo is

@@ -875,6 +875,14 @@ server_workstation_ssh_alias: savannarchome
 server_workstation_ssh_hostname: savannarchome.local
 server_workstation_ssh_identity_file: "{{ server_workstation_ssh_home }}/.ssh/deck-ludusavi-sync"
 server_workstation_ssh_known_host_key: ""
+# Multiple managed LAN aliases.  Keep the legacy variables above as the
+# default entry so existing hosts retain their configuration unchanged.
+server_workstation_ssh_aliases:
+  - alias: "{{ server_workstation_ssh_alias }}"
+    hostname: "{{ server_workstation_ssh_hostname }}"
+    user: "{{ server_workstation_ssh_user }}"
+    identity_file: "{{ server_workstation_ssh_identity_file }}"
+    known_host_key: "{{ server_workstation_ssh_known_host_key }}"
 
 # rclone Google Drive mount: the same remote that lives on savannarchome
 # (Google Drive Perso) is mounted under the desktop user's home, so opencode's

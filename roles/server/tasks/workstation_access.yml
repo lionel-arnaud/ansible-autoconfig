@@ -34,21 +34,34 @@
 
 - name: Configure SSH alias for the workstation
   ansible.builtin.copy:
-    dest: "{{ server_workstation_ssh_home }}/.ssh/config.d/workstation"
+    dest: "{{ server_workstation_ssh_home }}/.ssh/config.d/{{ item.alias }}"
     owner: "{{ server_workstation_ssh_user }}"
     group: "{{ server_workstation_ssh_user }}"
     mode: "0600"
     content: |
-      Host {{ server_workstation_ssh_alias }}
-        HostName {{ server_workstation_ssh_hostname }}
-        User {{ server_workstation_ssh_user }}
-        IdentityFile {{ server_workstation_ssh_identity_file }}
+      Host {{ item.alias }}
+        HostName {{ item.hostname }}
+        User {{ item.user }}
+      {% if item.identity_file | default('') | length > 0 %}
+        IdentityFile {{ item.identity_file }}
         IdentitiesOnly yes
+      {% else %}
+        # This alias deliberately prompts for the remote account password.
+        PubkeyAuthentication no
+        PasswordAuthentication yes
+        KbdInteractiveAuthentication yes
+      {% endif %}
+  loop: "{{ server_workstation_ssh_aliases }}"
+  loop_control:
+    label: "{{ item.alias }}"
 
 - name: Pin the workstation SSH host key
   ansible.builtin.known_hosts:
     path: "{{ server_workstation_ssh_home }}/.ssh/known_hosts"
-    name: "{{ server_workstation_ssh_alias }}"
-    key: "{{ server_workstation_ssh_known_host_key }}"
+    name: "{{ item.alias }}"
+    key: "{{ item.known_host_key }}"
     state: present
     hash_host: false
+  loop: "{{ server_workstation_ssh_aliases }}"
+  loop_control:
+    label: "{{ item.alias }}"
