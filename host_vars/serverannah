@@ -185,6 +185,9 @@ server_jellyfin_enabled: true
 # host loopback resolver while household clients use serverannah directly.
 server_pihole_enabled: true
 server_screenguard_enabled: true
+# This is an additional private access path.  LAN SSH/password access remains
+# independently available and unchanged.
+server_tailscale_enabled: true
 pihole_policy_import_enabled: true
 # The restrictive Pi-hole profile applies only to Kidsbook's static DHCP lease.
 # The role removes Pi-hole's implicit Default-group link before assigning rules.

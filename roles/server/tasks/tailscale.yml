@@ -1,0 +1,51 @@
+---
+# Tailscale is deliberately additive: it neither changes sshd nor opens a
+# public listener.  `tailscale up` is intentionally left to the administrator,
+# because enrollment requires an account-specific, short-lived authorization.
+- name: Install the Tailscale archive signing key
+  ansible.builtin.get_url:
+    url: "https://pkgs.tailscale.com/stable/{{ ansible_distribution | lower }}/{{ ansible_distribution_release }}.noarmor.gpg"
+    dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Configure the Tailscale package archive
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} main"
+    filename: tailscale
+    state: present
+
+- name: Install Tailscale
+  ansible.builtin.apt:
+    name: tailscale
+    state: present
+    update_cache: true
+
+- name: Enable the Tailscale daemon
+  ansible.builtin.systemd_service:
+    name: tailscaled
+    enabled: true
+    state: started
+
+- name: Check whether Tailscale has been enrolled
+  ansible.builtin.command: tailscale status --json
+  register: server_tailscale_status
+  changed_when: false
+  failed_when: false
+
+# Serve publishes only inside the tailnet.  It is not Tailscale Funnel, so no
+# public internet endpoint is created.  The ScreenGuard service stays bound to
+# the LAN address and is reached by Tailscale's local reverse proxy.
+- name: Publish ScreenGuard dashboard privately through Tailscale Serve
+  ansible.builtin.command:
+    argv:
+      - tailscale
+      - serve
+      - --https={{ server_tailscale_screenguard_port }}
+      - http://{{ screenguard_server_bind }}:{{ screenguard_webui_port }}
+  when:
+    - server_screenguard_enabled | default(false)
+    - server_tailscale_status.rc == 0
+    - (server_tailscale_status.stdout | from_json).BackendState == 'Running'
+  changed_when: false

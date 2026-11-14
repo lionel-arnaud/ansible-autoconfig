@@ -292,6 +292,13 @@
     - server
     - screenguard
 
+- name: Configure private Tailscale access
+  ansible.builtin.import_tasks: tailscale.yml
+  when: server_tailscale_enabled | default(false)
+  tags:
+    - server
+    - tailscale
+
 - name: Deploy AuMenuIlYA
   ansible.builtin.import_tasks: aumenuilya.yml
   when: server_aumenuilya_enabled | default(false)

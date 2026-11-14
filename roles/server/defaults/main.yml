@@ -33,6 +33,10 @@ server_lan_only_protocols:
 server_lan_cidrs:
   - 192.168.1.0/24
 server_lan_only_published_ports: []
+server_tailscale_enabled: false
+# Serve uses Tailscale's HTTPS proxy, not Funnel: the dashboard is visible only
+# to authenticated devices in the owner's tailnet.
+server_tailscale_screenguard_port: 443
 server_screenguard_enabled: false
 screenguard_version: v0.10.18
 screenguard_release_base_url: "https://github.com/adambie/screenguard/releases/download/{{ screenguard_version }}"
