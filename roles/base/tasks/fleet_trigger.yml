@@ -30,7 +30,7 @@
     owner: root
     group: root
     mode: "0440"
-    validate: /usr/bin/visudo -cf %s
+    validate: "{{ autoconfig_visudo_path }} -cf %s"
 
 - name: Authorize the laptop-only forced fleet-pull key
   ansible.builtin.lineinfile:

@@ -264,6 +264,7 @@ autoconfig_fleet_trigger_user: "{{ desktop_user | default('lion') }}"
 autoconfig_fleet_trigger_home: "/home/{{ autoconfig_fleet_trigger_user }}"
 autoconfig_fleet_trigger_source_address: 192.168.1.26
 autoconfig_fleet_trigger_public_key: ""
+autoconfig_visudo_path: "{{ '/usr/bin/visudo' if ansible_facts['distribution'] == 'Archlinux' else '/usr/sbin/visudo' }}"
 
 # Failure notifications (roles/base/tasks/notify.yml). Off by default so a new
 # host does not start emitting alerts before anyone has subscribed to them.
