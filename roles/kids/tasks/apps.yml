@@ -62,6 +62,24 @@
     label: "{{ item.name }}"
   when: kids_steam_enabled | default(true)
 
+- name: Configure Guacamelee 2's per-user WineD3D Proton fallback
+  ansible.builtin.script:
+    cmd: >-
+      guacamelee2-compat.py
+      /home/{{ item.name }}/.steam/debian-installation/config/config.vdf
+      {{ kids_guacamelee2_steam_appid }}
+      {{ kids_guacamelee2_compat_tool }}
+      {{ kids_guacamelee2_compat_config }}
+    executable: python3
+  register: kids_guacamelee2_compat_result
+  changed_when: "kids_guacamelee2_compat_result.stdout | trim == 'changed'"
+  loop: "{{ kids_managed_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - kids_steam_enabled | default(true)
+    - kids_guacamelee2_wined3d_enabled | default(false)
+
 # Flatpak apps from Flathub. flatpak itself is already part of the Mint base.
 - name: Ensure the Flathub remote is configured
   community.general.flatpak_remote:

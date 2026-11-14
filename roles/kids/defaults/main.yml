@@ -151,6 +151,15 @@ kids_steam_flatpak_app: com.valvesoftware.Steam
 kids_gamemode_enabled: true
 kids_gamemode_packages: [gamemode]
 
+# Guacamelee! 2 (Steam app 534550) cannot create a Vulkan device on the
+# KidsBook's Ivy Bridge GPU.  Keep Proton Experimental, but use WineD3D's
+# OpenGL renderer for this game only.  This has been verified on Oscar's active
+# session and deliberately does not change global Proton or Mesa settings.
+kids_guacamelee2_wined3d_enabled: true
+kids_guacamelee2_steam_appid: '534550'
+kids_guacamelee2_compat_tool: proton_experimental
+kids_guacamelee2_compat_config: PROTON_USE_WINED3D=1
+
 # Flatpak apps (from Flathub). The role ensures the flathub remote then installs.
 kids_flatpak_enabled: true
 kids_flatpak_remote_name: flathub
