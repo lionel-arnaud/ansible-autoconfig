@@ -79,6 +79,15 @@
     mode: "0644"
   register: fail2ban_jail_config
 
+- name: Configure fail2ban persistent ban history
+  ansible.builtin.template:
+    src: fail2ban/fail2ban.local.j2
+    dest: /etc/fail2ban/fail2ban.local
+    owner: root
+    group: root
+    mode: "0644"
+  register: fail2ban_server_config
+
 # Validate before restarting. The service keeps running on the configuration it
 # already loaded, so a mistake here fails the play with a message and leaves the
 # protection in place, instead of restarting into a fail2ban that will not start.
@@ -94,6 +103,7 @@
     name: fail2ban
     state: >-
       {{ (fail2ban_caddy_basic_auth_filter.changed
-          or fail2ban_caddy_probe_filter.changed
-          or fail2ban_jail_config.changed) | ternary('restarted', 'started') }}
+           or fail2ban_caddy_probe_filter.changed
+           or fail2ban_jail_config.changed
+           or fail2ban_server_config.changed) | ternary('restarted', 'started') }}
     enabled: true

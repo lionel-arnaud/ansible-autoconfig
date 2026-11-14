@@ -5,6 +5,11 @@ bantime = {{ fail2ban_bantime }}
 findtime = {{ fail2ban_findtime }}
 maxretry = {{ fail2ban_maxretry }}
 ignoreip = {{ fail2ban_ignoreips | join(' ') }}
+# Repeat bans double in length up to the host-set ceiling. Fail2ban records the
+# history in its persistent database; its retention is managed separately.
+bantime.increment = {{ fail2ban_bantime_increment | ternary('true', 'false') }}
+bantime.factor = {{ fail2ban_bantime_factor }}
+bantime.maxtime = {{ fail2ban_bantime_maxtime }}
 
 [sshd]
 enabled = {{ fail2ban_sshd_enabled | ternary('true', 'false') }}

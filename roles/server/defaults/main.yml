@@ -437,6 +437,12 @@ fail2ban_ignoreips: "{{ ['127.0.0.0/8', '172.16.0.0/12'] + server_lan_cidrs }}"
 fail2ban_bantime: 1h
 fail2ban_findtime: 10m
 fail2ban_maxretry: 5
+# Keep enough history to identify repeated internet-facing abuse, while making
+# escalation opt-in per host. The first ban remains the normal bantime.
+fail2ban_bantime_increment: false
+fail2ban_bantime_factor: 2
+fail2ban_bantime_maxtime: 1w
+fail2ban_dbpurgeage: 1d
 fail2ban_sshd_enabled: true
 fail2ban_sshd_port: ssh
 fail2ban_sshd_backend: systemd
