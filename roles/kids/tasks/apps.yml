@@ -58,6 +58,18 @@
     label: "{{ item.name }}"
   when: kids_steam_enabled | default(true)
 
+- name: Ensure Guacamelee 2 Proton prefix parents remain available
+  ansible.builtin.file:
+    path: "/home/{{ item.name }}/.steam/debian-installation/steamapps/compatdata/534550"
+    state: directory
+    owner: "{{ item.name }}"
+    group: "{{ item.name }}"
+    mode: '0755'
+  loop: "{{ kids_managed_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: kids_steam_enabled | default(true)
+
 # Flatpak apps from Flathub. flatpak itself is already part of the Mint base.
 - name: Ensure the Flathub remote is configured
   community.general.flatpak_remote:

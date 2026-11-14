@@ -65,6 +65,11 @@
       stamp=$(date +%Y%m%d-%H%M%S)
       mv "$root" "${root}.interrupted-${stamp}"
       chown -R "$user:$user" "${root}.interrupted-${stamp}"
+      # Proton's file lock lives directly under the compatdata app directory.
+      # Recreate that empty directory so its clean-prefix initialization can
+      # atomically create pfx.lock on the next launch.
+      mkdir -p "$root"
+      chown "$user:$user" "$root"
 
 - name: Ensure ScreenGuard agent is enabled and running
   ansible.builtin.systemd_service:
