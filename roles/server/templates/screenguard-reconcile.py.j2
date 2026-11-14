@@ -60,4 +60,5 @@ if __name__ == "__main__":
     try:
         main()
     except urllib.error.URLError as exc:
-        sys.exit("ScreenGuard server unavailable: %s" % exc)
+        detail = exc.read().decode(errors="replace") if isinstance(exc, urllib.error.HTTPError) else str(exc)
+        sys.exit("ScreenGuard API request failed: %s" % detail)
