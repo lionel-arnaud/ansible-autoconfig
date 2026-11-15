@@ -86,7 +86,7 @@
       guacamelee2-launch-options.py
       /home/{{ item.name }}/.steam/debian-installation
       {{ kids_guacamelee2_steam_appid }}
-      {{ kids_guacamelee2_launch_options | quote }}
+      {{ ('STEAM_COMPAT_LIBRARY_PATHS=/home/' ~ item.name ~ '/.steam/debian-installation/steamapps ' ~ kids_guacamelee2_launch_options) | quote }}
     executable: python3
   register: kids_guacamelee2_launch_options_result
   changed_when: "kids_guacamelee2_launch_options_result.stdout | trim == 'changed'"

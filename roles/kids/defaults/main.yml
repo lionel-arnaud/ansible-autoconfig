@@ -163,6 +163,9 @@ kids_guacamelee2_compat_tool: proton_experimental
 # documented Proton environment variable, covering Steam client paths where
 # the compatibility-map token is not propagated.
 kids_guacamelee2_compat_config: wined3d
+# The task prefixes this with the managed user's Steam library path. Some Steam
+# client launches otherwise provide an empty STEAM_COMPAT_LIBRARY_PATHS value,
+# which Proton cannot use to create the game drive.
 kids_guacamelee2_launch_options: PROTON_USE_WINED3D=1 %command%
 
 # Flatpak apps (from Flathub). The role ensures the flathub remote then installs.
