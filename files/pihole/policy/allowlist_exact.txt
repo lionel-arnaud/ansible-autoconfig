@@ -158,6 +158,8 @@ spclient.wg.spotify.com
 ssl.p.jwpcdn.com
 staging.plex.tv
 status.plex.tv
+steamcloud.com
+steamcommunity.com
 t.co
 t0.ssl.ak.dynamic.tiles.virtualearth.net
 t0.ssl.ak.tiles.virtualearth.net

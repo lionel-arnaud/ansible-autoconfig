@@ -158,7 +158,9 @@ kids_gamemode_packages: [gamemode]
 kids_guacamelee2_wined3d_enabled: true
 kids_guacamelee2_steam_appid: '534550'
 kids_guacamelee2_compat_tool: proton_experimental
-kids_guacamelee2_compat_config: PROTON_USE_WINED3D=1
+# Steam passes this field as STEAM_COMPAT_CONFIG; Proton recognizes the
+# `wined3d` token here (PROTON_USE_WINED3D is only for direct invocation).
+kids_guacamelee2_compat_config: wined3d
 
 # Flatpak apps (from Flathub). The role ensures the flathub remote then installs.
 kids_flatpak_enabled: true
