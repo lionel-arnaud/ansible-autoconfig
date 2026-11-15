@@ -80,6 +80,23 @@
     - kids_steam_enabled | default(true)
     - kids_guacamelee2_wined3d_enabled | default(false)
 
+- name: Configure Guacamelee 2's Steam launch options for initialized accounts
+  ansible.builtin.script:
+    cmd: >-
+      guacamelee2-launch-options.py
+      /home/{{ item.name }}/.steam/debian-installation
+      {{ kids_guacamelee2_steam_appid }}
+      {{ kids_guacamelee2_launch_options | quote }}
+    executable: python3
+  register: kids_guacamelee2_launch_options_result
+  changed_when: "kids_guacamelee2_launch_options_result.stdout | trim == 'changed'"
+  loop: "{{ kids_managed_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - kids_steam_enabled | default(true)
+    - kids_guacamelee2_wined3d_enabled | default(false)
+
 # Flatpak apps from Flathub. flatpak itself is already part of the Mint base.
 - name: Ensure the Flathub remote is configured
   community.general.flatpak_remote:

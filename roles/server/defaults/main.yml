@@ -667,6 +667,7 @@ pihole_policy_import_enabled: false
 pihole_policy_root: "{{ playbook_dir }}/files/pihole/policy"
 pihole_adlists_file: "{{ pihole_policy_root }}/adlists_enabled.txt"
 pihole_allowlist_exact_file: "{{ pihole_policy_root }}/allowlist_exact.txt"
+pihole_allowlist_regex_file: "{{ pihole_policy_root }}/allowlist_regex.txt"
 pihole_import_comment: Managed by ansible Pi-hole import
 pihole_policy_hash_file: "{{ pihole_root_dir }}/.ansible-policy-hash"
 # A client-specific default-deny profile. It is intentionally separate from the

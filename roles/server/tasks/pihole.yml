@@ -174,11 +174,18 @@
   register: pihole_allowlist_file_stat
   when: pihole_policy_import_enabled | bool
 
+- name: Check whether the extracted Pi-hole regex allowlist file exists
+  ansible.builtin.stat:
+    path: "{{ pihole_allowlist_regex_file }}"
+  register: pihole_allowlist_regex_file_stat
+  when: pihole_policy_import_enabled | bool
+
 - name: Require extracted Pi-hole policy files when import is enabled
   ansible.builtin.assert:
     that:
       - pihole_adlists_file_stat.stat.exists
       - pihole_allowlist_file_stat.stat.exists
+      - pihole_allowlist_regex_file_stat.stat.exists
     fail_msg: Pi-hole policy import is enabled but the extracted backup files are missing.
   when: pihole_policy_import_enabled | bool
 
@@ -278,7 +285,7 @@
 - name: Calculate the desired Pi-hole policy hash
   ansible.builtin.shell: |
     set -eu
-    cat "{{ pihole_adlists_file }}" "{{ pihole_allowlist_exact_file }}" | sha256sum | cut -d' ' -f1
+    cat "{{ pihole_adlists_file }}" "{{ pihole_allowlist_exact_file }}" "{{ pihole_allowlist_regex_file }}" | sha256sum | cut -d' ' -f1
   args:
     executable: /bin/bash
   register: pihole_policy_hash
@@ -370,6 +377,38 @@
     - pihole_policy_import_enabled | bool
     - not pihole_policy_hash_file_stat.stat.exists or (pihole_policy_hash_existing.content | b64decode | trim) != (pihole_policy_hash.stdout | trim)
 
+- name: Import Pi-hole regex allowlist from the extracted backup
+  ansible.builtin.shell: |
+    set -eu
+    db="{{ pihole_config_dir }}/gravity.db"
+    file="{{ pihole_allowlist_regex_file }}"
+    marker="{{ pihole_import_comment_sql }}"
+    changes=0
+    while IFS= read -r domain; do
+      [ -n "$domain" ] || continue
+      esc_domain=${domain//\'/\'\'}
+      delta=$(sqlite3 -cmd '.timeout 1000' "$db" "INSERT INTO domainlist(type, domain, enabled, comment) VALUES(2, '$esc_domain', 1, '$marker') ON CONFLICT(domain, type) DO UPDATE SET enabled=1, comment='$marker' WHERE enabled != 1 OR IFNULL(comment, '') != '$marker'; SELECT changes();")
+      changes=$((changes + delta))
+    done < "$file"
+    while IFS='|' read -r id domain; do
+      [ -n "$id" ] || continue
+      if ! grep -Fxq "$domain" "$file"; then
+        delta=$(sqlite3 -cmd '.timeout 1000' "$db" "DELETE FROM domainlist WHERE id=$id; SELECT changes();")
+        changes=$((changes + delta))
+      fi
+    done < <(sqlite3 -cmd '.timeout 1000' -separator '|' "$db" "SELECT id, domain FROM domainlist WHERE type=2 AND comment='$marker';")
+    printf '%s\n' "$changes"
+  args:
+    executable: /bin/bash
+  register: pihole_allowlist_regex_import
+  changed_when: (pihole_allowlist_regex_import.stdout | trim | int) > 0
+  retries: 5
+  delay: 1
+  until: pihole_allowlist_regex_import.rc == 0
+  when:
+    - pihole_policy_import_enabled | bool
+    - not pihole_policy_hash_file_stat.stat.exists or (pihole_policy_hash_existing.content | b64decode | trim) != (pihole_policy_hash.stdout | trim)
+
 - name: Restart Pi-hole after policy import changes
   ansible.builtin.command:
     argv:
@@ -379,7 +418,7 @@
   changed_when: true
   when:
     - pihole_policy_import_enabled | bool
-    - pihole_adlist_import.changed or pihole_allowlist_import.changed
+    - pihole_adlist_import.changed or pihole_allowlist_import.changed or pihole_allowlist_regex_import.changed
 
 - name: Record the imported Pi-hole policy hash
   ansible.builtin.copy:
