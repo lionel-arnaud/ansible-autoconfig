@@ -57,6 +57,12 @@
       tags:
         - workstation_rclone_gdrive
 
+    - name: Configure persistent Nautilus full-text search locations
+      ansible.builtin.import_tasks: localsearch.yml
+      when: workstation_localsearch_enabled | default(false)
+      tags:
+        - workstation_localsearch
+
     - name: Enable workstation user services
       ansible.builtin.import_tasks: systemd_user.yml
       when: workstation_systemd_user_services | default([]) | length > 0

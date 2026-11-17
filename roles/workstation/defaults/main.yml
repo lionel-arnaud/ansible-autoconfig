@@ -108,6 +108,15 @@ workstation_rclone_gdrive_options:
   - --vfs-cache-max-age
   - 72h
 
+# LocalSearch is GNOME/Nautilus' persistent metadata and full-text indexer
+# (formerly Tracker). It includes extractors for PDF and plain text, which
+# covers Markdown and .txt files. Paths listed here are added explicitly so
+# mount points below $HOME are not silently skipped by the normal home-folder
+# crawl. A first full database rebuild is intentionally never automated: on a
+# large rclone mount it downloads every eligible document once.
+workstation_localsearch_enabled: false
+workstation_localsearch_recursive_directories: []
+
 # Chromium New Tab Page seeding.
 #
 # Set to true in host_vars to seed a custom homepage URL on first Chromium run.

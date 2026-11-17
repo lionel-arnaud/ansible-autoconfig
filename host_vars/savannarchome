@@ -114,3 +114,10 @@ workstation_systemd_user_services:
 # Google Drive mounted at ~/Google Drive Perso. The remote is already authorised
 # for lion on this machine.
 workstation_rclone_gdrive_enabled: true
+
+# Explicitly retain a recursive LocalSearch/Tracker entry for the rclone FUSE
+# mount. Nautilus then searches its local, persistent index, including PDF and
+# Markdown/plain-text content, instead of walking Drive at query time.
+workstation_localsearch_enabled: true
+workstation_localsearch_recursive_directories:
+  - "/home/lion/Google Drive Perso"
