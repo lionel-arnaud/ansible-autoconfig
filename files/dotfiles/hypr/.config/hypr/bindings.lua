@@ -40,6 +40,9 @@ o.window("org.gnome.Calculator", { center = true })
 o.bind("SUPER + SHIFT + H", "Email", { launch = "thunderbird" })
 o.bind("SUPER + SHIFT + O", "Obsidian", { launch = "obsidian" })
 
+-- Toggle the custom Agents usage panel. The same key opens and closes it.
+o.bind("SUPER + SHIFT + A", "Toggle Agents widget", { panel = "omarchy.agents" })
+
 o.bind("SUPER + SHIFT + V", "Speak clipboard", "tts-clip")
 
 hl.unbind("SUPER + SHIFT + S")
