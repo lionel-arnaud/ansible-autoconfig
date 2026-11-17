@@ -177,8 +177,8 @@ else
   alias ll='ls -alFh'
   alias la='ls -Alh'
 fi
-alias lt='ls -ltrh'  # sort by date
-alias lk='ls -lSrh'  # sort by size
+alias lt='ls -ltrh' # sort by date
+alias lk='ls -lSrh' # sort by size
 
 alias ..='cd ..'
 alias ...='cd ../..'
@@ -198,6 +198,9 @@ alias gs='git status'
 alias dcu='docker compose up -d'
 alias dcd='docker compose down'
 alias docker-clean='docker container prune -f; docker image prune -f; docker network prune -f; docker volume prune -f'
+
+# various tools
+alias t='tuios start-agent opencode'
 
 export TLDR_OPTIONS="${TLDR_OPTIONS:-both}"
 
