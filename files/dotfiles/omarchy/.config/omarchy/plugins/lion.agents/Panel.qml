@@ -602,11 +602,13 @@ Panel {
   }
 
   // The countdown is useful at a glance, while the local date and time save
-  // someone from mentally adding it to the clock when they hover a limit.
+  // someone from mentally adding it to the clock.
   function formatResetAt(w) {
     if (!w || w.resetAt === "") return ""
     var date = new Date(w.resetAt)
-    return isFinite(date.getTime()) ? Qt.formatDateTime(date, "ddd d MMM yyyy, HH:mm") : ""
+    return isFinite(date.getTime())
+      ? date.toLocaleString(Qt.locale(Commons.I18n.formatLocale), "ddd d MMM yyyy, HH:mm")
+      : ""
   }
 
   function formatDuration(ms) {
@@ -1998,7 +2000,9 @@ Panel {
     readonly property var scoped: window && window.scoped ? window.scoped : []
     readonly property bool alarming: window && window.percent >= 0.9
     readonly property real resetMs: root.resetMsFor(window)
+    readonly property string resetAtText: resetMs > 0 ? root.formatResetAt(window) : ""
     implicitHeight: Math.max(compactTitle.implicitHeight, compactValue.implicitHeight)
+      + (resetAtText !== "" ? compactResetAt.implicitHeight + Style.space(2) : 0)
 
     HoverHandler { id: compactHover }
 
@@ -2069,6 +2073,23 @@ Panel {
       color: root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.bodySmall
+    }
+
+    // A rolling quota's duration alone makes the user add it to the current
+    // time. Keep the absolute local date and time visible for every window,
+    // including the five-hour and weekly Codex allowances.
+    Text {
+      id: compactResetAt
+      visible: compact.resetAtText !== ""
+      anchors.top: compactValue.bottom
+      anchors.topMargin: Style.space(2)
+      anchors.right: parent.right
+      textFormat: Text.PlainText
+      horizontalAlignment: Text.AlignRight
+      text: compact.resetAtText
+      color: root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
     }
   }
 

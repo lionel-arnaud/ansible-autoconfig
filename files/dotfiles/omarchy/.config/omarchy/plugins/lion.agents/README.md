@@ -18,8 +18,9 @@ Every subscription on one page, limits first.
 - **One section per subscription** — an agent with limits, a balance, a plan,
   or accounts to show gets one; local history alone only feeds the hero's
   line. Its mark, name, and plan, then a compact line
-  per limit window: its meter and the time until it resets (the exact percentage
-  and local reset date/time on hover). A model-scoped allowance on the same clock (Claude's Fable weekly
+  per limit window: its meter, the time until it resets, and the exact local
+  date/time it resets. The hover detail also includes the exact percentage.
+  A model-scoped allowance on the same clock (Claude's Fable weekly
   limit) is a tick on that window's meter rather than a line of its own; the
   row's tooltip names it. A lapsed or missing Claude, Codex, or Grok sign-in
   shows a _Sign-in required_ link that signs that account in again from the
