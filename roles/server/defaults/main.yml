@@ -56,27 +56,27 @@ screenguard_server_bind: 192.168.1.100
 screenguard_server_port: 8088
 screenguard_webui_port: 5000
 screenguard_timezone: Europe/Paris
-# Mirrors Timekpr but is deliberately looser for the overlap: Timekpr remains
-# active at 15/30 minutes and its narrower permitted hours.
+# Primary child-time controller. ScreenGuard enforces the narrow 15/30-minute
+# limits and permitted hours; Timekpr remains the looser fallback.
 screenguard_profiles:
   - {username: oscar, display_name: Oscar}
   - {username: romy, display_name: Romy}
 screenguard_trial_schedules:
-  - {day_of_week: 0, start_time: '15:30', end_time: '21:30'}
-  - {day_of_week: 1, start_time: '15:30', end_time: '21:30'}
-  - {day_of_week: 2, start_time: '15:30', end_time: '21:30'}
-  - {day_of_week: 3, start_time: '15:30', end_time: '21:30'}
-  - {day_of_week: 4, start_time: '15:30', end_time: '21:30'}
-  - {day_of_week: 5, start_time: '07:00', end_time: '21:30'}
-  - {day_of_week: 6, start_time: '07:00', end_time: '21:30'}
+  - {day_of_week: 0, start_time: '16:00', end_time: '21:00'}
+  - {day_of_week: 1, start_time: '16:00', end_time: '21:00'}
+  - {day_of_week: 2, start_time: '16:00', end_time: '21:00'}
+  - {day_of_week: 3, start_time: '16:00', end_time: '21:00'}
+  - {day_of_week: 4, start_time: '16:00', end_time: '21:00'}
+  - {day_of_week: 5, start_time: '07:30', end_time: '21:00'}
+  - {day_of_week: 6, start_time: '07:30', end_time: '21:00'}
 screenguard_trial_daily_limits:
-  - {day_of_week: 0, allowed_minutes: 30}
-  - {day_of_week: 1, allowed_minutes: 30}
-  - {day_of_week: 2, allowed_minutes: 30}
-  - {day_of_week: 3, allowed_minutes: 30}
-  - {day_of_week: 4, allowed_minutes: 30}
-  - {day_of_week: 5, allowed_minutes: 45}
-  - {day_of_week: 6, allowed_minutes: 45}
+  - {day_of_week: 0, allowed_minutes: 15}
+  - {day_of_week: 1, allowed_minutes: 15}
+  - {day_of_week: 2, allowed_minutes: 15}
+  - {day_of_week: 3, allowed_minutes: 15}
+  - {day_of_week: 4, allowed_minutes: 15}
+  - {day_of_week: 5, allowed_minutes: 30}
+  - {day_of_week: 6, allowed_minutes: 30}
 server_netplan_enabled: false
 server_netplan_file: /etc/netplan/00-installer-config.yaml
 server_netplan_config: ""

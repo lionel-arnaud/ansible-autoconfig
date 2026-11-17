@@ -63,8 +63,8 @@ kids_timekpr_ppa_codename: >-
 kids_timekpr_service: timekpr.service
 kids_timekpr_main_conf_src: "{{ playbook_dir }}/files/kids/timekpr/timekpr.conf"
 kids_timekpr_config_src_dir: "{{ playbook_dir }}/files/kids/timekpr/config"
-# Per-user policy files to deploy (captured verbatim). daddy = unrestricted,
-# oscar/romy = 15 min weekdays / 30 min weekends, allowed 16-20h on school days.
+# Per-user fallback policy files. daddy = unrestricted; oscar/romy receive the
+# looser 30 min weekdays / 45 min weekends, with ScreenGuard authoritative.
 kids_timekpr_user_confs: [daddy, oscar, romy]
 
 # Additional, non-authoritative ScreenGuard trial.  Pi-hole remains responsible
