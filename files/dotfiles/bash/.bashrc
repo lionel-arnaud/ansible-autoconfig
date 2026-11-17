@@ -245,7 +245,27 @@ alias docker-clean='docker container prune -f; docker image prune -f; docker net
 
 # various tools
 alias t='tuios start-agent opencode'
-alias apull="sudo systemctl start autoconfig-pull.service"
+# Run the managed pull synchronously so a desktop notification can report its
+# actual outcome, not merely that systemd accepted the start request. The
+# service's OnFailure path continues to send the remote ntfy alert; this is the
+# local, interactive counterpart for a manually run `apull`.
+apull() {
+  local status=0
+
+  sudo systemctl start --wait autoconfig-pull.service || status=$?
+
+  if command -v notify-send >/dev/null 2>&1; then
+    if ((status == 0)); then
+      notify-send -a 'Ansible' -u normal \
+        'Ansible pull complete' 'The configuration was applied successfully.'
+    else
+      notify-send -a 'Ansible' -u critical \
+        'Ansible pull failed' 'See: journalctl -u autoconfig-pull.service -n 100'
+    fi
+  fi
+
+  return "$status"
+}
 
 export TLDR_OPTIONS="${TLDR_OPTIONS:-both}"
 
