@@ -201,6 +201,7 @@ alias docker-clean='docker container prune -f; docker image prune -f; docker net
 
 # various tools
 alias t='tuios start-agent opencode'
+alias apull="sudo systemctl start autoconfig-pull.service"
 
 export TLDR_OPTIONS="${TLDR_OPTIONS:-both}"
 
