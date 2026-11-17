@@ -152,15 +152,20 @@ if [[ $(hostname -s) == savannarchome && -r $HOME/.ssh/autoconfig-fleet-trigger 
     fi
 
     printf '\n%s%sFleet pull%s — starting 4 managed hosts\n\n' "$bold" "$cyan" "$reset"
-    sudo -n /usr/bin/systemctl start autoconfig-pull.service >"$logdir/laptop" 2>&1 &
-    pids[laptop]=$!
-    logs[laptop]="$logdir/laptop"
+    # Bash emits a job number and PID when it starts each background command.
+    # Redirect only those shell messages; each command's own output still goes
+    # to its per-host log file and is available on a failure.
+    {
+      sudo -n /usr/bin/systemctl start autoconfig-pull.service >"$logdir/laptop" 2>&1 &
+      pids[laptop]=$!
+      logs[laptop]="$logdir/laptop"
 
-    for host in "${hosts[@]}"; do
-      ssh -i "$HOME/.ssh/autoconfig-fleet-trigger" -o BatchMode=yes -o IdentitiesOnly=yes "$host" start >"$logdir/$host" 2>&1 &
-      pids["$host"]=$!
-      logs["$host"]="$logdir/$host"
-    done
+      for host in "${hosts[@]}"; do
+        ssh -i "$HOME/.ssh/autoconfig-fleet-trigger" -o BatchMode=yes -o IdentitiesOnly=yes "$host" start >"$logdir/$host" 2>&1 &
+        pids["$host"]=$!
+        logs["$host"]="$logdir/$host"
+      done
+    } 2>/dev/null
 
     for host in laptop "${hosts[@]}"; do
       if wait "${pids[$host]}"; then
