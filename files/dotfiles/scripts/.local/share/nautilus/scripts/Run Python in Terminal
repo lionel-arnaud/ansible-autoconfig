@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Run selected Python files from Nautilus in the user's default terminal.
+# Nautilus exposes this as: right-click → Scripts → Run Python in Terminal.
+
+set -u
+
+if [[ "${1:-}" == "--run" ]]; then
+  shift
+  status=0
+
+  for script in "$@"; do
+    printf '\n\033[1m==> %s\033[0m\n\n' "$script"
+    python3 "$script" || status=$?
+  done
+
+  printf '\n'
+  if (( status == 0 )); then
+    printf 'Finished successfully.\n'
+  else
+    printf 'Finished with exit status %d.\n' "$status"
+  fi
+  read -r -p 'Press Enter to close this terminal...'
+  exit "$status"
+fi
+
+mapfile -t selected_paths <<< "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:-}"
+python_files=()
+
+for path in "${selected_paths[@]}"; do
+  [[ -f "$path" && "$path" == *.py ]] && python_files+=("$path")
+done
+
+(( ${#python_files[@]} > 0 )) || exit 0
+
+exec xdg-terminal-exec --title='Python output' -- "$0" --run "${python_files[@]}"

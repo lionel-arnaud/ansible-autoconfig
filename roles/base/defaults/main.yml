@@ -190,6 +190,8 @@ dotfiles_managed_paths:
     path: serverannah_mount.sh
   - package: scripts
     path: packages.sh
+  - package: scripts
+    path: .local/share/nautilus/scripts/Run Python in Terminal
   # espanso splits config and matches into separate subdirectories.
   - package: espanso
     path: .config/espanso/config/default.yml
