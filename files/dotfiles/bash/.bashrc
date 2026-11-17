@@ -249,27 +249,9 @@ alias t='tuios start-agent opencode'
 # actual outcome, not merely that systemd accepted the start request. The
 # service's OnFailure path continues to send the remote ntfy alert; this is the
 # local, interactive counterpart for a manually run `apull`.
-# Omarchy defines apull as an alias. Remove it before defining the function:
-# aliases are expanded while Bash parses `apull() {`, and also outrank a
-# same-named function at invocation time.
-unalias apull 2>/dev/null || true
-function apull {
-  local status=0
-
-  sudo systemctl start --wait autoconfig-pull.service || status=$?
-
-  if command -v notify-send >/dev/null 2>&1; then
-    if ((status == 0)); then
-      notify-send -a 'Ansible' -u normal \
-        'Ansible pull complete' 'The configuration was applied successfully.'
-    else
-      notify-send -a 'Ansible' -u critical \
-        'Ansible pull failed' 'See: journalctl -u autoconfig-pull.service -n 100'
-    fi
-  fi
-
-  return "$status"
-}
+# This deliberately replaces Omarchy's inherited apull alias. `&&` shows the
+# desktop notification only after the Type=oneshot pull service succeeds.
+alias apull='sudo systemctl start autoconfig-pull.service && notify-send -a "Ansible" -u normal "Ansible pull complete" "Configuration applied successfully."'
 
 export TLDR_OPTIONS="${TLDR_OPTIONS:-both}"
 
