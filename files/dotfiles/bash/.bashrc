@@ -119,17 +119,39 @@ lazyg() {
 
 # Trigger each machine's local Ansible pull in parallel from the laptop. The
 # dedicated SSH key is forced on targets to this action only; wait for each
-# systemd job so the notification reports the actual final result.
+# systemd job so the notification reports the actual final result. Keep the
+# output human-oriented: Bash job-control messages are noise, while a host can
+# have a failed pull or simply be offline.
 if [[ $(hostname -s) == savannarchome && -r $HOME/.ssh/autoconfig-fleet-trigger ]]; then
   fleet-pull() {
-    local host logdir status=0 summary
+    local host logdir status=0 summary result exit_code
+    local success_count=0 failed_count=0 unreachable_count=0
+    local reset='' bold='' dim='' green='' yellow='' red='' cyan=''
+    local monitor_was_enabled=0
     local -a hosts=(serverannah raspi kidsbook)
     local -A pids logs
 
     sudo -v || return
     logdir=$(mktemp -d "${TMPDIR:-/tmp}/fleet-pull.XXXXXX") || return
 
-    printf 'Starting local and remote Ansible pulls...\n'
+    # Prevent completed background jobs printing their own "[1] Done" lines
+    # while this function formats the final result.
+    if [[ $- == *m* ]]; then
+      monitor_was_enabled=1
+      set +m
+    fi
+
+    if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && [[ $(tput colors 2>/dev/null || echo 0) -ge 8 ]]; then
+      reset=$(tput sgr0)
+      bold=$(tput bold)
+      dim=$(tput dim)
+      green=$(tput setaf 2)
+      yellow=$(tput setaf 3)
+      red=$(tput setaf 1)
+      cyan=$(tput setaf 6)
+    fi
+
+    printf '\n%s%sFleet pull%s — starting 4 managed hosts\n\n' "$bold" "$cyan" "$reset"
     sudo -n /usr/bin/systemctl start autoconfig-pull.service >"$logdir/laptop" 2>&1 &
     pids[laptop]=$!
     logs[laptop]="$logdir/laptop"
@@ -142,23 +164,40 @@ if [[ $(hostname -s) == savannarchome && -r $HOME/.ssh/autoconfig-fleet-trigger 
 
     for host in laptop "${hosts[@]}"; do
       if wait "${pids[$host]}"; then
-        printf '✓ %s\n' "$host"
+        printf '  %s✓%s %-12s %ssuccess%s\n' "$green" "$reset" "$host" "$dim" "$reset"
+        ((success_count++))
       else
-        printf '✗ %s\n' "$host" >&2
-        sed -n '1,12p' "${logs[$host]}" >&2
+        exit_code=$?
+        if grep -qE 'No route to host|Connection timed out|Connection refused|Could not resolve hostname' "${logs[$host]}"; then
+          result=$(grep -m1 -E 'No route to host|Connection timed out|Connection refused|Could not resolve hostname' "${logs[$host]}")
+          printf '  %s✗%s %-12s %sunreachable%s\n' "$yellow" "$reset" "$host" "$dim" "$reset"
+          printf '     %s%s%s\n' "$dim" "$result" "$reset"
+          ((unreachable_count++))
+        else
+          result=$(sed -n '/[^[:space:]]/ {p; q;}' "${logs[$host]}")
+          printf '  %s✗%s %-12s %spull failed%s %s(exit %d)%s\n' "$red" "$reset" "$host" "$bold" "$reset" "$dim" "$exit_code" "$reset"
+          [[ -n $result ]] && printf '     %s%s%s\n' "$dim" "$result" "$reset"
+          ((failed_count++))
+        fi
         status=1
       fi
     done
 
+    printf '\n%s────────────────────────────────────────────────%s\n' "$dim" "$reset"
+    printf '%sSummary:%s %s%d succeeded%s · %s%d failed%s · %s%d unreachable%s\n' \
+      "$bold" "$reset" "$green" "$success_count" "$reset" "$red" "$failed_count" "$reset" "$yellow" "$unreachable_count" "$reset"
+
     if ((status == 0)); then
       summary='Ansible fleet pull completed successfully.'
+      rm -rf -- "$logdir"
     else
-      summary='Ansible fleet pull completed with failures.'
+      summary="Ansible fleet pull completed with ${failed_count} failed and ${unreachable_count} unreachable host(s)."
+      printf '%sLogs retained:%s %s\n' "$bold" "$reset" "$logdir"
     fi
     if command -v notify-send >/dev/null 2>&1; then
       notify-send -a 'Ansible fleet' -u "$([[ $status -eq 0 ]] && echo normal || echo critical)" 'Fleet pull complete' "$summary"
     fi
-    rm -rf -- "$logdir"
+    ((monitor_was_enabled)) && set -m
     return "$status"
   }
 fi

@@ -183,11 +183,16 @@ without implementing anything ('dry run')._
 
 On Savannarchome, `fleet-pull` starts the laptop, Serverannah, Raspberry Pi and
 Kidsbook pulls in parallel, waits for their actual systemd jobs to finish, then
-shows an Omarchy desktop notification with the final result:
+shows a color-coded per-host result and an Omarchy desktop notification:
 
 ```bash
 fleet-pull
 ```
+
+It distinguishes a completed pull, a failed pull, and an unreachable device.
+When any host does not complete successfully, its captured logs are retained in
+a private temporary directory printed at the end; fully successful runs clean
+up their logs automatically.
 
 The SSH key used for this is generated only on the laptop. Each target accepts
 it only from the laptop LAN address, without shell, forwarding or PTY access,
