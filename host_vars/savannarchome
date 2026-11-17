@@ -121,3 +121,6 @@ workstation_rclone_gdrive_enabled: true
 workstation_localsearch_enabled: true
 workstation_localsearch_recursive_directories:
   - "/home/lion/Google Drive Perso"
+# Explicitly approved one-time rebuild; its durable marker prevents later
+# ansible-pull runs from clearing the index again.
+workstation_localsearch_initialize: true

@@ -3,9 +3,9 @@
 #
 # `localsearch index --add` writes the user's Tracker configuration. It is not
 # a one-off import: LocalSearch retains the index across logouts and reboots,
-# and Nautilus uses it for its full-text search. We deliberately do not run
-# `localsearch reset --filesystem` here. A reset is an expensive, bandwidth-
-# heavy operation on a cloud FUSE mount and should remain an explicit choice.
+# and Nautilus uses it for its full-text search. A full reset is explicitly
+# opt-in and protected by a durable marker: it starts a one-time crawl of
+# existing files without repeating that expensive work on each ansible-pull.
 
 - name: List LocalSearch indexed locations
   ansible.builtin.command:
@@ -28,3 +28,37 @@
     DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
   loop: "{{ workstation_localsearch_recursive_directories }}"
   when: item not in workstation_localsearch_indexed_locations.stdout
+
+- name: Create the LocalSearch initialization state directory
+  ansible.builtin.file:
+    path: "{{ workstation_localsearch_initialization_marker | dirname }}"
+    state: directory
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0755"
+  when: workstation_localsearch_initialize | bool
+
+- name: Start one-time LocalSearch filesystem rebuild
+  ansible.builtin.command:
+    argv: [localsearch, reset, --filesystem]
+    creates: "{{ workstation_localsearch_initialization_marker }}"
+  become: true
+  become_user: "{{ workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
+  when: workstation_localsearch_initialize | bool
+  register: workstation_localsearch_reset
+
+- name: Record that the LocalSearch rebuild was launched
+  ansible.builtin.file:
+    path: "{{ workstation_localsearch_initialization_marker }}"
+    state: touch
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0644"
+    modification_time: preserve
+    access_time: preserve
+  when:
+    - workstation_localsearch_initialize | bool
+    - workstation_localsearch_reset is changed

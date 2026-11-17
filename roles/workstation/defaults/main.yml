@@ -112,10 +112,13 @@ workstation_rclone_gdrive_options:
 # (formerly Tracker). It includes extractors for PDF and plain text, which
 # covers Markdown and .txt files. Paths listed here are added explicitly so
 # mount points below $HOME are not silently skipped by the normal home-folder
-# crawl. A first full database rebuild is intentionally never automated: on a
-# large rclone mount it downloads every eligible document once.
+# crawl. Rebuilding on a large rclone mount downloads every eligible document
+# once, so it is opt-in and guarded by a durable completion marker.
 workstation_localsearch_enabled: false
 workstation_localsearch_recursive_directories: []
+workstation_localsearch_initialize: false
+workstation_localsearch_initialization_marker: >-
+  {{ workstation_home }}/.local/state/ansible-autoconfig/localsearch-initialized
 
 # Chromium New Tab Page seeding.
 #
