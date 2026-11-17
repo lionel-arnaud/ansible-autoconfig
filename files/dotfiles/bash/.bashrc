@@ -249,7 +249,11 @@ alias t='tuios start-agent opencode'
 # actual outcome, not merely that systemd accepted the start request. The
 # service's OnFailure path continues to send the remote ntfy alert; this is the
 # local, interactive counterpart for a manually run `apull`.
-apull() {
+# Omarchy defines apull as an alias. Remove it before defining the function:
+# aliases are expanded while Bash parses `apull() {`, and also outrank a
+# same-named function at invocation time.
+unalias apull 2>/dev/null || true
+function apull {
   local status=0
 
   sudo systemctl start --wait autoconfig-pull.service || status=$?
