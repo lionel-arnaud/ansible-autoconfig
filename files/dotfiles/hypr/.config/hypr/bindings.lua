@@ -74,3 +74,7 @@ if o.dictation_installed and o.dictation_installed() then
   o.bind("SUPER + CTRL + X", "Toggle dictation", "omarchy-dictation toggle")
   o.bind_hold("F9", "Start dictation (push-to-talk)", "omarchy-dictation start", "Stop dictation (push-to-talk)", "omarchy-dictation stop")
 end
+
+-- The CHERRY keyboard has no microphone-mute media key. Keep the laptop's
+-- dedicated XF86AudioMicMute binding and give F10 the same Omarchy action.
+o.bind("F10", "Mute microphone", "omarchy-audio-input-mute", { locked = true })
