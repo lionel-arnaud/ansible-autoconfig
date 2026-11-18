@@ -193,6 +193,13 @@
     - server
     - bentopdf
 
+- name: Deploy DocuSeal
+  ansible.builtin.import_tasks: docuseal.yml
+  when: server_docuseal_enabled | default(false)
+  tags:
+    - server
+    - docuseal
+
 - name: Deploy the game timer
   ansible.builtin.import_tasks: game_timer.yml
   when: server_game_timer_enabled | default(false)

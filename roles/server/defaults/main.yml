@@ -147,6 +147,23 @@ bentopdf_image: ghcr.io/alam00000/bentopdf-simple:latest
 bentopdf_network_name: autoconfig-services
 bentopdf_port: 8080
 
+# DocuSeal document signing. Pin the application to a reviewed release; changing
+# the version is a deliberate code change rather than an unattended major upgrade.
+server_docuseal_enabled: false
+docuseal_container_name: docuseal
+docuseal_image: docuseal/docuseal:3.3.7
+docuseal_db_container_name: docuseal-db
+docuseal_db_image: postgres:18-alpine
+docuseal_db_name: docuseal
+docuseal_db_user: docuseal
+docuseal_network_name: autoconfig-services
+docuseal_root_dir: /opt/docuseal
+docuseal_data_dir: "{{ docuseal_root_dir }}/data"
+docuseal_db_data_dir: "{{ docuseal_root_dir }}/postgres"
+docuseal_secret_dir: /etc/ansible/secrets
+docuseal_db_password_file: "{{ docuseal_secret_dir }}/docuseal-db-password"
+docuseal_hostname: sign.dinnizer.com
+
 server_game_timer_enabled: false
 # tabletop-timer.com is a plain static HTML/CSS/JS site (no build step). Its
 # source is its own PUBLIC repo, which the server clones directly — there is no
@@ -594,6 +611,7 @@ backup_exclude_paths:
   - "{{ nextcloud_db_data_dir }}"
   - "{{ aumenuilya_db_data_dir }}"
   - "{{ dinnizer_db_data_dir }}"
+  - "{{ docuseal_db_data_dir }}"
   - "{{ server_reverse_proxy_data_dir }}/{{ server_reverse_proxy_access_log | basename }}"
 # Host-specific exclusions extend, rather than replace, the consistency
 # exclusions above. This avoids accidentally backing up live databases or the

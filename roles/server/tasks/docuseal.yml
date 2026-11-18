@@ -1,0 +1,114 @@
+---
+# DocuSeal has two distinct classes of visitor: its account owners and external
+# document signers. Do not put a proxy-wide login in front of it: each signer
+# receives a capability URL from DocuSeal and would otherwise need the household
+# shared password before they could sign.
+- name: Create DocuSeal directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ docuseal_root_dir }}", mode: "0755"}
+    # The official image runs as uid/gid 2000 and persists uploads, completed
+    # documents, and local app state below /data/docuseal.
+    - {path: "{{ docuseal_data_dir }}", owner: "2000", group: "2000", mode: "0750"}
+    - {path: "{{ docuseal_db_data_dir }}", mode: "0700"}
+    - {path: "{{ docuseal_secret_dir }}", mode: "0700"}
+
+- name: Generate persistent DocuSeal database password
+  ansible.builtin.shell: |
+    umask 077
+    python3 -c 'import secrets; print(secrets.token_hex(32))' > {{ docuseal_db_password_file | quote }}
+  args:
+    executable: /bin/bash
+    creates: "{{ docuseal_db_password_file }}"
+  no_log: true
+
+- name: Read DocuSeal database password
+  ansible.builtin.slurp:
+    src: "{{ docuseal_db_password_file }}"
+  register: docuseal_db_password
+  no_log: true
+
+- name: Ensure DocuSeal container network exists
+  community.docker.docker_network:
+    name: "{{ docuseal_network_name }}"
+    state: present
+
+- name: Pull DocuSeal PostgreSQL image
+  community.docker.docker_image:
+    name: "{{ docuseal_db_image }}"
+    source: pull
+    force_source: true
+  register: docuseal_db_image_pull
+
+- name: Run DocuSeal PostgreSQL
+  community.docker.docker_container:
+    name: "{{ docuseal_db_container_name }}"
+    image: "{{ docuseal_db_image }}"
+    state: started
+    recreate: "{{ docuseal_db_image_pull.changed }}"
+    restart_policy: unless-stopped
+    networks:
+      - name: "{{ docuseal_network_name }}"
+    # PostgreSQL 18 images store clusters under this versioned directory.
+    volumes:
+      - "{{ docuseal_db_data_dir }}:/var/lib/postgresql/18/docker"
+    env:
+      POSTGRES_DB: "{{ docuseal_db_name }}"
+      POSTGRES_USER: "{{ docuseal_db_user }}"
+      POSTGRES_PASSWORD: "{{ docuseal_db_password.content | b64decode | trim }}"
+  no_log: true
+
+- name: Wait for DocuSeal PostgreSQL
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - "{{ docuseal_db_container_name }}"
+      - pg_isready
+      - -U
+      - "{{ docuseal_db_user }}"
+      - -d
+      - "{{ docuseal_db_name }}"
+  changed_when: false
+  register: docuseal_db_ready
+  retries: 30
+  delay: 2
+  until: docuseal_db_ready.rc == 0
+
+- name: Pull DocuSeal image
+  community.docker.docker_image:
+    name: "{{ docuseal_image }}"
+    source: pull
+    force_source: true
+  register: docuseal_image_pull
+
+- name: Build DocuSeal database URL
+  ansible.builtin.set_fact:
+    docuseal_database_url: >-
+      {{ 'postgresql://' ~ docuseal_db_user ~ ':' ~
+         (docuseal_db_password.content | b64decode | trim) ~ '@' ~
+         docuseal_db_container_name ~ ':5432/' ~ docuseal_db_name }}
+  no_log: true
+
+- name: Run DocuSeal
+  community.docker.docker_container:
+    name: "{{ docuseal_container_name }}"
+    image: "{{ docuseal_image }}"
+    state: started
+    init: true
+    recreate: "{{ docuseal_image_pull.changed }}"
+    restart_policy: unless-stopped
+    networks:
+      - name: "{{ docuseal_network_name }}"
+    volumes:
+      - "{{ docuseal_data_dir }}:/data/docuseal"
+    env:
+      DATABASE_URL: "{{ docuseal_database_url }}"
+      # Caddy terminates TLS; this prevents DocuSeal from generating HTTP links.
+      FORCE_SSL: "{{ docuseal_hostname }}"
+  no_log: true
