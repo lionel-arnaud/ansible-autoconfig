@@ -1,0 +1,17 @@
+---
+- name: Require an expiry for passwordless manual pulls
+  ansible.builtin.assert:
+    that:
+      - autoconfig_manual_pull_authorization_notafter is match('^[0-9]{14}Z$')
+    fail_msg: >-
+      autoconfig_manual_pull_authorization_notafter must use UTC generalized
+      time, for example 20261231235959Z.
+
+- name: Authorize the time-bounded manual autoconfig pull
+  ansible.builtin.template:
+    src: autoconfig-manual-pull.sudoers.j2
+    dest: /etc/sudoers.d/autoconfig-manual-pull
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "{{ autoconfig_visudo_path }} -cf %s"

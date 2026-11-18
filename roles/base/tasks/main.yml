@@ -54,3 +54,9 @@
 
 - name: Install the self-managing ansible-pull timer
   ansible.builtin.import_tasks: autopull.yml
+
+- name: Authorize time-bounded manual ansible pulls
+  ansible.builtin.import_tasks: manual_pull_authorization.yml
+  when: autoconfig_manual_pull_authorization_enabled | bool
+  tags:
+    - autoconfig

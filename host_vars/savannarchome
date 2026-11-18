@@ -20,6 +20,11 @@ workstation_dotfiles_enabled: true
 workstation_espanso_enabled: true
 workstation_keyd_enabled: true
 autoconfig_fleet_controller_enabled: true
+# Explicitly approved temporary authorization for OpenCode-assisted manual
+# pulls. It permits only `systemctl start autoconfig-pull.service`, not general
+# root access, and sudo will reject it after 31 December 2026.
+autoconfig_manual_pull_authorization_enabled: true
+autoconfig_manual_pull_authorization_notafter: "20261231235959Z"
 workstation_ssh_authorized_keys:
   # Existing server key, restricted to the server's fixed LAN address.
   - 'from="192.168.1.100" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGZzObPq8yodB0aiOw31xJKkVdP15xh9Q4QpcPPhQtzV serverannah Deck Ludusavi one-way backup'

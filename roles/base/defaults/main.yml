@@ -249,6 +249,14 @@ autoconfig_randomized_delay: 30m
 autoconfig_persistent: true
 autoconfig_vault_password_file: "/home/{{ desktop_user | default('lion') }}/.ansible-vault-pass"
 
+# A deliberately narrow, time-bounded way to let an interactive desktop user
+# start the managed pull without entering a password.  Starting this unit still
+# means executing the configured Ansible repository as root, so leave it off by
+# default and set a hard UTC expiry in host_vars when explicitly approved.
+autoconfig_manual_pull_authorization_enabled: false
+autoconfig_manual_pull_authorization_user: "{{ desktop_user | default('lion') }}"
+autoconfig_manual_pull_authorization_notafter: ""
+
 # The fleet-pull controller uses a dedicated SSH key rather than a general
 # login key. Its public half is added to other hosts only with a forced command
 # that can start this host's autoconfig-pull service and nothing else.

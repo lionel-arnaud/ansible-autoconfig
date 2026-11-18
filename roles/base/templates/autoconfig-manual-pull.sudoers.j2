@@ -1,0 +1,6 @@
+# Managed by Ansible. This authorization expires at
+# {{ autoconfig_manual_pull_authorization_notafter }} (UTC).
+#
+# It intentionally permits one exact systemd invocation only. Starting that
+# unit applies the configured Ansible repository as root.
+{{ autoconfig_manual_pull_authorization_user }} ALL=(root) NOTAFTER={{ autoconfig_manual_pull_authorization_notafter }} NOPASSWD: /usr/bin/systemctl start {{ autoconfig_timer_name }}.service
