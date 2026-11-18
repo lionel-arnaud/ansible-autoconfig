@@ -201,7 +201,7 @@
       set +e
       borg create --stats --compression zstd,6 \
         --exclude-from "$sqlite_excludes" \
-      {% for path in backup_exclude_paths | default([]) %}
+      {% for path in (backup_exclude_paths | default([])) + (backup_exclude_paths_extra | default([])) %}
         --exclude '{{ path }}' \
       {% endfor %}
         "$BORG_REPO::$archive" \

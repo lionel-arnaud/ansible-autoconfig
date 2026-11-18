@@ -115,7 +115,9 @@ backup_paths:
   # intentionally excluded below because Borg provides versioned retention.
   - /home/lion/Obsidian/Lion
   - /home/lion/Obsidian/Biomemory
-backup_exclude_paths:
+# These are only Serverannah-specific additions. The role's main exclusion
+# list continues to protect live database directories and Caddy's active log.
+backup_exclude_paths_extra:
   - /home/lion/Obsidian/Lion/.stversions
   - /home/lion/Obsidian/Biomemory/.stversions
 backup_database_dumps:

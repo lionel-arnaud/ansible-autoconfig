@@ -595,6 +595,10 @@ backup_exclude_paths:
   - "{{ aumenuilya_db_data_dir }}"
   - "{{ dinnizer_db_data_dir }}"
   - "{{ server_reverse_proxy_data_dir }}/{{ server_reverse_proxy_access_log | basename }}"
+# Host-specific exclusions extend, rather than replace, the consistency
+# exclusions above. This avoids accidentally backing up live databases or the
+# append-only reverse-proxy access log when a host adds an unrelated path.
+backup_exclude_paths_extra: []
 backup_database_dumps:
   - name: aumenuilya
     container: "{{ aumenuilya_db_container_name }}"
