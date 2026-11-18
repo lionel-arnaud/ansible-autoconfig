@@ -101,6 +101,10 @@ workstation_rclone_gdrive_enabled: false
 workstation_rclone_gdrive_remote: "Google Drive Perso"
 workstation_rclone_gdrive_user: "{{ workstation_user }}"
 workstation_rclone_gdrive_mount_point: "{{ workstation_home }}/Google Drive Perso"
+# An optional stable user-facing link to the mount.  Keeping a FUSE mount
+# outside $HOME lets LocalSearch index it as a distinct root; the link
+# preserves existing shell, Nautilus, and application paths below $HOME.
+workstation_rclone_gdrive_compatibility_link: ""
 workstation_rclone_gdrive_options:
   - --drive-skip-shortcuts
   - --vfs-cache-mode
@@ -116,6 +120,10 @@ workstation_rclone_gdrive_options:
 # once, so it is opt-in and guarded by a durable completion marker.
 workstation_localsearch_enabled: false
 workstation_localsearch_recursive_directories: []
+# Locations formerly managed as LocalSearch roots but no longer wanted.  This
+# is primarily useful when relocating a mount so an obsolete nested root does
+# not remain in the persistent Tracker configuration.
+workstation_localsearch_remove_directories: []
 workstation_localsearch_initialize: false
 workstation_localsearch_initialization_marker: >-
   {{ workstation_home }}/.local/state/ansible-autoconfig/localsearch-initialized

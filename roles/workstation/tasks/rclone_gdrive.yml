@@ -1,5 +1,5 @@
 ---
-# rclone mount of the user's personal Google Drive at ~/Google Drive Perso.
+# rclone mount of the user's personal Google Drive.
 #
 # This mirrors roles/server/tasks/rclone_gdrive.yml. The two are kept separate
 # rather than shared because the mount point and remote differ per host class,
@@ -12,8 +12,62 @@
 #   2. The remote itself is created interactively with `rclone config`. We do
 #      not script the OAuth flow.
 #
-# The mount point is created by ExecStartPre in the unit, not by a file task:
-# an explicit create fails with EEXIST against a half-bound FUSE mount.
+# Create the mount point before deploying the user service.  That also supports
+# external paths such as /mnt, whose parent is not writable by the desktop user.
+- name: Create the rclone Google Drive mount point
+  ansible.builtin.file:
+    path: "{{ workstation_rclone_gdrive_mount_point }}"
+    state: directory
+    owner: "{{ workstation_rclone_gdrive_user }}"
+    group: "{{ workstation_rclone_gdrive_user }}"
+    mode: "0755"
+
+- name: Check whether the previous Drive path is still a mount
+  ansible.builtin.command:
+    argv: [mountpoint, -q, "{{ workstation_rclone_gdrive_compatibility_link }}"]
+  register: workstation_rclone_gdrive_legacy_mount
+  changed_when: false
+  failed_when: false
+  when:
+    - workstation_rclone_gdrive_compatibility_link | length > 0
+    - workstation_rclone_gdrive_compatibility_link != workstation_rclone_gdrive_mount_point
+
+- name: Detach the previous Drive FUSE mount before relocating it
+  ansible.builtin.command:
+    argv: [fusermount3, -uz, "{{ workstation_rclone_gdrive_compatibility_link }}"]
+  become: true
+  become_user: "{{ workstation_rclone_gdrive_user }}"
+  when:
+    - workstation_rclone_gdrive_legacy_mount is not skipped
+    - workstation_rclone_gdrive_legacy_mount.rc == 0
+
+- name: Inspect the previous Drive path after detaching it
+  ansible.builtin.stat:
+    path: "{{ workstation_rclone_gdrive_compatibility_link }}"
+    follow: false
+  register: workstation_rclone_gdrive_legacy_path
+  when:
+    - workstation_rclone_gdrive_compatibility_link | length > 0
+    - workstation_rclone_gdrive_compatibility_link != workstation_rclone_gdrive_mount_point
+
+- name: Remove the now-empty previous Drive mount directory
+  ansible.builtin.command:
+    argv: [rmdir, "{{ workstation_rclone_gdrive_compatibility_link }}"]
+  when:
+    - workstation_rclone_gdrive_legacy_path is not skipped
+    - workstation_rclone_gdrive_legacy_path.stat.isdir | default(false)
+
+- name: Preserve the previous Drive path as a symbolic link
+  ansible.builtin.file:
+    src: "{{ workstation_rclone_gdrive_mount_point }}"
+    dest: "{{ workstation_rclone_gdrive_compatibility_link }}"
+    state: link
+    owner: "{{ workstation_rclone_gdrive_user }}"
+    group: "{{ workstation_rclone_gdrive_user }}"
+  when:
+    - workstation_rclone_gdrive_compatibility_link | length > 0
+    - workstation_rclone_gdrive_compatibility_link != workstation_rclone_gdrive_mount_point
+
 - name: Probe whether the rclone remote is already configured
   ansible.builtin.command:
     argv: [rclone, listremotes]

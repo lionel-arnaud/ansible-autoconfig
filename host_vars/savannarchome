@@ -111,15 +111,21 @@ workstation_systemd_user_services:
 # a provider or renewing capacity:
 #   - opencode-autonomous-maintenance.timer
 
-# Google Drive mounted at ~/Google Drive Perso. The remote is already authorised
-# for lion on this machine.
+# LocalSearch omits a separately configured FUSE root when it is nested below
+# its broad $HOME root (confirmed in the LocalSearch debug log).  Mount Drive
+# outside $HOME so it is crawled as its own root, while retaining the existing
+# path as a symlink for applications and shell commands.
 workstation_rclone_gdrive_enabled: true
+workstation_rclone_gdrive_mount_point: "/mnt/lion-google-drive-perso"
+workstation_rclone_gdrive_compatibility_link: "/home/lion/Google Drive Perso"
 
-# Explicitly retain a recursive LocalSearch/Tracker entry for the rclone FUSE
-# mount. Nautilus then searches its local, persistent index, including PDF and
+# LocalSearch/Tracker retains this external rclone mount as a recursive root.
+# Nautilus then searches its local, persistent index, including PDF and
 # Markdown/plain-text content, instead of walking Drive at query time.
 workstation_localsearch_enabled: true
 workstation_localsearch_recursive_directories:
+  - "/mnt/lion-google-drive-perso"
+workstation_localsearch_remove_directories:
   - "/home/lion/Google Drive Perso"
 # Explicitly approved one-time rebuild; its durable marker prevents later
 # ansible-pull runs from clearing the index again.

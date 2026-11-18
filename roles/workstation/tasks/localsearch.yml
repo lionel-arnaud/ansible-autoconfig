@@ -18,6 +18,17 @@
   register: workstation_localsearch_indexed_locations
   changed_when: false
 
+- name: Remove obsolete persistent LocalSearch locations
+  ansible.builtin.command:
+    argv: [localsearch, index, --remove, "{{ item }}"]
+  become: true
+  become_user: "{{ workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
+  loop: "{{ workstation_localsearch_remove_directories }}"
+  when: item in workstation_localsearch_indexed_locations.stdout
+
 - name: Add persistent recursive LocalSearch locations
   ansible.builtin.command:
     argv: [localsearch, index, --add, --recursive, "{{ item }}"]
