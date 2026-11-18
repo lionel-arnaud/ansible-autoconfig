@@ -84,6 +84,23 @@
     - workstation_rclone_gdrive_legacy_path is not skipped
     - not (workstation_rclone_gdrive_legacy_path.stat.islnk | default(false))
 
+- name: Check for Nautilus bookmarks to migrate with the Drive mount
+  ansible.builtin.stat:
+    path: "{{ workstation_home }}/.config/gtk-3.0/bookmarks"
+  become: true
+  become_user: "{{ workstation_rclone_gdrive_user }}"
+  register: workstation_rclone_gdrive_nautilus_bookmarks
+
+- name: Rewrite Nautilus Drive bookmarks to the indexed mount URI
+  ansible.builtin.replace:
+    path: "{{ workstation_home }}/.config/gtk-3.0/bookmarks"
+    regexp: "{{ item.from | regex_escape }}"
+    replace: "{{ item.to }}"
+  become: true
+  become_user: "{{ workstation_rclone_gdrive_user }}"
+  loop: "{{ workstation_rclone_gdrive_bookmark_uri_rewrites }}"
+  when: workstation_rclone_gdrive_nautilus_bookmarks.stat.exists
+
 - name: Probe whether the rclone remote is already configured
   ansible.builtin.command:
     argv: [rclone, listremotes]

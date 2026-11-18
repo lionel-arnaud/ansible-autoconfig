@@ -118,6 +118,9 @@ workstation_systemd_user_services:
 workstation_rclone_gdrive_enabled: true
 workstation_rclone_gdrive_mount_point: "/mnt/lion-google-drive-perso"
 workstation_rclone_gdrive_compatibility_link: "/home/lion/Google Drive Perso"
+workstation_rclone_gdrive_bookmark_uri_rewrites:
+  - from: "file:///home/lion/Google%20Drive%20Perso"
+    to: "file:///mnt/lion-google-drive-perso"
 
 # LocalSearch/Tracker retains this external rclone mount as a recursive root.
 # Nautilus then searches its local, persistent index, including PDF and

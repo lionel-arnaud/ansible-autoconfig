@@ -105,6 +105,10 @@ workstation_rclone_gdrive_mount_point: "{{ workstation_home }}/Google Drive Pers
 # outside $HOME lets LocalSearch index it as a distinct root; the link
 # preserves existing shell, Nautilus, and application paths below $HOME.
 workstation_rclone_gdrive_compatibility_link: ""
+# When a mount moves, Nautilus bookmarks must point at its real URI rather than
+# the compatibility symlink.  Nautilus passes a bookmark URI to LocalSearch;
+# an alias URI cannot match the indexed URI below the external mount point.
+workstation_rclone_gdrive_bookmark_uri_rewrites: []
 workstation_rclone_gdrive_options:
   - --drive-skip-shortcuts
   - --vfs-cache-mode
