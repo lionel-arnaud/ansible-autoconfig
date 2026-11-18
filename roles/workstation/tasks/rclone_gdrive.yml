@@ -34,7 +34,7 @@
 
 - name: Check whether the previous Drive path is still a mount
   ansible.builtin.command:
-    argv: [mountpoint, -q, "{{ workstation_rclone_gdrive_compatibility_link }}"]
+    argv: [mountpoint, --nofollow, -q, "{{ workstation_rclone_gdrive_compatibility_link }}"]
   become: true
   become_user: "{{ workstation_rclone_gdrive_user }}"
   register: workstation_rclone_gdrive_legacy_mount
