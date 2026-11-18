@@ -81,6 +81,8 @@
   when:
     - workstation_rclone_gdrive_compatibility_link | length > 0
     - workstation_rclone_gdrive_compatibility_link != workstation_rclone_gdrive_mount_point
+    - workstation_rclone_gdrive_legacy_path is not skipped
+    - not (workstation_rclone_gdrive_legacy_path.stat.islnk | default(false))
 
 - name: Probe whether the rclone remote is already configured
   ansible.builtin.command:
