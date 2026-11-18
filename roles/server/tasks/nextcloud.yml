@@ -72,6 +72,24 @@
     state: present
   loop: "{{ nextcloud_external_mounts | default([]) }}"
 
+# An excluded path can legitimately disappear when an optional external-storage
+# directory has been removed. ACL removal is then already satisfied; failing the
+# entire pull blocks unrelated services and leaves the last role (Caddy) stale.
+- name: Check which protected external paths currently exist
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ nextcloud_external_mount_acl_excludes | default([]) }}"
+  register: nextcloud_external_mount_acl_exclude_stats
+  changed_when: false
+
+- name: Keep only existing protected external paths for ACL cleanup
+  ansible.builtin.set_fact:
+    nextcloud_existing_external_mount_acl_excludes: >-
+      {{ nextcloud_external_mount_acl_exclude_stats.results
+         | selectattr('stat.exists')
+         | map(attribute='item')
+         | list }}
+
 - name: Remove Nextcloud ACL access from protected external paths
   ansible.posix.acl:
     path: "{{ item }}"
@@ -79,7 +97,7 @@
     etype: user
     state: absent
     recursive: true
-  loop: "{{ nextcloud_external_mount_acl_excludes | default([]) }}"
+  loop: "{{ nextcloud_existing_external_mount_acl_excludes }}"
 
 - name: Remove inherited Nextcloud ACL access from protected external paths
   ansible.posix.acl:
@@ -89,7 +107,7 @@
     state: absent
     default: true
     recursive: true
-  loop: "{{ nextcloud_external_mount_acl_excludes | default([]) }}"
+  loop: "{{ nextcloud_existing_external_mount_acl_excludes }}"
 
 - name: Restrict protected external paths at their entry point
   ansible.builtin.file:
@@ -97,7 +115,7 @@
     owner: root
     group: root
     mode: "0700"
-  loop: "{{ nextcloud_external_mount_acl_excludes | default([]) }}"
+  loop: "{{ nextcloud_existing_external_mount_acl_excludes }}"
 
 - name: Build Nextcloud external storage bind mounts
   ansible.builtin.set_fact:
