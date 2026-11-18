@@ -15,8 +15,11 @@
     # The official image runs as uid/gid 2000 and persists uploads, completed
     # documents, and local app state below /data/docuseal.
     - {path: "{{ docuseal_data_dir }}", owner: "2000", group: "2000", mode: "0750"}
-    - {path: "{{ docuseal_db_data_dir }}", mode: "0700"}
+    # postgres:18-alpine runs its server as uid/gid 70. The parent must be
+    # traversable by that user as well as the cluster contents it creates.
+    - {path: "{{ docuseal_db_data_dir }}", owner: "70", group: "70", mode: "0700"}
     - {path: "{{ docuseal_secret_dir }}", mode: "0700"}
+  register: docuseal_directories
 
 - name: Generate persistent DocuSeal database password
   ansible.builtin.shell: |
@@ -51,6 +54,7 @@
     image: "{{ docuseal_db_image }}"
     state: started
     recreate: "{{ docuseal_db_image_pull.changed }}"
+    restart: "{{ docuseal_directories.changed }}"
     restart_policy: unless-stopped
     networks:
       - name: "{{ docuseal_network_name }}"
@@ -102,6 +106,7 @@
     state: started
     init: true
     recreate: "{{ docuseal_image_pull.changed }}"
+    restart: "{{ docuseal_directories.changed }}"
     restart_policy: unless-stopped
     networks:
       - name: "{{ docuseal_network_name }}"
