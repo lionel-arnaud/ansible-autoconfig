@@ -253,6 +253,32 @@ alias t='tuios start-agent opencode'
 # desktop notification only after the Type=oneshot pull service succeeds.
 alias apull='sudo systemctl start autoconfig-pull.service && notify-send -a "Ansible" -u normal "Ansible pull complete" "Configuration applied successfully."'
 
+c-later() {
+  local when="${1:-90 minutes}"
+  local prompt="${2:-Continue the previous task now.}"
+  local sid="${3:-$OC_SESSION}"
+
+  if [ -z "$sid" ]; then
+    cat >&2 <<'EOF'
+usage: oc-later [duration] [prompt] [session_id]
+       (or export OC_SESSION=ses_...)
+
+No session id given. To find one:
+  opencode session list        # lists sessions with their ses_... ids
+  opencode session --help      # other session subcommands
+
+Then either:
+  export OC_SESSION=ses_xxxxxxxx
+  oc-later "2 hours" "Resume work" ses_xxxxxxxx
+EOF
+    return 1
+  fi
+
+  opencode api post /api/experimental/schedule --data "$(jq -nc \
+    --arg s "$sid" --arg p "$prompt" --arg w "$when" \
+    '{sessionID: $s, name: "Retry later", when: {type: "in", in: $w}, prompt: $p}')"
+}
+
 export TLDR_OPTIONS="${TLDR_OPTIONS:-both}"
 
 # Per-machine overrides last, so they win over everything above.
