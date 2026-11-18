@@ -14,6 +14,15 @@
 #
 # Create the mount point before deploying the user service.  That also supports
 # external paths such as /mnt, whose parent is not writable by the desktop user.
+- name: Check whether the rclone Google Drive mount is already active
+  ansible.builtin.command:
+    argv: [mountpoint, -q, "{{ workstation_rclone_gdrive_mount_point }}"]
+  become: true
+  become_user: "{{ workstation_rclone_gdrive_user }}"
+  register: workstation_rclone_gdrive_mount_active
+  changed_when: false
+  failed_when: false
+
 - name: Create the rclone Google Drive mount point
   ansible.builtin.file:
     path: "{{ workstation_rclone_gdrive_mount_point }}"
@@ -21,6 +30,7 @@
     owner: "{{ workstation_rclone_gdrive_user }}"
     group: "{{ workstation_rclone_gdrive_user }}"
     mode: "0755"
+  when: workstation_rclone_gdrive_mount_active.rc != 0
 
 - name: Check whether the previous Drive path is still a mount
   ansible.builtin.command:
