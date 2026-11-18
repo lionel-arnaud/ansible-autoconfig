@@ -10,10 +10,11 @@
     "schedules": true
   },
   "policies": [
-    { "action": "tool.use", "resource": "shell:sudo *", "effect": "deny" },
     { "action": "tool.use", "resource": "shell:pkexec *", "effect": "deny" }
   ],
   "permissions": [
+    { "action": "shell", "resource": "sudo *", "effect": "deny" },
+    { "action": "shell", "resource": "sudo -n /usr/bin/systemctl start autoconfig-pull.service", "effect": "allow" },
     { "action": "read", "resource": "*", "effect": "allow" },
     { "action": "read", "resource": "*.env", "effect": "deny" },
     { "action": "read", "resource": "*.env.*", "effect": "deny" },
