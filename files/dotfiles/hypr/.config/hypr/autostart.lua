@@ -20,7 +20,8 @@ hl.on("hyprland.start", function()
 	-- (roles/workstation/tasks/rclone_gdrive.yml), not launched here. Running
 	-- both raced for the same mountpoint and crash-looped the systemd unit.
 	hl.exec_cmd(o.launch('bash "$HOME/serverannah_mount.sh"'))
-	hl.exec_cmd(o.launch('bash "$HOME/freebox.sh"'))
+	-- Freebox is likewise owned by freebox-mount.service. Starting its script
+	-- here would race systemd for the FUSE mountpoint.
 	-- Only the tray indicator is launched here. kdeconnectd is already started by
 	-- /etc/xdg/autostart/org.kde.kdeconnect.daemon.desktop (uwsm turns XDG
 	-- autostart entries into app-org.kde.kdeconnect.daemon@autostart.service).
