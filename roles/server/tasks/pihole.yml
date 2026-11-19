@@ -556,7 +556,10 @@
                         [default_group[0], *client_ids],
                     )
 
-                rules = [(3, ".*"), *((2, rule) for rule in allow)]
+                # Pi-hole uses type 2 for deny regexes and type 3 for allow
+                # regexes.  The catch-all deny is overridden only by the
+                # explicitly permitted child-profile domains.
+                rules = [(2, ".*"), *((3, rule) for rule in allow)]
                 rule_ids = []
                 for rule_type, domain in rules:
                     conn.execute(
