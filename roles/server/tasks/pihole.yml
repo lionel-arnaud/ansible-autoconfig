@@ -465,6 +465,14 @@
                     (name,),
                 ).fetchall(),
                 conn.execute(
+                    "SELECT c.ip FROM client_by_group cg "
+                    "JOIN client c ON c.id = cg.client_id "
+                    "JOIN 'group' g ON g.id = cg.group_id "
+                    "WHERE g.name = 'Default' AND c.ip IN ({}) ORDER BY c.ip"
+                    .format(",".join("?" for _ in clients) or "NULL"),
+                    clients,
+                ).fetchall(),
+                conn.execute(
                     "SELECT d.type, d.domain, d.enabled, d.comment, dg.group_id "
                     "FROM domainlist d LEFT JOIN domainlist_by_group dg "
                     "ON dg.domainlist_id = d.id WHERE d.comment = ? "
@@ -535,6 +543,18 @@
                     f"NOT IN ({placeholders})",
                     [group_id, *client_ids],
                 )
+                # Pi-hole assigns each new client to Default.  A client in both
+                # Default and this profile inherits Default's unrestricted
+                # policy, which defeats the profile's catch-all deny rule.
+                default_group = conn.execute(
+                    "SELECT id FROM 'group' WHERE name = 'Default'"
+                ).fetchone()
+                if default_group is not None:
+                    conn.execute(
+                        "DELETE FROM client_by_group WHERE group_id = ? AND client_id "
+                        f"IN ({placeholders})",
+                        [default_group[0], *client_ids],
+                    )
 
                 rules = [(3, ".*"), *((2, rule) for rule in allow)]
                 rule_ids = []
