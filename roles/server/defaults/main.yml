@@ -163,6 +163,65 @@ docuseal_db_data_dir: "{{ docuseal_root_dir }}/postgres"
 docuseal_secret_dir: /etc/ansible/secrets
 docuseal_db_password_file: "{{ docuseal_secret_dir }}/docuseal-db-password"
 docuseal_hostname: sign.dinnizer.com
+docuseal_account_name: Dinnizer
+# Text-only by design: custom HTML emails require a DocuSeal Pro license. The
+# variables are those exposed by DocuSeal's template editor for each email type.
+docuseal_email_templates:
+  submitter_invitation_email:
+    subject: "Action required — {{ '{{template.name}}' }} | Dinnizer"
+    body: |-
+      Hello,
+
+      Dinnizer has invited you to review and sign:
+
+      {{ '{{template.name}}' }}
+
+      Open the secure document:
+      {{ '{{submitter.link}}' }}
+
+      Please review the document carefully before signing. This personal link should not be forwarded.
+
+      Kind regards,
+
+      Lionel Arnaud
+      Dinnizer
+      www.dinnizer.com
+  submitter_completed_email:
+    subject: "Document completed — {{ '{{template.name}}' }} | Dinnizer"
+    body: |-
+      Hello,
+
+      The document "{{ '{{template.name}}' }}" has now been completed by:
+      {{ '{{submission.submitters}}' }}
+
+      View or download the completed document:
+      {{ '{{submission.link}}' }}
+
+      Please retain the completed document and its audit log for your records.
+
+      Kind regards,
+
+      Lionel Arnaud
+      Dinnizer
+      www.dinnizer.com
+  submitter_documents_copy_email:
+    subject: "Your copy — {{ '{{template.name}}' }} | Dinnizer"
+    body: |-
+      Hello,
+
+      Here is your copy of the completed document:
+      {{ '{{template.name}}' }}
+
+      Download your copy:
+      {{ '{{documents.link}}' }}
+
+      Please retain this document and its audit log for your records.
+
+      Kind regards,
+
+      Lionel Arnaud
+      Dinnizer
+      www.dinnizer.com
 
 server_game_timer_enabled: false
 # tabletop-timer.com is a plain static HTML/CSS/JS site (no build step). Its

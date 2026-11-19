@@ -117,3 +117,18 @@
       # Caddy terminates TLS; this prevents DocuSeal from generating HTTP links.
       FORCE_SSL: "{{ docuseal_hostname }}"
   no_log: true
+
+# Use DocuSeal's own Rails models rather than writing its encrypted/configuration
+# tables directly. Existing delivery preferences (attachments, BCC, reply-to)
+# are preserved; only the subject and plain-text body are managed.
+- name: Apply managed DocuSeal email templates
+  community.docker.docker_container_exec:
+    container: "{{ docuseal_container_name }}"
+    command: >-
+      sh -c "cd /app && /app/bin/bundle exec rails runner /dev/stdin"
+    stdin: "{{ lookup('ansible.builtin.file', role_path ~ '/files/docuseal-bootstrap-email-templates.rb') }}"
+    env:
+      DOCUSEAL_ACCOUNT_NAME: "{{ docuseal_account_name }}"
+      DOCUSEAL_EMAIL_TEMPLATES: "{{ docuseal_email_templates | to_json }}"
+  register: docuseal_email_templates_apply
+  changed_when: "'CHANGED:' in docuseal_email_templates_apply.stdout"
