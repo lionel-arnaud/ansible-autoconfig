@@ -25,7 +25,10 @@
     "session.first": "ctrl+g,ctrl+home",
     "session.last": "ctrl+alt+g,ctrl+end",
     "input.line.home": "home",
-    "input.line.end": "end"
+    "input.line.end": "end",
+    "model.cycle_recent": false,
+    "model.cycle_favorite": "f2",
+    "model.cycle_favorite_reverse": "shift+f2"
   },
   "plugins": [
     "*",
