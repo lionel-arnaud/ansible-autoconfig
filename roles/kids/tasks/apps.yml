@@ -18,6 +18,14 @@
     state: present
   when: kids_gamemode_enabled | default(true)
 
+- name: Disable Mission Espace automatic launch for child accounts
+  ansible.builtin.file:
+    path: "/home/{{ item.name }}/.config/autostart/mission-espace.desktop"
+    state: absent
+  loop: "{{ kids_managed_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
 # Steam's native package ships only as 32-bit, so i386 must be enabled before apt
 # can resolve it. Ubuntu uses the Flatpak delivery path instead (see defaults).
 - name: Check whether the i386 architecture is enabled for Steam
