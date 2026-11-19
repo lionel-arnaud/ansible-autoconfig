@@ -125,7 +125,7 @@
   community.docker.docker_container_exec:
     container: "{{ docuseal_container_name }}"
     command: >-
-      sh -c "cd /app && /app/bin/bundle exec rails runner /dev/stdin"
+      sh -c "cd /app && /app/bin/bundle exec rails runner -"
     stdin: "{{ lookup('ansible.builtin.file', role_path ~ '/files/docuseal-bootstrap-email-templates.rb') }}"
     env:
       DOCUSEAL_ACCOUNT_NAME: "{{ docuseal_account_name }}"
