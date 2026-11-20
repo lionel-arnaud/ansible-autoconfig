@@ -33,7 +33,7 @@ cameras:
         loitering_time: 0
 
 record:
-  enabled: true
+  enabled: {{ frigate_record_enabled | bool | lower }}
   alerts:
     retain:
       days: {{ frigate_alerts_retain_days }}

@@ -7,6 +7,12 @@
     - server
     - server_docker
 
+- name: Configure bounded system journal retention
+  ansible.builtin.import_tasks: journald.yml
+  tags:
+    - server
+    - logging
+
 - name: Configure LAN access to workstations
   ansible.builtin.import_tasks: workstation_access.yml
   when: server_workstation_ssh_enabled | default(false)

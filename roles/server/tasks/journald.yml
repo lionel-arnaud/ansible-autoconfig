@@ -1,0 +1,16 @@
+---
+# Use journald's documented quota and retention settings. This is intentionally
+# a server-wide limit: a USB reset storm or another noisy service must not be
+# able to exhaust the root filesystem before log rotation can intervene.
+- name: Configure bounded persistent system journal storage
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/50-autoconfig-retention.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Journal]
+      SystemMaxUse={{ server_journald_system_max_use }}
+      SystemKeepFree={{ server_journald_system_keep_free }}
+      MaxRetentionSec={{ server_journald_max_retention_sec }}
+  notify: Restart systemd-journald

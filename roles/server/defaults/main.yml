@@ -526,6 +526,7 @@ frigate_motion_contour_area: 150
 frigate_motion_improve_contrast: true
 frigate_zone_name: dining_room
 frigate_zone_coordinates: 0.31,0.237,0.309,0.831,0.663,0.821,0.615,0.19
+frigate_record_enabled: true
 frigate_record_retain_days: 1
 # Split out by Frigate 0.17; both inherit the old single retention by default.
 frigate_record_continuous_days: "{{ frigate_record_retain_days }}"
@@ -534,6 +535,13 @@ frigate_record_motion_days: "{{ frigate_record_retain_days }}"
 frigate_alerts_retain_days: 2
 frigate_detections_retain_days: 2
 frigate_snapshots_retain_days: 1
+
+# Bound persistent systemd journal storage so a noisy kernel device or service
+# cannot consume the root filesystem. Application-specific logs are managed by
+# their own services and Docker's json-file caps above.
+server_journald_system_max_use: 500M
+server_journald_system_keep_free: 5G
+server_journald_max_retention_sec: 14day
 
 # Keep storage simple: the repo ships the target host's /etc/fstab, and the
 # server role copies it into place instead of rebuilding mount lines from vars.
