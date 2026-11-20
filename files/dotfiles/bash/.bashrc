@@ -254,13 +254,14 @@ alias t='tuios start-agent opencode'
 alias apull='sudo systemctl start autoconfig-pull.service && notify-send -a "Ansible" -u normal "Ansible pull complete" "Configuration applied successfully."'
 
 c-later() {
-  local when="${1:-90 minutes}"
+  local duration="${1:-90 minutes}"
   local prompt="${2:-Continue the previous task now.}"
   local sid="${3:-$OC_SESSION}"
+  local when
 
   if [ -z "$sid" ]; then
     cat >&2 <<'EOF'
-usage: oc-later [duration] [prompt] [session_id]
+usage: c-later [duration] [prompt] [session_id]
        (or export OC_SESSION=ses_...)
 
 No session id given. To find one:
@@ -269,14 +270,26 @@ No session id given. To find one:
 
 Then either:
   export OC_SESSION=ses_xxxxxxxx
-  oc-later "2 hours" "Resume work" ses_xxxxxxxx
+  c-later "2 hours" "Resume work" ses_xxxxxxxx
 EOF
     return 1
   fi
 
-  opencode api post /api/experimental/schedule --data "$(jq -nc \
+  # OpenCode receives the prompt unchanged and delivers it to the target
+  # session at the requested time. This function is deliberately not an AI
+  # command: jq only constructs the documented automation API payload.
+  case "$duration" in
+    in\ *) when="$duration" ;;
+    * )    when="in $duration" ;;
+  esac
+
+  opencode api post /api/experimental/automation --data "$(jq -nc \
     --arg s "$sid" --arg p "$prompt" --arg w "$when" \
-    '{sessionID: $s, name: "Retry later", when: {type: "in", in: $w}, prompt: $p}')"
+    '{
+      name: "Retry later",
+      trigger: {type: "at", at: $w},
+      action: {type: "prompt", prompt: $p, to: {session: $s}}
+    }')"
 }
 
 export TLDR_OPTIONS="${TLDR_OPTIONS:-both}"
