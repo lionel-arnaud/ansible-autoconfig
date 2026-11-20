@@ -3,6 +3,7 @@
 
 import json
 from pathlib import Path
+import subprocess
 import sys
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -33,6 +34,50 @@ def bootstrap(base_url, password_file, websites_file):
     def login(value):
         return api("/api/auth/login", {"username": "admin", "password": value})["token"]
 
+    def reset_admin_password(value):
+        """Reset a managed admin password when its prior value is unavailable.
+
+        Umami's API correctly requires the old password.  The Ansible-managed
+        secret can be rotated independently, though, so use the co-located
+        trusted containers to recover that one managed account.  The plaintext
+        is passed on stdin only; neither it nor the generated bcrypt hash is
+        printed or written to disk.
+        """
+        bcrypt_program = """
+const bcrypt = require("bcryptjs");
+let password = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { password += chunk; });
+process.stdin.on("end", () => {
+  process.stdout.write(bcrypt.hashSync(password, 10));
+});
+"""
+        password_hash = subprocess.run(
+            ["docker", "exec", "-i", "umami", "node", "-e", bcrypt_program],
+            input=value,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout
+        updated = subprocess.run(
+            [
+                "docker", "exec", "-i", "umami-db",
+                "psql", "-v", "ON_ERROR_STOP=1",
+                "-U", "umami", "-d", "umami",
+                "-v", f"password_hash={password_hash}",
+                "-tAc",
+                """UPDATE "user"
+                   SET password = :'password_hash', updated_at = NOW()
+                   WHERE username = 'admin'
+                   RETURNING 1""",
+            ],
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+        if updated != "1":
+            raise RuntimeError("Expected to reset exactly one Umami admin account")
+
     changed = False
     try:
         token = login(password)
@@ -40,8 +85,14 @@ def bootstrap(base_url, password_file, websites_file):
         if error.code != 401:
             raise
         # Only a fresh installation accepts the upstream default password.
-        token = login("umami")
-        api("/api/me/password", {"currentPassword": "umami", "newPassword": password})
+        try:
+            token = login("umami")
+        except HTTPError as default_error:
+            if default_error.code != 401:
+                raise
+            reset_admin_password(password)
+        else:
+            api("/api/me/password", {"currentPassword": "umami", "newPassword": password})
         token = login(password)
         changed = True
 
