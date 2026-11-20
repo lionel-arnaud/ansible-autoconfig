@@ -53,7 +53,10 @@ process.stdin.on("end", () => {
 });
 """
         password_hash = subprocess.run(
-            ["docker", "exec", "-i", "umami", "node", "-e", bcrypt_program],
+            [
+                "docker", "exec", "-i", "-w", "/app",
+                "umami", "node", "-e", bcrypt_program,
+            ],
             input=value,
             text=True,
             capture_output=True,
