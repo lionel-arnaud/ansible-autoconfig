@@ -2,6 +2,14 @@
 # Use journald's documented quota and retention settings. This is intentionally
 # a server-wide limit: a USB reset storm or another noisy service must not be
 # able to exhaust the root filesystem before log rotation can intervene.
+- name: Ensure the system journal drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Configure bounded persistent system journal storage
   ansible.builtin.copy:
     dest: /etc/systemd/journald.conf.d/50-autoconfig-retention.conf
