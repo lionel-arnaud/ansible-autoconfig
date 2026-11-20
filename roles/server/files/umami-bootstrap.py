@@ -3,6 +3,7 @@
 
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 from urllib.error import HTTPError
@@ -48,24 +49,24 @@ def bootstrap(base_url, password_file, websites_file):
         password_hash = bcrypt.hashpw(
             value.encode(), bcrypt.gensalt()
         ).decode()
+        if not re.fullmatch(r"\$2[aby]\$\d\d\$[./A-Za-z0-9]{53}", password_hash):
+            raise RuntimeError("Generated an invalid bcrypt password hash")
         updated = subprocess.run(
             [
                 "docker", "exec", "-i", "umami-db",
                 "psql", "-v", "ON_ERROR_STOP=1",
                 "-U", "umami", "-d", "umami",
-                "-v", f"password_hash={password_hash}",
                 "-tAc",
                 """UPDATE "user"
-                   SET password = :'password_hash', updated_at = NOW()
+                   SET password = '%s', updated_at = NOW()
                    WHERE username = 'admin'
-                   RETURNING 1""",
+                   RETURNING 1""" % password_hash,
             ],
             text=True,
             capture_output=True,
-            check=True,
-        ).stdout.strip()
-        if updated != "1":
-            raise RuntimeError("Expected to reset exactly one Umami admin account")
+        )
+        if updated.returncode != 0 or updated.stdout.strip() != "1":
+            raise RuntimeError("Unable to reset the managed Umami admin account")
 
     changed = False
     try:
