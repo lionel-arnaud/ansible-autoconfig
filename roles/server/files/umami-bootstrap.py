@@ -9,6 +9,8 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from uuid import UUID, uuid5
 
+import bcrypt
+
 # Ansible's to_uuid default namespace; stable IDs survive a database rebuild.
 NAMESPACE = UUID("361e6d51-faec-444a-9079-341386da8e2e")
 
@@ -43,25 +45,9 @@ def bootstrap(base_url, password_file, websites_file):
         is passed on stdin only; neither it nor the generated bcrypt hash is
         printed or written to disk.
         """
-        bcrypt_program = """
-const bcrypt = require("bcryptjs");
-let password = "";
-process.stdin.setEncoding("utf8");
-process.stdin.on("data", (chunk) => { password += chunk; });
-process.stdin.on("end", () => {
-  process.stdout.write(bcrypt.hashSync(password, 10));
-});
-"""
-        password_hash = subprocess.run(
-            [
-                "docker", "exec", "-i", "-w", "/app",
-                "umami", "node", "-e", bcrypt_program,
-            ],
-            input=value,
-            text=True,
-            capture_output=True,
-            check=True,
-        ).stdout
+        password_hash = bcrypt.hashpw(
+            value.encode(), bcrypt.gensalt()
+        ).decode()
         updated = subprocess.run(
             [
                 "docker", "exec", "-i", "umami-db",
