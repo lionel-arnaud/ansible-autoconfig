@@ -44,6 +44,11 @@
   when: kids_timekpr_enabled | default(true)
   tags: [kids, kids_timekpr]
 
+- name: Remove legacy timekpr-next parental controls
+  ansible.builtin.import_tasks: timekpr_remove.yml
+  when: not (kids_timekpr_enabled | default(true))
+  tags: [kids, kids_timekpr]
+
 - name: Set up ScreenGuard trial agent
   ansible.builtin.import_tasks: screenguard.yml
   when: kids_screenguard_enabled | default(false)

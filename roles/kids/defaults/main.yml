@@ -48,9 +48,10 @@ kids_managed_users:
 kids_admin_user: daddy
 kids_admin_extra_groups: [parent, gamers]
 
-# --- Parental control (timekpr-next) ------------------------------------------
-# timekpr-next is not in the Mint base repos; it ships from the upstream PPA.
-kids_timekpr_enabled: true
+# --- Legacy parental control cleanup (timekpr-next) ---------------------------
+# ScreenGuard is the sole time-limit authority.  Keep these values only so the
+# role can fully remove the legacy package and its upstream PPA.
+kids_timekpr_enabled: false
 kids_timekpr_packages: [timekpr-next]
 kids_timekpr_ppa: ppa:mjasnik/ppa
 # The PPA publishes Ubuntu releases. Mint 22.x derives from Noble despite its

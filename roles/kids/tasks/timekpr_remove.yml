@@ -1,0 +1,28 @@
+---
+- name: Stop and disable the legacy Timekpr service
+  ansible.builtin.systemd_service:
+    name: "{{ kids_timekpr_service }}"
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: Purge the legacy Timekpr package
+  ansible.builtin.apt:
+    name: "{{ kids_timekpr_packages }}"
+    state: absent
+    purge: true
+    autoremove: true
+
+- name: Remove the legacy Timekpr PPA
+  ansible.builtin.apt_repository:
+    repo: "{{ kids_timekpr_ppa }}"
+    codename: "{{ kids_timekpr_ppa_codename }}"
+    state: absent
+
+- name: Remove legacy Timekpr state and policy files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/timekpr
+    - /var/lib/timekpr

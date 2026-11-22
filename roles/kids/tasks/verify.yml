@@ -4,7 +4,7 @@
     argv:
       - systemctl
       - is-active
-      - "{{ kids_timekpr_service }}"
+      - screenguard-agent.service
       - autoconfig-pull.timer
       - kidsbook-backup.timer
   register: kids_verify_services
