@@ -797,6 +797,10 @@ pihole_kids_profile_allow_regex:
   - '(^|\.)steampowered\.com$'
   - '(^|\.)steamstatic\.com$'
   - '(^|\.)steamcontent\.com$'
+  # Steam's connection-manager and connectivity-test hosts are required for
+  # online mode and first-launch licence checks. Steam Community remains blocked.
+  - '(^|\.)steamserver\.net$'
+  - '(^|\.)steamconnecttest\.com$'
   - '(^|\.)akamaihd\.net$'
   - '^steamcloud[^.]*\.blob\.core\.windows\.net$'
   - '^steamcloud[^.]*\.s3\.dualstack\.[a-z0-9-]+\.amazonaws\.com$'
