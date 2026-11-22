@@ -123,3 +123,31 @@
        ([kids_steam_flatpak_app] if kids_steam_enabled | default(true)
        and kids_steam_install_method == 'flatpak' else []) }}
   when: kids_flatpak_enabled | default(true)
+
+# The Flatpak module's `present` state installs missing applications but does not
+# refresh applications or their runtimes.  Check first so scheduled pulls avoid
+# launching a no-op update process, then update every system-installed Flatpak
+# app/runtime non-interactively when Flathub publishes an update.
+- name: Check for available system Flatpak updates
+  ansible.builtin.command:
+    argv:
+      - flatpak
+      - --system
+      - remote-ls
+      - --updates
+      - --columns=ref
+  register: kids_flatpak_updates_available
+  changed_when: false
+  when: kids_flatpak_enabled | default(true)
+
+- name: Update available system Flatpak applications and runtimes
+  ansible.builtin.command:
+    argv:
+      - flatpak
+      - update
+      - --system
+      - --noninteractive
+      - --assumeyes
+  when:
+    - kids_flatpak_enabled | default(true)
+    - kids_flatpak_updates_available.stdout | trim | length > 0
