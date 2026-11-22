@@ -777,9 +777,10 @@ pihole_kids_profile_allow_regex:
   - '(^|\.)vikidia\.org$'
   - '(^|\.)lumni\.fr$'
   - '(^|\.)1jour1actu\.com$'
-  # Sonic Origins' observed Denuvo/Codefusion licence verification servers.
-  # Keep this limited to the three hosts requested by the game.
+  # Sonic Origins' observed Denuvo/Codefusion licence verification hosts.
+  # Keep this limited to the three licence servers and its support site.
   - '^srv0[1-3]\.codefusion\.technology$'
+  - '^support\.codefusion\.technology$'
   # Mint, Ubuntu, the Timekpr PPA, and signed package metadata.
   - '(^|\.)linuxmint\.com$'
   - '(^|\.)ubuntu\.com$'
