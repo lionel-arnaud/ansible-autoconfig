@@ -1,0 +1,36 @@
+---
+# Flatpak applications may be installed by a host-specific role or directly by
+# an administrator.  Update only the system installation here: user-scoped
+# Flatpaks remain owned and updated by their respective user.
+- name: Check whether Flatpak is installed
+  ansible.builtin.command:
+    argv:
+      - flatpak
+      - --version
+  register: base_flatpak_version
+  changed_when: false
+  failed_when: false
+
+- name: Check for available system Flatpak updates
+  ansible.builtin.command:
+    argv:
+      - flatpak
+      - --system
+      - remote-ls
+      - --updates
+      - --columns=ref
+  register: base_flatpak_updates_available
+  changed_when: false
+  when: base_flatpak_version.rc == 0
+
+- name: Update available system Flatpak applications and runtimes
+  ansible.builtin.command:
+    argv:
+      - flatpak
+      - update
+      - --system
+      - --noninteractive
+      - --assumeyes
+  when:
+    - base_flatpak_version.rc == 0
+    - base_flatpak_updates_available.stdout | trim | length > 0

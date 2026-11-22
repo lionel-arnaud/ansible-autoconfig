@@ -4,6 +4,14 @@
 # autopull always runs — every host must be self-managing via ansible-pull.
 - name: Install the common package set
   ansible.builtin.import_tasks: common_packages.yml
+
+- name: Update installed system Flatpaks
+  ansible.builtin.import_tasks: flatpak.yml
+  when: base_flatpak_system_updates_enabled | bool
+  tags:
+    - base
+    - flatpak
+
 - name: Install lazydocker
   ansible.builtin.import_tasks: lazydocker.yml
   when: base_lazydocker_enabled | default(false)

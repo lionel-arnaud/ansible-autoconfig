@@ -1,4 +1,9 @@
 ---
+# Keep system-wide Flatpak apps and their runtimes current on every managed host
+# that has Flatpak installed. User-scoped installations are deliberately left
+# to their owning user.
+base_flatpak_system_updates_enabled: true
+
 # Keep common package names in one map so the base role stays portable across
 # Debian-family and Arch-family hosts without splitting the whole role.
 base_packages_by_family:
