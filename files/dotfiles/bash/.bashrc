@@ -113,9 +113,9 @@ ocgrep() {
   python3 - "$1" "$db" <<'PY' | jq -r --argjson color "$use_color" '
     if .type == "match" then
       if $color then
-        "\u001b[1;36m\(.session_id)\u001b[0m  \u001b[1m\(.title)\u001b[0m\n\u001b[2m\(.excerpt)\u001b[0m"
+        "\u001b[1;36m\(.session_id)\u001b[0m  \u001b[1m\(.title)\u001b[0m\n\u001b[2mGenerated \(.timestamp)\u001b[0m\n\u001b[2m\(.excerpt)\u001b[0m"
       else
-        "\(.session_id) — \(.title)\n\(.excerpt)"
+        "\(.session_id) — \(.title)\nGenerated \(.timestamp)\n\(.excerpt)"
       end
     else
       "No OpenCode transcript text matched: \(.needle|@json)"
@@ -124,28 +124,29 @@ ocgrep() {
 import json
 import sqlite3
 import sys
+from datetime import datetime
 
 needle, database = sys.argv[1], sys.argv[2]
 
 query = """
-SELECT session_id, title, text FROM (
-  SELECT p.session_id, s2.title, json_extract(p.data, '$.text') AS text
+SELECT session_id, title, text, time_created FROM (
+  SELECT p.session_id, s2.title, json_extract(p.data, '$.text') AS text, p.time_created
   FROM session_part AS p
   JOIN session_v2 AS s2 ON s2.id = p.session_id
   UNION ALL
-  SELECT p.session_id, s.title, json_extract(p.data, '$.text') AS text
+  SELECT p.session_id, s.title, json_extract(p.data, '$.text') AS text, p.time_created
   FROM part AS p
   JOIN session AS s ON s.id = p.session_id
 )
 WHERE lower(text) LIKE '%' || lower(?) || '%'
-ORDER BY session_id
+ORDER BY time_created DESC
 """
 
 try:
     connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
     matches = connection.execute(query, (needle,))
     found = False
-    for session_id, title, text in matches:
+    for session_id, title, text, time_created in matches:
         if not text:
             continue
         found = True
@@ -153,10 +154,12 @@ try:
         position = excerpt.lower().find(needle.lower())
         start = max(0, position - 120)
         end = position + len(needle) + 240
+        timestamp = datetime.fromtimestamp(time_created / 1000).astimezone().isoformat(timespec="seconds")
         print(json.dumps({
             "type": "match",
             "session_id": session_id,
             "title": title or "(untitled session)",
+            "timestamp": timestamp,
             "excerpt": excerpt[start:end],
         }))
     if not found:
