@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""Apply Hyprsunset's night-light mode using local astronomical sun times."""
+
+from __future__ import annotations
+
+import math
+import subprocess
+import sys
+from datetime import date, datetime, time, timedelta, timezone
+
+LATITUDE = {{ workstation_astronomical_nightlight_latitude | float }}
+LONGITUDE = {{ workstation_astronomical_nightlight_longitude | float }}
+NIGHT_TEMPERATURE = {{ workstation_astronomical_nightlight_temperature | int }}
+ZENITH = 90.833  # Official sunrise/sunset, including atmospheric refraction.
+
+
+def solar_event(day: date, sunrise: bool) -> datetime:
+    """Return the local astronomical sunrise or sunset for ``day``.
+
+    This is the NOAA sunrise equation. It uses the local system time zone, so
+    daylight-saving changes are handled by Python's zoneinfo support.
+    """
+    day_of_year = day.timetuple().tm_yday
+    longitude_hour = LONGITUDE / 15
+    approximate_time = day_of_year + ((6 if sunrise else 18) - longitude_hour) / 24
+    mean_anomaly = (0.9856 * approximate_time) - 3.289
+    true_longitude = (
+        mean_anomaly
+        + (1.916 * math.sin(math.radians(mean_anomaly)))
+        + (0.020 * math.sin(math.radians(2 * mean_anomaly)))
+        + 282.634
+    ) % 360
+    right_ascension = math.degrees(
+        math.atan(0.91764 * math.tan(math.radians(true_longitude)))
+    ) % 360
+    right_ascension += (
+        math.floor(true_longitude / 90) * 90
+        - math.floor(right_ascension / 90) * 90
+    )
+    right_ascension /= 15
+    sin_declination = 0.39782 * math.sin(math.radians(true_longitude))
+    cos_declination = math.cos(math.asin(sin_declination))
+    cosine_hour_angle = (
+        math.cos(math.radians(ZENITH))
+        - (sin_declination * math.sin(math.radians(LATITUDE)))
+    ) / (cos_declination * math.cos(math.radians(LATITUDE)))
+    if not -1 <= cosine_hour_angle <= 1:
+        raise ValueError("Sunrise/sunset is undefined at this location today")
+    hour_angle = math.degrees(math.acos(cosine_hour_angle))
+    if sunrise:
+        hour_angle = 360 - hour_angle
+    local_mean_time = (hour_angle / 15) + right_ascension - (0.06571 * approximate_time) - 6.622
+    universal_time = (local_mean_time - longitude_hour) % 24
+    event_utc = datetime.combine(day, time(), timezone.utc) + timedelta(hours=universal_time)
+    return event_utc.astimezone()
+
+
+def main() -> int:
+    now = datetime.now().astimezone()
+    try:
+        sunrise = solar_event(now.date(), sunrise=True)
+        sunset = solar_event(now.date(), sunrise=False)
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        return 0
+
+    command = ["hyprctl", "hyprsunset"]
+    if sunrise <= now < sunset:
+        command.append("identity")
+    else:
+        command.extend(("temperature", str(NIGHT_TEMPERATURE)))
+
+    # A user timer may fire before Hyprland has started or after it exited.
+    # That is normal; the next timer run will apply the current state.
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    if result.returncode:
+        print(result.stderr.strip(), file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

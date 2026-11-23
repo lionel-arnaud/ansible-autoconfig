@@ -1,0 +1,8 @@
+[Unit]
+Description=Apply astronomical Hyprsunset night-light state
+After=graphical-session.target hyprsunset.service
+Wants=hyprsunset.service
+
+[Service]
+Type=oneshot
+ExecStart={{ workstation_home }}/.local/lib/autoconfig/astronomical-nightlight.py

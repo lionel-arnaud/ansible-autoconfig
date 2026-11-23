@@ -1,0 +1,67 @@
+---
+- name: Validate astronomical night-light coordinates
+  ansible.builtin.assert:
+    that:
+      - workstation_astronomical_nightlight_latitude | float >= -90
+      - workstation_astronomical_nightlight_latitude | float <= 90
+      - workstation_astronomical_nightlight_longitude | float >= -180
+      - workstation_astronomical_nightlight_longitude | float <= 180
+      - workstation_astronomical_nightlight_temperature | int >= 1000
+      - workstation_astronomical_nightlight_temperature | int <= 10000
+    fail_msg: >-
+      Astronomical night light requires valid latitude/longitude coordinates
+      and a color temperature between 1000 K and 10000 K.
+
+- name: Create the astronomical night-light script directory
+  ansible.builtin.file:
+    path: "{{ workstation_home }}/.local/lib/autoconfig"
+    state: directory
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0755"
+
+- name: Deploy the astronomical night-light controller
+  ansible.builtin.template:
+    src: astronomical-nightlight.py.j2
+    dest: "{{ workstation_home }}/.local/lib/autoconfig/astronomical-nightlight.py"
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0755"
+
+- name: Deploy astronomical night-light user units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ workstation_home }}/.config/systemd/user/{{ item }}"
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0644"
+  loop:
+    - autoconfig-astronomical-nightlight.service
+    - autoconfig-astronomical-nightlight.timer
+
+- name: Enable Hyprsunset and astronomical night-light timer
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
+  loop:
+    - hyprsunset.service
+    - autoconfig-astronomical-nightlight.timer
+
+- name: Apply the current astronomical night-light state
+  ansible.builtin.systemd:
+    name: autoconfig-astronomical-nightlight.service
+    state: started
+    scope: user
+  become: true
+  become_user: "{{ workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"

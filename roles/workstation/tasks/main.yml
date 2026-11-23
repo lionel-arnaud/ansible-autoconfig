@@ -63,6 +63,12 @@
       tags:
         - workstation_localsearch
 
+    - name: Configure astronomical night light
+      ansible.builtin.import_tasks: astronomical_nightlight.yml
+      when: workstation_astronomical_nightlight_enabled | bool
+      tags:
+        - workstation_nightlight
+
     - name: Enable workstation user services
       ansible.builtin.import_tasks: systemd_user.yml
       when: workstation_systemd_user_services | default([]) | length > 0

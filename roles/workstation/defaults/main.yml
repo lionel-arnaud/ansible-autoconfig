@@ -93,6 +93,14 @@ workstation_espanso_aur_package: espanso-wayland
 # host_vars to select which services are active on a given workstation.
 workstation_systemd_user_services: []
 
+# Use the daily astronomical sunrise and sunset for Hyprsunset rather than a
+# fixed wall-clock schedule. It is off by default because exact solar times
+# require an explicit location.
+workstation_astronomical_nightlight_enabled: false
+workstation_astronomical_nightlight_latitude: 0.0
+workstation_astronomical_nightlight_longitude: 0.0
+workstation_astronomical_nightlight_temperature: 4000
+
 # rclone Google Drive mount, the workstation twin of server_rclone_gdrive_*.
 # Deploying the unit is safe on its own: it only starts once the remote has been
 # authorised interactively with `rclone config`, and StartLimitBurst stops an
