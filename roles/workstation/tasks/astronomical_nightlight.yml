@@ -39,9 +39,22 @@
     - autoconfig-astronomical-nightlight.service
     - autoconfig-astronomical-nightlight.timer
 
-- name: Enable Hyprsunset and astronomical night-light timer
+- name: Keep Hyprsunset managed by Omarchy's UWSM launcher
   ansible.builtin.systemd:
-    name: "{{ item }}"
+    name: hyprsunset.service
+    enabled: false
+    state: stopped
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
+
+- name: Enable astronomical night-light timer
+  ansible.builtin.systemd:
+    name: autoconfig-astronomical-nightlight.timer
     enabled: true
     state: started
     daemon_reload: true
@@ -51,9 +64,6 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
     DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
-  loop:
-    - hyprsunset.service
-    - autoconfig-astronomical-nightlight.timer
 
 - name: Apply the current astronomical night-light state
   ansible.builtin.systemd:

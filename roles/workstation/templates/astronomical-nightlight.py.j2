@@ -6,6 +6,7 @@ from __future__ import annotations
 import math
 import subprocess
 import sys
+import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 
 LATITUDE = {{ workstation_astronomical_nightlight_latitude | float }}
@@ -70,11 +71,23 @@ def main() -> int:
     else:
         command.extend(("temperature", str(NIGHT_TEMPERATURE)))
 
-    # A user timer may fire before Hyprland has started or after it exited.
-    # That is normal; the next timer run will apply the current state.
-    result = subprocess.run(command, capture_output=True, text=True, check=False)
-    if result.returncode:
-        print(result.stderr.strip(), file=sys.stderr)
+    if subprocess.run(command, capture_output=True, check=False).returncode == 0:
+        return 0
+
+    # Omarchy launches Hyprsunset through UWSM rather than its upstream
+    # systemd unit. A timer can fire before the graphical session has launched
+    # it, so start one UWSM-managed instance and give its IPC socket time to
+    # become available. If no session exists, succeed quietly and retry later.
+    subprocess.Popen(
+        ["uwsm-app", "--", "hyprsunset"],
+        start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    for _ in range(10):
+        time_module.sleep(0.2)
+        if subprocess.run(command, capture_output=True, check=False).returncode == 0:
+            break
     return 0
 
 
