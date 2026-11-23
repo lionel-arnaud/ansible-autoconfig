@@ -88,8 +88,10 @@ ftext() {
 # the legacy tables, prints the matching session ID plus surrounding text, and
 # lets you resume a match with: opencode --session <session-id>
 #
-# This depends on OpenCode's internal storage schema and may need updating if a
-# future OpenCode release migrates it. It never writes to the database.
+# This searches every observed OpenCode transcript storage layout (legacy
+# `part`, current `session_part`, and transitional `session_message`). The
+# database schema is internal and can change in a future OpenCode release. It
+# never writes to the database.
 ocgrep() {
   if (($# != 1)) || [[ -z $1 ]]; then
     printf 'Usage: ocgrep <text>\n' >&2
@@ -113,9 +115,9 @@ ocgrep() {
   python3 - "$1" "$db" <<'PY' | jq -r --argjson color "$use_color" '
     if .type == "match" then
       if $color then
-        "\u001b[1;36m\(.session_id)\u001b[0m  \u001b[1m\(.title)\u001b[0m\n\u001b[2mGenerated \(.timestamp)\u001b[0m\n\u001b[2m\(.excerpt)\u001b[0m"
+        "\u001b[1;36m\(.session_id)\u001b[0m  \u001b[1m\(.title)\u001b[0m\n\u001b[2m\(.role) · \(.timestamp)\u001b[0m\n\u001b[2m\(.excerpt)\u001b[0m"
       else
-        "\(.session_id) — \(.title)\nGenerated \(.timestamp)\n\(.excerpt)"
+        "\(.session_id) — \(.title)\n\(.role) · \(.timestamp)\n\(.excerpt)"
       end
     else
       "No OpenCode transcript text matched: \(.needle|@json)"
@@ -129,15 +131,39 @@ from datetime import datetime
 needle, database = sys.argv[1], sys.argv[2]
 
 query = """
-SELECT session_id, title, text, time_created FROM (
-  SELECT p.session_id, s2.title, json_extract(p.data, '$.text') AS text, p.time_created
+WITH transcript AS (
+  SELECT p.session_id, s2.title, json_extract(p.data, '$.text') AS text,
+         p.time_created, p.type AS role
   FROM session_part AS p
   JOIN session_v2 AS s2 ON s2.id = p.session_id
   UNION ALL
-  SELECT p.session_id, s.title, json_extract(p.data, '$.text') AS text, p.time_created
+  SELECT p.session_id, s.title, json_extract(p.data, '$.text') AS text,
+         p.time_created, json_extract(p.data, '$.type') AS role
   FROM part AS p
   JOIN session AS s ON s.id = p.session_id
+  UNION ALL
+  SELECT sm.session_id, COALESCE(s2.title, s.title), json_extract(sm.data, '$.text') AS text,
+         COALESCE(json_extract(sm.data, '$.time.completed'),
+                  json_extract(sm.data, '$.time.created'),
+                  sm.time_created),
+         sm.type AS role
+  FROM session_message AS sm
+  LEFT JOIN session_v2 AS s2 ON s2.id = sm.session_id
+  LEFT JOIN session AS s ON s.id = sm.session_id
+  UNION ALL
+  SELECT sm.session_id, COALESCE(s2.title, s.title), json_extract(content.value, '$.text') AS text,
+         COALESCE(json_extract(sm.data, '$.time.completed'),
+                  json_extract(sm.data, '$.time.created'),
+                  sm.time_created),
+         sm.type AS role
+  FROM session_message AS sm
+  JOIN json_each(sm.data, '$.content') AS content
+  LEFT JOIN session_v2 AS s2 ON s2.id = sm.session_id
+  LEFT JOIN session AS s ON s.id = sm.session_id
+  WHERE json_extract(content.value, '$.type') = 'text'
 )
+SELECT session_id, title, text, time_created, role
+FROM transcript
 WHERE lower(text) LIKE '%' || lower(?) || '%'
 ORDER BY time_created DESC
 """
@@ -146,7 +172,7 @@ try:
     connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
     matches = connection.execute(query, (needle,))
     found = False
-    for session_id, title, text, time_created in matches:
+    for session_id, title, text, time_created, role in matches:
         if not text:
             continue
         found = True
@@ -159,6 +185,7 @@ try:
             "type": "match",
             "session_id": session_id,
             "title": title or "(untitled session)",
+            "role": role or "message",
             "timestamp": timestamp,
             "excerpt": excerpt[start:end],
         }))
