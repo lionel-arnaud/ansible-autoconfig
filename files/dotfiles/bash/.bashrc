@@ -95,8 +95,8 @@ ocgrep() {
     printf 'Usage: ocgrep <text>\n' >&2
     return 2
   fi
-  if ! command -v opencode >/dev/null 2>&1 || ! command -v python3 >/dev/null 2>&1; then
-    printf 'ocgrep requires opencode and python3.\n' >&2
+  if ! command -v opencode >/dev/null 2>&1 || ! command -v python3 >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+    printf 'ocgrep requires opencode, python3, and jq.\n' >&2
     return 127
   fi
 
@@ -107,7 +107,21 @@ ocgrep() {
     return 1
   fi
 
-  python3 - "$1" "$db" <<'PY'
+  local use_color=false
+  [[ -t 1 ]] && use_color=true
+
+  python3 - "$1" "$db" <<'PY' | jq -r --argjson color "$use_color" '
+    if .type == "match" then
+      if $color then
+        "\u001b[1;36m\(.session_id)\u001b[0m  \u001b[1m\(.title)\u001b[0m\n\u001b[2m\(.excerpt)\u001b[0m"
+      else
+        "\(.session_id) — \(.title)\n\(.excerpt)"
+      end
+    else
+      "No OpenCode transcript text matched: \(.needle|@json)"
+    end
+  '
+import json
 import sqlite3
 import sys
 
@@ -132,19 +146,29 @@ try:
     matches = connection.execute(query, (needle,))
     found = False
     for session_id, title, text in matches:
+        if not text:
+            continue
         found = True
         excerpt = " ".join(text.split())
         position = excerpt.lower().find(needle.lower())
         start = max(0, position - 120)
         end = position + len(needle) + 240
-        print(f"\n{session_id} — {title or '(untitled session)'}")
-        print(excerpt[start:end])
+        print(json.dumps({
+            "type": "match",
+            "session_id": session_id,
+            "title": title or "(untitled session)",
+            "excerpt": excerpt[start:end],
+        }))
     if not found:
-        print(f"No OpenCode transcript text matched: {needle!r}")
+        print(json.dumps({"type": "empty", "needle": needle}))
 except sqlite3.Error as error:
     print(f"Could not search the OpenCode database: {error}", file=sys.stderr)
     sys.exit(1)
 PY
+  local pipeline_status=("${PIPESTATUS[@]}")
+  (( pipeline_status[0] == 0 && pipeline_status[1] == 0 )) || return 1
+
+  return 0
 }
 
 # Copy a file with a progress bar.
