@@ -80,6 +80,73 @@ ftext() {
   grep -iIHrn --color=always "$1" . | less -r
 }
 
+# Search the text of every local OpenCode conversation, across all projects.
+#
+# OpenCode's `session.list --param search=...` API searches session titles only.
+# The transcript-search API does not exist yet, so this read-only helper queries
+# OpenCode's local SQLite database. It handles both the current V2 tables and
+# the legacy tables, prints the matching session ID plus surrounding text, and
+# lets you resume a match with: opencode --session <session-id>
+#
+# This depends on OpenCode's internal storage schema and may need updating if a
+# future OpenCode release migrates it. It never writes to the database.
+ocgrep() {
+  if (($# != 1)) || [[ -z $1 ]]; then
+    printf 'Usage: ocgrep <text>\n' >&2
+    return 2
+  fi
+  if ! command -v opencode >/dev/null 2>&1 || ! command -v python3 >/dev/null 2>&1; then
+    printf 'ocgrep requires opencode and python3.\n' >&2
+    return 127
+  fi
+
+  local db
+  db=$(opencode debug paths db) || return
+  if [[ ! -r $db ]]; then
+    printf 'OpenCode database is not readable: %s\n' "$db" >&2
+    return 1
+  fi
+
+  python3 - "$1" "$db" <<'PY'
+import sqlite3
+import sys
+
+needle, database = sys.argv[1], sys.argv[2]
+
+query = """
+SELECT session_id, title, text FROM (
+  SELECT p.session_id, s2.title, json_extract(p.data, '$.text') AS text
+  FROM session_part AS p
+  JOIN session_v2 AS s2 ON s2.id = p.session_id
+  UNION ALL
+  SELECT p.session_id, s.title, json_extract(p.data, '$.text') AS text
+  FROM part AS p
+  JOIN session AS s ON s.id = p.session_id
+)
+WHERE lower(text) LIKE '%' || lower(?) || '%'
+ORDER BY session_id
+"""
+
+try:
+    connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    matches = connection.execute(query, (needle,))
+    found = False
+    for session_id, title, text in matches:
+        found = True
+        excerpt = " ".join(text.split())
+        position = excerpt.lower().find(needle.lower())
+        start = max(0, position - 120)
+        end = position + len(needle) + 240
+        print(f"\n{session_id} — {title or '(untitled session)'}")
+        print(excerpt[start:end])
+    if not found:
+        print(f"No OpenCode transcript text matched: {needle!r}")
+except sqlite3.Error as error:
+    print(f"Could not search the OpenCode database: {error}", file=sys.stderr)
+    sys.exit(1)
+PY
+}
+
 # Copy a file with a progress bar.
 cpp() {
   set -e
