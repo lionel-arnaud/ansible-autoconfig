@@ -24,6 +24,39 @@
     - jwt
   no_log: true
 
+- name: Rotate the Authelia session secret for its configured generation
+  ansible.builtin.shell: |
+    set -eu
+    umask 077
+    session_file={{ (authelia_secret_dir ~ '/session') | quote }}
+    generation_file={{ (authelia_secret_dir ~ '/session-generation') | quote }}
+    target_generation=${AUTHELIA_SESSION_SECRET_GENERATION:?}
+    current_generation=1
+
+    if [ -r "$generation_file" ]; then
+      current_generation=$(cat "$generation_file")
+    fi
+
+    if [ "$current_generation" != "$target_generation" ]; then
+      session_tmp=$(mktemp "${session_file}.XXXXXX")
+      generation_tmp=$(mktemp "${generation_file}.XXXXXX")
+      trap 'rm -f "$session_tmp" "$generation_tmp"' EXIT
+      python3 -c 'import secrets; print(secrets.token_hex(32))' > "$session_tmp"
+      printf '%s\n' "$target_generation" > "$generation_tmp"
+      mv "$session_tmp" "$session_file"
+      mv "$generation_tmp" "$generation_file"
+      trap - EXIT
+      printf 'Authelia session secret rotated to generation %s\n' "$target_generation"
+    elif [ ! -e "$generation_file" ]; then
+      printf '%s\n' "$target_generation" > "$generation_file"
+      printf 'Authelia session secret generation initialized at %s\n' "$target_generation"
+    fi
+  environment:
+    AUTHELIA_SESSION_SECRET_GENERATION: "{{ authelia_session_secret_generation | string }}"
+  register: authelia_session_secret_rotation
+  changed_when: authelia_session_secret_rotation.stdout != ""
+  no_log: true
+
 - name: Pull the pinned Authelia image
   community.docker.docker_image:
     name: "{{ authelia_image }}"
@@ -113,7 +146,7 @@
     image: "{{ authelia_image }}"
     state: started
     restart_policy: unless-stopped
-    restart: "{{ authelia_config.changed or authelia_users_config.changed }}"
+    restart: "{{ authelia_config.changed or authelia_users_config.changed or authelia_session_secret_rotation.changed }}"
     networks:
       - name: "{{ authelia_network_name }}"
     volumes:

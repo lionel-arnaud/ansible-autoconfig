@@ -854,6 +854,9 @@ authelia_username: lion
 authelia_display_name: Lionel
 authelia_email: lionel@dinnizer.com
 authelia_password_file: /etc/ansible/secrets/caddy-shared-password
+# Bump this deliberately to rotate the session secret and revoke every
+# authenticated and remember-me browser session.
+authelia_session_secret_generation: 1
 # Each site can either proxy to an upstream or redirect to a canonical host.
 server_reverse_proxy_sites: []
 # HSTS tells browsers to only ever reach these hosts over HTTPS. Only safe once a

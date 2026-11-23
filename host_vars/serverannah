@@ -271,6 +271,9 @@ server_netplan_config: |
             - 1.1.1.1
 server_reverse_proxy_enabled: true
 server_authelia_enabled: true
+# Generation 1 is the original persistent session secret. Bumping to 2 revokes
+# every existing Authelia session after the November 2026 password rotation.
+authelia_session_secret_generation: 2
 # The portal's DNS, certificate and password login are verified before cutover.
 server_reverse_proxy_auth_provider: authelia
 server_aumenuilya_enabled: true
