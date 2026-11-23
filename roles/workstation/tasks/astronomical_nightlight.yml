@@ -17,6 +17,11 @@
     name: wlsunset
     state: present
 
+- name: Check for the superseded astronomical night-light timer
+  ansible.builtin.stat:
+    path: "{{ workstation_home }}/.config/systemd/user/autoconfig-astronomical-nightlight.timer"
+  register: workstation_astronomical_nightlight_legacy_timer
+
 - name: Stop the superseded astronomical night-light timer
   ansible.builtin.systemd:
     name: autoconfig-astronomical-nightlight.timer
@@ -28,6 +33,7 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
     DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
+  when: workstation_astronomical_nightlight_legacy_timer.stat.exists
 
 - name: Remove the superseded astronomical night-light timer
   ansible.builtin.file:
