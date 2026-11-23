@@ -19,8 +19,8 @@ workstation_cli_enabled: true
 workstation_dotfiles_enabled: true
 workstation_espanso_enabled: true
 workstation_keyd_enabled: true
-# Paris, France. The timer derives the daily local sunrise/sunset from these
-# coordinates and toggles only Hyprsunset (no automatic theme change).
+# Paris, France. wlsunset derives daily local sunrise/sunset from these
+# coordinates and controls only the display's color temperature.
 workstation_astronomical_nightlight_enabled: true
 workstation_astronomical_nightlight_latitude: 48.8566
 workstation_astronomical_nightlight_longitude: 2.3522

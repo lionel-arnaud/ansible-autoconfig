@@ -1,7 +1,11 @@
 [Unit]
-Description=Apply astronomical Hyprsunset night-light state
+Description=Apply astronomical Wayland night light
 After=graphical-session.target
+PartOf=graphical-session.target
 
 [Service]
-Type=oneshot
-ExecStart={{ workstation_home }}/.local/lib/autoconfig/astronomical-nightlight.py
+ExecStart=/usr/bin/wlsunset -l {{ workstation_astronomical_nightlight_latitude }} -L {{ workstation_astronomical_nightlight_longitude }} -T 6500 -t {{ workstation_astronomical_nightlight_temperature }}
+Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target

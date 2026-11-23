@@ -12,39 +12,57 @@
       Astronomical night light requires valid latitude/longitude coordinates
       and a color temperature between 1000 K and 10000 K.
 
-- name: Create the astronomical night-light script directory
+- name: Install wlsunset
+  ansible.builtin.package:
+    name: wlsunset
+    state: present
+
+- name: Stop the superseded astronomical night-light timer
+  ansible.builtin.systemd:
+    name: autoconfig-astronomical-nightlight.timer
+    enabled: false
+    state: stopped
+    scope: user
+  become: true
+  become_user: "{{ workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
+
+- name: Remove the superseded astronomical night-light timer
   ansible.builtin.file:
-    path: "{{ workstation_home }}/.local/lib/autoconfig"
-    state: directory
-    owner: "{{ workstation_user }}"
-    group: "{{ workstation_user }}"
-    mode: "0755"
+    path: "{{ workstation_home }}/.config/systemd/user/autoconfig-astronomical-nightlight.timer"
+    state: absent
 
-- name: Deploy the astronomical night-light controller
-  ansible.builtin.template:
-    src: astronomical-nightlight.py.j2
-    dest: "{{ workstation_home }}/.local/lib/autoconfig/astronomical-nightlight.py"
-    owner: "{{ workstation_user }}"
-    group: "{{ workstation_user }}"
-    mode: "0755"
+- name: Remove the superseded astronomical night-light controller
+  ansible.builtin.file:
+    path: "{{ workstation_home }}/.local/lib/autoconfig/astronomical-nightlight.py"
+    state: absent
 
-- name: Deploy astronomical night-light user units
+- name: Deploy the astronomical wlsunset user service
   ansible.builtin.template:
-    src: "{{ item }}.j2"
-    dest: "{{ workstation_home }}/.config/systemd/user/{{ item }}"
+    src: autoconfig-astronomical-nightlight.service.j2
+    dest: "{{ workstation_home }}/.config/systemd/user/autoconfig-astronomical-nightlight.service"
     owner: "{{ workstation_user }}"
     group: "{{ workstation_user }}"
     mode: "0644"
-  loop:
-    - autoconfig-astronomical-nightlight.service
-    - autoconfig-astronomical-nightlight.timer
 
-- name: Keep Hyprsunset managed by Omarchy's UWSM launcher
+- name: Stop any running Hyprsunset instance
+  ansible.builtin.command:
+    argv:
+      - pkill
+      - -x
+      - hyprsunset
+  changed_when: false
+  failed_when: false
+  become: true
+  become_user: "{{ workstation_user }}"
+
+- name: Disable Hyprsunset's upstream user service
   ansible.builtin.systemd:
     name: hyprsunset.service
     enabled: false
     state: stopped
-    daemon_reload: true
     scope: user
   become: true
   become_user: "{{ workstation_user }}"
@@ -52,23 +70,12 @@
     XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
     DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
 
-- name: Enable astronomical night-light timer
-  ansible.builtin.systemd:
-    name: autoconfig-astronomical-nightlight.timer
-    enabled: true
-    state: started
-    daemon_reload: true
-    scope: user
-  become: true
-  become_user: "{{ workstation_user }}"
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
-    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
-
-- name: Apply the current astronomical night-light state
+- name: Enable and restart astronomical wlsunset
   ansible.builtin.systemd:
     name: autoconfig-astronomical-nightlight.service
-    state: started
+    enabled: true
+    state: restarted
+    daemon_reload: true
     scope: user
   become: true
   become_user: "{{ workstation_user }}"
