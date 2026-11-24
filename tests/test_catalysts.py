@@ -153,6 +153,7 @@ def test_a_cut_short_sweep_does_not_erase_what_was_already_known():
     universe. It is not evidence those trials went away — letting it overwrite
     the cache dropped the live agent from 76 catalysts to 6."""
     state = {"limit": False}
+    upcoming_date = (dt.date.today() + dt.timedelta(days=7)).isoformat()
 
     def http(url, params):
         if state["limit"]:
@@ -162,7 +163,7 @@ def test_a_cut_short_sweep_does_not_erase_what_was_already_known():
                 "identificationModule": {"briefTitle": "T", "nctId": "NCT1"},
                 "designModule": {"phases": ["PHASE3"]},
                 "statusModule": {
-                    "primaryCompletionDateStruct": {"date": "2026-09-20"}},
+                    "primaryCompletionDateStruct": {"date": upcoming_date}},
             }
         }]
 
