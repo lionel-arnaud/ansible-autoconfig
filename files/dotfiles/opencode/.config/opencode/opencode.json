@@ -9,6 +9,9 @@
     "background_compaction": true,
     "schedules": true
   },
+  "compaction": {
+    "buffer": "75%"
+  },
   "policies": [
     { "action": "tool.use", "resource": "shell:pkexec *", "effect": "deny" }
   ],
