@@ -53,6 +53,7 @@ EXTRA_VARS = {
     "inventory_hostname": "serverannah",
     "desktop_user": "lion",
     "dotfiles_user": "lion",
+    "kids_admin_user": "lion",
     "autoconfig_branch": "main",
     "autoconfig_playbook": "local.yml",
     "server_lan_only_published_ports": [3000, 8089, 8080, 8971, 8554, 8555],
@@ -65,24 +66,41 @@ def load_defaults(role: str) -> dict:
     return yaml.safe_load(path.read_text()) or {}
 
 
+def shell_for(source: str) -> str:
+    """Use the shell declared by the rendered template's shebang."""
+    first_line = source.splitlines()[0] if source else ""
+    if first_line.startswith("#!/usr/bin/env bash") or first_line.startswith("#!/bin/bash"):
+        return "bash"
+    return "sh"
+
+
+def resolve_value(value: object, values: dict) -> object:
+    """Render Jinja references within defaults, including lists and mappings."""
+    if isinstance(value, str) and "{{" in value:
+        try:
+            return Environment().from_string(value).render(**values)
+        except Exception:
+            return value
+    if isinstance(value, list):
+        return [resolve_value(item, values) for item in value]
+    if isinstance(value, dict):
+        return {key: resolve_value(item, values) for key, item in value.items()}
+    return value
+
+
 def resolve(values: dict) -> dict:
     """Role defaults reference each other through Jinja; flatten them so a
     template does not receive a literal '{{ other_var }}' as a value."""
     # Deliberately lenient: role defaults legitimately reference variables that
     # only host_vars supplies, and flattening must not fail on those.
-    lenient = Environment(trim_blocks=True, lstrip_blocks=True)
     out = dict(values)
     for _ in range(5):
         changed = False
         for key, value in list(out.items()):
-            if isinstance(value, str) and "{{" in value:
-                try:
-                    rendered = lenient.from_string(value).render(**out)
-                except Exception:
-                    continue
-                if rendered != value:
-                    out[key] = rendered
-                    changed = True
+            rendered = resolve_value(value, out)
+            if rendered != value:
+                out[key] = rendered
+                changed = True
         if not changed:
             break
     return out
@@ -124,7 +142,7 @@ def main() -> int:
             # word-splitting class that created two directories named "{{" and
             # "}}" on this very homelab) is reported at info level and would be
             # filtered out at warning.
-            ["shellcheck", "--shell=sh", "--severity=info", "-"],
+            ["shellcheck", f"--shell={shell_for(rendered)}", "--severity=info", "-"],
             input=rendered, capture_output=True, text=True,
         )
         if proc.returncode != 0:
