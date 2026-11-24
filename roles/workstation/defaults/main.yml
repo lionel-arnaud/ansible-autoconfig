@@ -140,6 +140,9 @@ workstation_localsearch_remove_directories: []
 # marker. The marker leaves the files intact, but prevents their metadata and
 # contents from appearing in LocalSearch/Nautilus search results.
 workstation_localsearch_nomedia_directories: []
+# Filename glob patterns excluded from LocalSearch before metadata extraction.
+# Unlike `.nomedia`, these keep the containing directory searchable.
+workstation_localsearch_ignored_files: []
 workstation_localsearch_initialize: false
 workstation_localsearch_initialization_marker: >-
   {{ workstation_home }}/.local/state/ansible-autoconfig/localsearch-initialized

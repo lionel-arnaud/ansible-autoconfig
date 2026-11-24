@@ -18,6 +18,44 @@
     access_time: preserve
   loop: "{{ workstation_localsearch_nomedia_directories }}"
 
+- name: Read current LocalSearch ignored file patterns
+  ansible.builtin.command:
+    argv:
+      - gsettings
+      - get
+      - org.freedesktop.Tracker3.Miner.Files
+      - ignored-files
+  become: true
+  become_user: "{{ workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
+  register: workstation_localsearch_current_ignored_files
+  changed_when: false
+
+- name: Combine LocalSearch ignored file patterns
+  ansible.builtin.set_fact:
+    workstation_localsearch_effective_ignored_files: >-
+      {{ ((workstation_localsearch_current_ignored_files.stdout | from_yaml)
+          + workstation_localsearch_ignored_files) | unique }}
+
+- name: Exclude configured file patterns from LocalSearch
+  ansible.builtin.command:
+    argv:
+      - gsettings
+      - set
+      - org.freedesktop.Tracker3.Miner.Files
+      - ignored-files
+      - "{{ workstation_localsearch_effective_ignored_files | to_json }}"
+  become: true
+  become_user: "{{ workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ (lookup('pipe', 'id -u ' ~ workstation_user)) }}/bus"
+  when: >-
+    (workstation_localsearch_current_ignored_files.stdout | from_yaml)
+    != workstation_localsearch_effective_ignored_files
+
 - name: List LocalSearch indexed locations
   ansible.builtin.command:
     argv: [localsearch, index]

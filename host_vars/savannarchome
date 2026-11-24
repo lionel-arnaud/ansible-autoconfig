@@ -160,8 +160,14 @@ workstation_localsearch_remove_directories:
 workstation_localsearch_nomedia_directories:
   - "/home/lion/Downloads"
   - "/home/lion/go/pkg"
+# LocalSearch 3.12's media extractor deterministically SIGSEGVs on these
+# non-media formats after misclassification as audio. Ignore just the files:
+# ~/Insync and its document/PDF/text content remain indexed.
+workstation_localsearch_ignored_files:
+  - "*.pod5"
+  - "*.mpp"
 # Explicitly approved one-time rebuild; its durable marker prevents later
 # ansible-pull runs from clearing the index again.
 workstation_localsearch_initialize: true
 workstation_localsearch_initialization_marker: >-
-  /home/lion/.local/state/ansible-autoconfig/localsearch-rebuilt-with-go-cache-excluded
+  /home/lion/.local/state/ansible-autoconfig/localsearch-rebuilt-with-unsafe-media-extensions-excluded
