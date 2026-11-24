@@ -34,6 +34,22 @@
     creates: "{{ screenguard_root_dir }}/webui/app.py"
   notify: Restart ScreenGuard web UI
 
+- name: Set ScreenGuard dashboard time-adjustment step
+  ansible.builtin.replace:
+    path: "{{ screenguard_root_dir }}/webui/templates/profile.html"
+    regexp: "{{ item.regexp }}"
+    replace: "{{ item.replace }}"
+  loop:
+    - regexp: '(?<=&#8854; −)15(?=m</button>)'
+      replace: "{{ screenguard_adjustment_step_minutes }}"
+    - regexp: '(?<=&#8853; \+)15(?=m</button>)'
+      replace: "{{ screenguard_adjustment_step_minutes }}"
+    - regexp: 'val \+= 15;'
+      replace: "val += {{ screenguard_adjustment_step_minutes }};"
+    - regexp: 'val -= 15;'
+      replace: "val -= {{ screenguard_adjustment_step_minutes }};"
+  notify: Restart ScreenGuard web UI
+
 - name: Create ScreenGuard web UI virtual environment
   ansible.builtin.command:
     argv: [python3, -m, venv, "{{ screenguard_root_dir }}/webui/venv"]

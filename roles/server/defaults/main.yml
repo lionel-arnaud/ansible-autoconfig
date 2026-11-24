@@ -56,6 +56,10 @@ screenguard_server_bind: 192.168.1.100
 screenguard_server_port: 8088
 screenguard_webui_port: 5000
 screenguard_timezone: Europe/Paris
+# The ScreenGuard API accepts arbitrary whole-minute adjustments.  Its upstream
+# dashboard exposes only +/-15-minute controls, so the role patches those
+# controls after installing the pinned web UI archive.
+screenguard_adjustment_step_minutes: 1
 # Primary child-time controller. ScreenGuard enforces the narrow 15/30-minute
 # limits and permitted hours; Timekpr remains the looser fallback.
 screenguard_profiles:
