@@ -1,10 +1,10 @@
 ---
-- name: Require a fleet-pull trigger public key
+- name: Require fleet-pull trigger controller keys
   ansible.builtin.assert:
     that:
-      - autoconfig_fleet_trigger_public_key | length > 0
+      - autoconfig_fleet_trigger_authorized_keys | length > 0
     fail_msg: >-
-      autoconfig_fleet_trigger_public_key is required when the restricted
+      autoconfig_fleet_trigger_authorized_keys is required when the restricted
       fleet-pull trigger is enabled.
 
 - name: Ensure the fleet-pull user's SSH directory exists
@@ -32,11 +32,13 @@
     mode: "0440"
     validate: "{{ autoconfig_visudo_path }} -cf %s"
 
-- name: Authorize the laptop-only forced fleet-pull key
+- name: Authorize the restricted fleet-pull controller keys
   ansible.builtin.lineinfile:
     path: "{{ autoconfig_fleet_trigger_home }}/.ssh/authorized_keys"
     create: true
     owner: "{{ autoconfig_fleet_trigger_user }}"
     group: "{{ autoconfig_fleet_trigger_user }}"
     mode: "0600"
-    line: 'from="{{ autoconfig_fleet_trigger_source_address }}",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding,command="/usr/local/sbin/autoconfig-fleet-trigger" {{ autoconfig_fleet_trigger_public_key }}'
+    line: 'from="{{ item.source_address }}",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding,command="/usr/local/sbin/autoconfig-fleet-trigger" {{ item.public_key }}'
+  loop: "{{ autoconfig_fleet_trigger_authorized_keys }}"
+  no_log: true

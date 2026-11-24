@@ -26,7 +26,9 @@ autoconfig_fleet_controller_targets:
     user: daddy
     known_host: "kidsbook,192.168.1.41 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK8Ta0lhNxazlok+M2zsEAPV5h14JdbI/8tZDQpqmRxc"
 autoconfig_fleet_trigger_enabled: true
-autoconfig_fleet_trigger_public_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBF1SSnx4VJQjvb715ZxQSScRuoPtzszS+rbnDe5FqsH autoconfig-fleet-trigger@savannarchome
+autoconfig_fleet_trigger_authorized_keys:
+  - source_address: 192.168.1.26
+    public_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBF1SSnx4VJQjvb715ZxQSScRuoPtzszS+rbnDe5FqsH autoconfig-fleet-trigger@savannarchome
 notify_topic: qOa8RdyjqfhBpT1B
 
 # Common foundation + dotfiles.

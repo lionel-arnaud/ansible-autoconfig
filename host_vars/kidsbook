@@ -22,7 +22,11 @@ base_lazydocker_enabled: false
 autoconfig_fleet_trigger_enabled: true
 autoconfig_fleet_trigger_user: daddy
 autoconfig_fleet_trigger_home: /home/daddy
-autoconfig_fleet_trigger_public_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBF1SSnx4VJQjvb715ZxQSScRuoPtzszS+rbnDe5FqsH autoconfig-fleet-trigger@savannarchome
+autoconfig_fleet_trigger_authorized_keys:
+  - source_address: 192.168.1.26
+    public_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBF1SSnx4VJQjvb715ZxQSScRuoPtzszS+rbnDe5FqsH autoconfig-fleet-trigger@savannarchome
+  - source_address: 192.168.1.99
+    public_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF4+b8XEYFeroWJ/gPUNDla+FArD8jHv/CS14XWux4Rf autoconfig-fleet-trigger@savannarchome
 # Linux Mint 22.3 does not offer these optional workstation tools from its
 # configured repositories, and Kidsbook does not use them.
 base_cli_packages_exclude:
