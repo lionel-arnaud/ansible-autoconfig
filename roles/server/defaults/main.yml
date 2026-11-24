@@ -60,6 +60,11 @@ screenguard_timezone: Europe/Paris
 # dashboard exposes only +/-15-minute controls, so the role patches those
 # controls after installing the pinned web UI archive.
 screenguard_adjustment_step_minutes: 1
+# At the end of an allowance, end the child's desktop session rather than leave
+# applications running behind the lock screen.  Zero grace minutes makes the
+# logout immediate when the allowance reaches zero.
+screenguard_preserve_tasks_on_lock: false
+screenguard_lockout_grace_minutes: 0
 # Primary child-time controller. ScreenGuard enforces the narrow 15/30-minute
 # limits and permitted hours; Timekpr remains the looser fallback.
 screenguard_profiles:

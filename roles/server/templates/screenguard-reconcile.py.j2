@@ -60,10 +60,12 @@ def main():
             changes.append("profile " + wanted["display_name"])
         pid = profile["id"]
         current = request(f"/profiles/{pid}", token=token)
-        if (current["preserve_tasks_on_lock"] is not True or
-                int(current["lockout_grace_minutes"]) != 5):
-            request(f"/profiles/{pid}", "PATCH", {"preserve_tasks_on_lock": True,
-                                                      "lockout_grace_minutes": 5}, token)
+        if (current["preserve_tasks_on_lock"] is not {{ screenguard_preserve_tasks_on_lock | to_json }} or
+                int(current["lockout_grace_minutes"]) != {{ screenguard_lockout_grace_minutes }}):
+            request(f"/profiles/{pid}", "PATCH", {
+                "preserve_tasks_on_lock": {{ screenguard_preserve_tasks_on_lock | to_json }},
+                "lockout_grace_minutes": {{ screenguard_lockout_grace_minutes }}
+            }, token)
             changes.append(wanted["display_name"] + " enforcement")
         if schedule_set(current["schedules"]) != schedule_set(SCHEDULES):
             request(f"/profiles/{pid}/schedules", "PUT", {"schedules": SCHEDULES}, token)
