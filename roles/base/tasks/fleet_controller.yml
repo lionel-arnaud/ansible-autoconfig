@@ -23,3 +23,35 @@
     creates: "{{ autoconfig_fleet_controller_key_path }}"
   become: true
   become_user: "{{ autoconfig_fleet_controller_user }}"
+
+- name: Configure the fleet-pull controller targets
+  ansible.builtin.template:
+    src: autoconfig-fleet-controller-ssh-config.j2
+    dest: "{{ autoconfig_fleet_controller_home }}/.ssh/autoconfig-fleet-trigger-config"
+    owner: "{{ autoconfig_fleet_controller_user }}"
+    group: "{{ autoconfig_fleet_controller_user }}"
+    mode: "0600"
+
+- name: Pin fleet-pull target host keys
+  ansible.builtin.template:
+    src: autoconfig-fleet-controller-known-hosts.j2
+    dest: "{{ autoconfig_fleet_controller_home }}/.ssh/autoconfig-fleet-trigger-known-hosts"
+    owner: "{{ autoconfig_fleet_controller_user }}"
+    group: "{{ autoconfig_fleet_controller_user }}"
+    mode: "0600"
+
+- name: Ensure the fleet-pull configuration directory exists
+  ansible.builtin.file:
+    path: "{{ autoconfig_fleet_controller_home }}/.config/autoconfig"
+    state: directory
+    owner: "{{ autoconfig_fleet_controller_user }}"
+    group: "{{ autoconfig_fleet_controller_user }}"
+    mode: "0700"
+
+- name: Configure the fleet-pull command
+  ansible.builtin.template:
+    src: autoconfig-fleet-pull.conf.j2
+    dest: "{{ autoconfig_fleet_controller_home }}/.config/autoconfig/fleet-pull.conf"
+    owner: "{{ autoconfig_fleet_controller_user }}"
+    group: "{{ autoconfig_fleet_controller_user }}"
+    mode: "0600"

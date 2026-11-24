@@ -243,14 +243,25 @@ lazyg() {
 # systemd job so the notification reports the actual final result. Keep the
 # output human-oriented: Bash job-control messages are noise, while a host can
 # have a failed pull or simply be offline.
-if [[ $(hostname -s) == savannarchome && -r $HOME/.ssh/autoconfig-fleet-trigger ]]; then
+if [[ -r $HOME/.ssh/autoconfig-fleet-trigger ]]; then
   fleet-pull() {
-    local host logdir status=0 summary result exit_code
+    local host logdir status=0 summary result exit_code local_name=laptop
     local success_count=0 failed_count=0 unreachable_count=0
     local reset='' bold='' dim='' green='' yellow='' red='' cyan=''
     local monitor_was_enabled=0
     local -a hosts=(serverannah raspi kidsbook)
+    local -a ssh_args=(-i "$HOME/.ssh/autoconfig-fleet-trigger" -o BatchMode=yes -o IdentitiesOnly=yes)
     local -A pids logs
+    local fleet_config="$HOME/.config/autoconfig/fleet-pull.conf"
+    local ssh_config="$HOME/.ssh/autoconfig-fleet-trigger-config"
+
+    if [[ -r $fleet_config ]]; then
+      # This file is managed mode 0600 by the fleet controller role.
+      source "$fleet_config"
+      local_name=${AUTOCONFIG_FLEET_PULL_LOCAL_NAME:-$local_name}
+      hosts=("${AUTOCONFIG_FLEET_PULL_HOSTS[@]}")
+    fi
+    [[ -r $ssh_config ]] && ssh_args=(-F "$ssh_config")
 
     sudo -v || return
     logdir=$(mktemp -d "${TMPDIR:-/tmp}/fleet-pull.XXXXXX") || return
@@ -272,23 +283,24 @@ if [[ $(hostname -s) == savannarchome && -r $HOME/.ssh/autoconfig-fleet-trigger 
       cyan=$(tput setaf 6)
     fi
 
-    printf '\n%s%sFleet pull%s — starting 4 managed hosts\n\n' "$bold" "$cyan" "$reset"
+    printf '\n%s%sFleet pull%s — starting %d managed hosts\n\n' \
+      "$bold" "$cyan" "$reset" "$(( ${#hosts[@]} + 1 ))"
     # Bash emits a job number and PID when it starts each background command.
     # Redirect only those shell messages; each command's own output still goes
     # to its per-host log file and is available on a failure.
     {
       sudo -n /usr/bin/systemctl start autoconfig-pull.service >"$logdir/laptop" 2>&1 &
-      pids[laptop]=$!
-      logs[laptop]="$logdir/laptop"
+      pids["$local_name"]=$!
+      logs["$local_name"]="$logdir/$local_name"
 
       for host in "${hosts[@]}"; do
-        ssh -i "$HOME/.ssh/autoconfig-fleet-trigger" -o BatchMode=yes -o IdentitiesOnly=yes "$host" start >"$logdir/$host" 2>&1 &
+        ssh "${ssh_args[@]}" "$host" start >"$logdir/$host" 2>&1 &
         pids["$host"]=$!
         logs["$host"]="$logdir/$host"
       done
     } 2>/dev/null
 
-    for host in laptop "${hosts[@]}"; do
+    for host in "$local_name" "${hosts[@]}"; do
       if wait "${pids[$host]}"; then
         printf '  %s✓%s %-12s %ssuccess%s\n' "$green" "$reset" "$host" "$dim" "$reset"
         ((success_count++))

@@ -1,0 +1,12 @@
+# Managed by Ansible. Used only by fleet-pull's dedicated SSH key.
+{% for target in autoconfig_fleet_controller_targets %}
+Host {{ target.name }}
+  HostName {{ target.hostname }}
+  User {{ target.user }}
+  IdentityFile {{ autoconfig_fleet_controller_key_path }}
+  IdentitiesOnly yes
+  BatchMode yes
+  StrictHostKeyChecking yes
+  UserKnownHostsFile {{ autoconfig_fleet_controller_home }}/.ssh/autoconfig-fleet-trigger-known-hosts
+  GlobalKnownHostsFile /dev/null
+{% endfor %}

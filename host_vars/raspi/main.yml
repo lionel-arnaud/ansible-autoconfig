@@ -15,6 +15,16 @@ disk_monitor_mounts:
 # ~/.ansible-vault-pass. Without this the nightly pull cannot decrypt
 # host_vars/raspi/vault.yml and the whole run aborts before it starts.
 autoconfig_vault_password_file: /home/lion/secret.txt
+autoconfig_fleet_controller_enabled: true
+autoconfig_fleet_controller_targets:
+  - name: serverannah
+    hostname: 192.168.1.100
+    user: lion
+    known_host: "serverannah,192.168.1.100 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMX9G6OI23dVKAGOGQzdnhYCtUfqfI1w28spHCW2IPcs"
+  - name: kidsbook
+    hostname: 192.168.1.41
+    user: daddy
+    known_host: "kidsbook,192.168.1.41 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK8Ta0lhNxazlok+M2zsEAPV5h14JdbI/8tZDQpqmRxc"
 autoconfig_fleet_trigger_enabled: true
 autoconfig_fleet_trigger_public_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBF1SSnx4VJQjvb715ZxQSScRuoPtzszS+rbnDe5FqsH autoconfig-fleet-trigger@savannarchome
 notify_topic: qOa8RdyjqfhBpT1B

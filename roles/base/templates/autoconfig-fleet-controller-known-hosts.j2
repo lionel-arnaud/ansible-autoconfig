@@ -1,0 +1,4 @@
+# Managed by Ansible. Do not learn host keys automatically for fleet-pull.
+{% for target in autoconfig_fleet_controller_targets %}
+{{ target.known_host }}
+{% endfor %}

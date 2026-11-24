@@ -269,6 +269,8 @@ autoconfig_fleet_controller_enabled: false
 autoconfig_fleet_controller_user: "{{ desktop_user | default('lion') }}"
 autoconfig_fleet_controller_home: "/home/{{ autoconfig_fleet_controller_user }}"
 autoconfig_fleet_controller_key_path: "{{ autoconfig_fleet_controller_home }}/.ssh/autoconfig-fleet-trigger"
+autoconfig_fleet_controller_local_name: "{{ inventory_hostname }}"
+autoconfig_fleet_controller_targets: []
 
 # A target accepts the controller key only from the laptop's fixed LAN address.
 # The forced command can start its local pull and cannot open a shell or forward

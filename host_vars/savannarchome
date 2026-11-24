@@ -26,6 +26,19 @@ workstation_astronomical_nightlight_latitude: 48.8566
 workstation_astronomical_nightlight_longitude: 2.3522
 workstation_astronomical_nightlight_temperature: 4000
 autoconfig_fleet_controller_enabled: true
+autoconfig_fleet_controller_targets:
+  - name: serverannah
+    hostname: 192.168.1.100
+    user: lion
+    known_host: "serverannah,192.168.1.100 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMX9G6OI23dVKAGOGQzdnhYCtUfqfI1w28spHCW2IPcs"
+  - name: raspi
+    hostname: 192.168.1.99
+    user: lion
+    known_host: "raspi,192.168.1.99 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAFcjgjopTvRIQydKF0LbaAGHqpvDAO38CJjNNf5E4+W"
+  - name: kidsbook
+    hostname: 192.168.1.41
+    user: daddy
+    known_host: "kidsbook,192.168.1.41 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK8Ta0lhNxazlok+M2zsEAPV5h14JdbI/8tZDQpqmRxc"
 # Explicitly approved temporary authorization for OpenCode-assisted manual
 # pulls. It permits only `systemctl start autoconfig-pull.service`, not general
 # root access, and sudo will reject it after 31 December 2026.

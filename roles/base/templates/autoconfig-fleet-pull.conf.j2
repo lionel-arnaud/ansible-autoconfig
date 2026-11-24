@@ -1,0 +1,7 @@
+# Managed by Ansible. Sourced only by the user's fleet-pull shell function.
+AUTOCONFIG_FLEET_PULL_LOCAL_NAME='{{ autoconfig_fleet_controller_local_name }}'
+AUTOCONFIG_FLEET_PULL_HOSTS=(
+{% for target in autoconfig_fleet_controller_targets %}
+  '{{ target.name }}'
+{% endfor %}
+)
