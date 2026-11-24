@@ -18,6 +18,10 @@ trading_agent_stage_dir: "{{ trading_agent_root }}/src"
 trading_agent_state_db: "{{ trading_agent_root }}/state.db"
 trading_agent_log_dir: "{{ trading_agent_root }}/logs"
 trading_agent_env_file: /etc/trading-agent/env
+# Keep autonomous analysis on a verified model rather than inheriting the
+# OpenCode server's interactive default.
+trading_agent_opencode_model_provider: openai
+trading_agent_opencode_model_id: gpt-5.6-terra
 
 # Risk limits. Deterministic, enforced in code, never delegated to the model.
 # Defaults match the operator's confirmed $1000 account.

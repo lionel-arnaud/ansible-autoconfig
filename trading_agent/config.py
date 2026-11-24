@@ -4,6 +4,7 @@ The live endpoint is deliberately hard to reach: it needs TWO independent
 environment variables, because a single one can be set by a typo, a stale
 shell, or a unit file copied from somewhere else. Two cannot be set by accident.
 """
+
 from __future__ import annotations
 
 import math
@@ -43,6 +44,10 @@ class Config:
     # OpenCode V2 fixes the HTTP Basic username to "opencode".
     opencode_user: str = "opencode"
     opencode_password: str = ""
+    # A session otherwise inherits OpenCode's interactive default, which can
+    # change without a trading-agent deployment.
+    opencode_model_provider: str = ""
+    opencode_model_id: str = ""
 
     @property
     def is_live(self) -> bool:
@@ -81,6 +86,8 @@ class Config:
             opencode_url=os.environ.get("OPENCODE_URL", ""),
             opencode_user=os.environ.get("OPENCODE_USER", "opencode"),
             opencode_password=os.environ.get("OPENCODE_PASSWORD", ""),
+            opencode_model_provider=os.environ.get("OPENCODE_MODEL_PROVIDER", ""),
+            opencode_model_id=os.environ.get("OPENCODE_MODEL_ID", ""),
         )
 
     @classmethod

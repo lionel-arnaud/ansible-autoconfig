@@ -1,4 +1,5 @@
 """OpenCode V2 transport and deployment regression tests."""
+
 from __future__ import annotations
 
 from trading_agent.reasoning import _extract_text, _request_v2_reply
@@ -27,13 +28,20 @@ class V2HTTP:
 
     def get(self, url):
         self.calls.append(("get", url, None))
-        return Response({"data": [
-            {"type": "user", "content": [{"type": "text", "text": "ignored"}]},
-            {"type": "assistant", "content": [
-                {"type": "reasoning", "text": "hidden"},
-                {"type": "text", "text": "final answer"},
-            ]},
-        ]})
+        return Response(
+            {
+                "data": [
+                    {"type": "user", "content": [{"type": "text", "text": "ignored"}]},
+                    {
+                        "type": "assistant",
+                        "content": [
+                            {"type": "reasoning", "text": "hidden"},
+                            {"type": "text", "text": "final answer"},
+                        ],
+                    },
+                ]
+            }
+        )
 
     def delete(self, url):
         self.calls.append(("delete", url, None))
@@ -53,8 +61,34 @@ def test_v2_transport_waits_for_final_answer_and_removes_session():
     ]
 
 
+def test_v2_transport_can_pin_the_session_model():
+    http = V2HTTP()
+
+    assert (
+        _request_v2_reply(
+            http,
+            "https://ai.example",
+            "decide",
+            model={"providerID": "openai", "id": "gpt-5.6-terra"},
+        )
+        == "final answer"
+    )
+    assert http.calls[1] == (
+        "post",
+        "https://ai.example/api/session/ses_test/model",
+        {"model": {"providerID": "openai", "id": "gpt-5.6-terra"}},
+    )
+
+
 def test_v2_extract_text_uses_the_latest_assistant_message():
-    assert _extract_text({"data": [
-        {"type": "assistant", "content": [{"type": "text", "text": "old"}]},
-        {"type": "assistant", "content": [{"type": "text", "text": "new"}]},
-    ]}) == "new"
+    assert (
+        _extract_text(
+            {
+                "data": [
+                    {"type": "assistant", "content": [{"type": "text", "text": "old"}]},
+                    {"type": "assistant", "content": [{"type": "text", "text": "new"}]},
+                ]
+            }
+        )
+        == "new"
+    )

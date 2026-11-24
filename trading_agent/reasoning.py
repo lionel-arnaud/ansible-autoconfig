@@ -8,6 +8,7 @@ The important behaviour is not what it returns but what it does when it cannot
 return anything: it raises, and the loop opens no positions. A trading process
 that guesses when its reasoning is unavailable is worse than one that stops.
 """
+
 from __future__ import annotations
 
 import json
@@ -40,9 +41,10 @@ class Proposal:
 
 
 class ReasoningClient:
-    def __init__(self, transport, *, url: str = "") -> None:
+    def __init__(self, transport, *, url: str = "", model: dict | None = None) -> None:
         self._transport = transport
         self.url = url
+        self.model = model
 
     @classmethod
     def from_config(cls, config) -> "ReasoningClient":
@@ -65,9 +67,29 @@ class ReasoningClient:
             # The caller sets this for prose; proposals keep the default.
             timeout = float(payload.get("timeout") or 180.0)
             with httpx.Client(auth=auth, timeout=timeout) as http:
-                return _request_v2_reply(http, base, _build_prompt(payload))
+                return _request_v2_reply(
+                    http,
+                    base,
+                    _build_prompt(payload),
+                    model=(
+                        {
+                            "providerID": config.opencode_model_provider,
+                            "id": config.opencode_model_id,
+                        }
+                        if config.opencode_model_provider and config.opencode_model_id
+                        else None
+                    ),
+                )
 
-        return cls(transport, url=config.opencode_url)
+        model = (
+            {
+                "providerID": config.opencode_model_provider,
+                "id": config.opencode_model_id,
+            }
+            if config.opencode_model_provider and config.opencode_model_id
+            else None
+        )
+        return cls(transport, url=config.opencode_url, model=model)
 
     def ask(self, prompt: str, *, timeout: float | None = None) -> str:
         """One prose question, one prose answer.
@@ -106,18 +128,22 @@ class ReasoningClient:
         out: list[Proposal] = []
         for item in items:
             try:
-                out.append(Proposal(
-                    symbol=str(item["symbol"]).strip().upper(),
-                    side=str(item["side"]).strip().lower(),
-                    notional_usd=float(item["notional_usd"]),
-                    rationale=str(item.get("rationale", "")),
-                    correlation_id=str(item.get("correlation_id", "")),
-                ))
+                out.append(
+                    Proposal(
+                        symbol=str(item["symbol"]).strip().upper(),
+                        side=str(item["side"]).strip().lower(),
+                        notional_usd=float(item["notional_usd"]),
+                        rationale=str(item.get("rationale", "")),
+                        correlation_id=str(item.get("correlation_id", "")),
+                    )
+                )
             except (KeyError, TypeError, ValueError) as exc:
                 # Reject the batch rather than the item: a malformed response
                 # suggests a confused model, and cherry-picking the parseable
                 # half of a confused answer is how you trade on nonsense.
-                raise ReasoningUnavailable(f"malformed proposal {item!r}: {exc}") from exc
+                raise ReasoningUnavailable(
+                    f"malformed proposal {item!r}: {exc}"
+                ) from exc
         return out
 
 
@@ -164,7 +190,9 @@ def _build_prompt(payload: dict) -> str:
     )
 
 
-def _request_v2_reply(http, base: str, prompt: str) -> str:
+def _request_v2_reply(
+    http, base: str, prompt: str, *, model: dict | None = None
+) -> str:
     """Send one request through the V2 API and return its final text.
 
     V2 prompt delivery is asynchronous.  Waiting for the session to settle
@@ -177,6 +205,13 @@ def _request_v2_reply(http, base: str, prompt: str) -> str:
     data = created.json().get("data") or {}
     session_id = data["id"]
     try:
+        if model is not None:
+            selected = http.post(
+                f"{base}/api/session/{session_id}/model",
+                json={"model": model},
+            )
+            selected.raise_for_status()
+
         submitted = http.post(
             f"{base}/api/session/{session_id}/prompt",
             json={"text": prompt},
@@ -211,8 +246,11 @@ def _extract_text(reply: dict) -> str:
         for message in reversed(messages):
             if message.get("type") != "assistant":
                 continue
-            texts = [part.get("text", "") for part in message.get("content", [])
-                     if part.get("type") == "text"]
+            texts = [
+                part.get("text", "")
+                for part in message.get("content", [])
+                if part.get("type") == "text"
+            ]
             if texts:
                 return texts[-1].strip()
 
