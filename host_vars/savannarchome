@@ -154,13 +154,14 @@ workstation_localsearch_recursive_directories:
   - "/mnt/lion-google-drive-perso"
 workstation_localsearch_remove_directories:
   - "/home/lion/Google Drive Perso"
-# LocalSearch 3.12 can abort if a browser download generates two closely spaced
-# modification events for one file. Exclude only Downloads; files are retained
-# but do not appear in LocalSearch/Nautilus search.
+# LocalSearch 3.12 extractors crash while misclassifying Go module cache files
+# as audio. Exclude cache/download trees only; user files, projects, and Insync
+# remain searchable in Nautilus.
 workstation_localsearch_nomedia_directories:
   - "/home/lion/Downloads"
+  - "/home/lion/go/pkg"
 # Explicitly approved one-time rebuild; its durable marker prevents later
 # ansible-pull runs from clearing the index again.
 workstation_localsearch_initialize: true
 workstation_localsearch_initialization_marker: >-
-  /home/lion/.local/state/ansible-autoconfig/localsearch-rebuilt-with-downloads-excluded
+  /home/lion/.local/state/ansible-autoconfig/localsearch-rebuilt-with-go-cache-excluded
