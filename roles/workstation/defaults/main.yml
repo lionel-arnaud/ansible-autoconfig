@@ -136,6 +136,10 @@ workstation_localsearch_recursive_directories: []
 # is primarily useful when relocating a mount so an obsolete nested root does
 # not remain in the persistent Tracker configuration.
 workstation_localsearch_remove_directories: []
+# Directories excluded from the normal recursive crawl by an empty `.nomedia`
+# marker. The marker leaves the files intact, but prevents their metadata and
+# contents from appearing in LocalSearch/Nautilus search results.
+workstation_localsearch_nomedia_directories: []
 workstation_localsearch_initialize: false
 workstation_localsearch_initialization_marker: >-
   {{ workstation_home }}/.local/state/ansible-autoconfig/localsearch-initialized

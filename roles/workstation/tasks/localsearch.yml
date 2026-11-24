@@ -7,6 +7,17 @@
 # opt-in and protected by a durable marker: it starts a one-time crawl of
 # existing files without repeating that expensive work on each ansible-pull.
 
+- name: Exclude configured directories from LocalSearch
+  ansible.builtin.file:
+    path: "{{ item }}/.nomedia"
+    state: touch
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0644"
+    modification_time: preserve
+    access_time: preserve
+  loop: "{{ workstation_localsearch_nomedia_directories }}"
+
 - name: List LocalSearch indexed locations
   ansible.builtin.command:
     argv: [localsearch, index]
