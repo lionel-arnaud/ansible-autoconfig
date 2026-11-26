@@ -32,6 +32,32 @@
   become: true
   become_user: "{{ server_opencode_user }}"
 
+# OpenTunnel is not part of this deployment: ai.dinnizer.com is securely exposed
+# by Caddy and Authelia. Removing its persisted state avoids presenting an
+# obsolete public tunnel URL that can show as offline in the OpenCode UI.
+- name: Check whether OpenCode OpenTunnel access is enabled
+  ansible.builtin.command:
+    argv:
+      - "{{ server_opencode_binary }}"
+      - service
+      - get
+      - remote
+  register: server_opencode_remote_enabled
+  changed_when: false
+  become: true
+  become_user: "{{ server_opencode_user }}"
+
+- name: Disable obsolete OpenCode OpenTunnel access
+  ansible.builtin.command:
+    argv:
+      - "{{ server_opencode_binary }}"
+      - service
+      - unset
+      - remote
+  when: server_opencode_remote_enabled.stdout | trim == \"true\"
+  become: true
+  become_user: "{{ server_opencode_user }}"
+
 # Generate a dedicated HTTP basic-auth password for the opencode web UI. Caddy
 # gates the public hostname, but the in-app password is defense-in-depth: a LAN
 # device that reaches 4096 directly still hits basic auth. Storing it in
