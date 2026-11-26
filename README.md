@@ -198,6 +198,35 @@ The SSH key used for this is generated only on the laptop. Each target accepts
 it only from the laptop LAN address, without shell, forwarding or PTY access,
 and its forced command can start only `autoconfig-pull.service`.
 
+### Mother’s Windows PC: read-only health and migration inventory
+
+`windows_health.yml` is deliberately separate from `local.yml`: the latter
+contains Linux-only roles. The Windows play connects over the PC’s Tailscale IP
+using the dedicated SSH key and performs no configuration changes. It reports
+Defender health and detections, fixed-disk capacity, recent critical System
+events, recent updates, the Winget version, and the installed desktop-application
+inventory needed to plan the replacement PC.
+
+Run it from Savannarchome:
+
+```bash
+ANSIBLE_LOG_PATH=/tmp/opencode/ansible-windows-health.log \
+  ansible-playbook windows_health.yml
+```
+
+Install the declared control-node collections first when needed:
+
+```bash
+ansible-galaxy collection install -r requirements.yml
+```
+
+Chris Titus Tech’s WinUtil is appropriate for a *reviewed, opt-in* replacement
+PC setup. Its documented automation uses a versioned exported JSON configuration
+or a named preset; do not use a preset blindly, because presets also apply
+Windows tweaks. Create and review the desired WinUtil configuration first, pin
+the generated command/configuration in a dedicated future play, and run it only
+after approving the applications and system changes it makes.
+
 ### Steam Deck
 
 SteamOS is immutable, so the Deck is intentionally **not** part of the normal

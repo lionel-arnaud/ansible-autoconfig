@@ -1,0 +1,7 @@
+---
+# The report intentionally caps event and update lists so a normal run remains
+# readable. Override at invocation time for a deeper one-off inspection:
+#   -e windows_health_max_events=50
+windows_health_max_events: 20
+windows_health_event_lookback_days: 7
+windows_health_max_updates: 20

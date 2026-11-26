@@ -16,3 +16,8 @@ raspi
 # Linux Mint 22.3 (XFCE) on an old MacBook, reached as daddy@192.168.1.41.
 # Strict timekpr parental controls + learning/gaming apps via the kids role.
 kidsbook
+
+[mothers_windows]
+# Managed only by windows_health.yml. This host must not be included in local.yml:
+# that playbook intentionally contains Linux-only package and systemd roles.
+isabe-pc ansible_host=100.80.190.1 ansible_user=isabe ansible_connection=ssh ansible_shell_type=powershell ansible_ssh_private_key_file=/home/lion/.ssh/isabe-windows ansible_ssh_common_args='-o IdentitiesOnly=yes'

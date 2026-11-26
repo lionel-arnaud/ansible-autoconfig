@@ -1,0 +1,137 @@
+---
+- name: Verify the Windows Ansible connection
+  ansible.windows.win_ping:
+
+- name: Collect Windows health and migration inventory
+  ansible.windows.win_shell:
+    cmd: |
+      $ErrorActionPreference = 'Stop'
+
+      function Get-SafeValue {
+        param(
+          [scriptblock] $Script,
+          $Fallback = 'Unavailable'
+        )
+
+        try {
+          & $Script
+        } catch {
+          $Fallback
+        }
+      }
+
+      $computer = Get-CimInstance Win32_ComputerSystem
+      $operatingSystem = Get-CimInstance Win32_OperatingSystem
+      $now = Get-Date
+
+      $defender = Get-SafeValue {
+        $status = Get-MpComputerStatus
+        [pscustomobject]@{
+          AntivirusEnabled        = $status.AntivirusEnabled
+          RealTimeProtection      = $status.RealTimeProtectionEnabled
+          AntivirusSignatureAge   = $status.AntivirusSignatureAge
+          AntispywareSignatureAge = $status.AntispywareSignatureAge
+          QuickScanAge            = $status.QuickScanAge
+          FullScanAge             = $status.FullScanAge
+        }
+      }
+
+      $threats = Get-SafeValue {
+        @(Get-MpThreatDetection |
+          Sort-Object InitialDetectionTime -Descending |
+          Select-Object -First 20 ThreatName, InitialDetectionTime, ActionSuccess,
+            Resources)
+      } @()
+
+      $disks = @(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType = 3' |
+        ForEach-Object {
+          [pscustomobject]@{
+            Drive       = $_.DeviceID
+            Label       = $_.VolumeName
+            SizeGB      = [math]::Round($_.Size / 1GB, 1)
+            FreeGB      = [math]::Round($_.FreeSpace / 1GB, 1)
+            FreePercent = if ($_.Size) {
+              [math]::Round(100 * $_.FreeSpace / $_.Size, 1)
+            } else {
+              $null
+            }
+          }
+        })
+
+      $recentEvents = Get-SafeValue {
+        @(Get-WinEvent -FilterHashtable @{
+            LogName   = 'System'
+            Level     = @(1, 2)
+            StartTime = $now.AddDays(-{{ windows_health_event_lookback_days | int }})
+          } -MaxEvents {{ windows_health_max_events | int }} |
+          ForEach-Object {
+            [pscustomobject]@{
+              TimeCreated = $_.TimeCreated
+              Provider    = $_.ProviderName
+              Id          = $_.Id
+              Message     = ($_.Message -replace '\s+', ' ').Trim()
+            }
+          })
+      } @()
+
+      $updates = Get-SafeValue {
+        @(Get-HotFix |
+          Sort-Object InstalledOn -Descending |
+          Select-Object -First {{ windows_health_max_updates | int }} HotFixID,
+            Description, InstalledOn)
+      } @()
+
+      # The uninstall registry is Windows' canonical source for installed desktop
+      # applications. It sees both 64-bit and 32-bit programs without invoking an
+      # installer, package manager, or Windows Store API.
+      $uninstallPaths = @(
+        'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+        'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
+        'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+      )
+      $applications = @(
+        Get-ItemProperty -Path $uninstallPaths -ErrorAction SilentlyContinue |
+          Where-Object {
+            $_.DisplayName -and $_.SystemComponent -ne 1 -and
+            $_.ParentKeyName -eq $null
+          } |
+          Select-Object @{ Name = 'Name'; Expression = { $_.DisplayName } },
+            @{ Name = 'Version'; Expression = { $_.DisplayVersion } },
+            Publisher, InstallDate, InstallLocation |
+          Sort-Object Name -Unique
+      )
+
+      $winget = Get-SafeValue {
+        $command = Get-Command winget.exe -ErrorAction Stop
+        [pscustomobject]@{
+          Available = $true
+          Version   = (& $command.Source --version 2>$null).Trim()
+        }
+      } ([pscustomobject]@{ Available = $false; Version = $null })
+
+      [pscustomobject]@{
+        CollectedAt = $now.ToString('o')
+        System = [pscustomobject]@{
+          ComputerName = $env:COMPUTERNAME
+          Manufacturer = $computer.Manufacturer
+          Model        = $computer.Model
+          UserName     = $computer.UserName
+          OS           = $operatingSystem.Caption
+          Version      = $operatingSystem.Version
+          BuildNumber  = $operatingSystem.BuildNumber
+          LastBoot     = $operatingSystem.LastBootUpTime
+        }
+        Defender              = $defender
+        DefenderDetections    = $threats
+        FixedDisks            = $disks
+        RecentCriticalEvents  = $recentEvents
+        RecentUpdates         = $updates
+        Winget                = $winget
+        InstalledApplications = $applications
+      } | ConvertTo-Json -Depth 6
+  register: windows_health_report
+  changed_when: false
+
+- name: Show Windows health and migration inventory
+  ansible.builtin.debug:
+    msg: "{{ windows_health_report.stdout | from_json | to_nice_json }}"

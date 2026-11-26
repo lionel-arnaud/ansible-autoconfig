@@ -1,0 +1,14 @@
+---
+# Read-only remote health and migration inventory for the Windows PC.
+#
+# Run from Savannarchome:
+#   ANSIBLE_LOG_PATH=/tmp/opencode/ansible-windows-health.log \
+#     ansible-playbook windows_health.yml
+#
+# This is deliberately separate from local.yml, whose roles configure Linux
+# hosts. It does not change the Windows PC or write an inventory file on it.
+- name: Inspect mother's Windows PC
+  hosts: mothers_windows
+  gather_facts: false
+  roles:
+    - windows_health
