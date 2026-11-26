@@ -243,10 +243,10 @@
     mode: "0644"
     content: |
       [Unit]
-      Description=Start the autoconfig Pi-hole container after the LAN address exists
+      Description=Start the autoconfig Pi-hole container after its bind addresses exist
       Requires=docker.service
-      After=network-online.target docker.service
-      Wants=network-online.target
+      After=network-online.target docker.service{% if server_tailscale_enabled | default(false) %} tailscaled.service{% endif %}
+      Wants=network-online.target{% if server_tailscale_enabled | default(false) %} tailscaled.service{% endif %}
 
       [Service]
       Type=oneshot
