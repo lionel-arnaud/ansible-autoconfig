@@ -245,8 +245,8 @@
       [Unit]
       Description=Start the autoconfig Pi-hole container after its bind addresses exist
       Requires=docker.service
-      After=network-online.target docker.service{% if server_tailscale_enabled | default(false) %} tailscaled.service{% endif %}
-      Wants=network-online.target{% if server_tailscale_enabled | default(false) %} tailscaled.service{% endif %}
+      After=network-online.target docker.service{{ ' tailscaled.service' if server_tailscale_enabled | default(false) else '' }}
+      Wants=network-online.target{{ ' tailscaled.service' if server_tailscale_enabled | default(false) else '' }}
 
       [Service]
       Type=oneshot
