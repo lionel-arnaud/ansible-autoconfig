@@ -34,6 +34,32 @@
   changed_when: false
   failed_when: false
 
+- name: Enable forwarding required by a Tailscale exit node
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: "1"
+    state: present
+    sysctl_set: true
+    reload: true
+  loop:
+    - net.ipv4.ip_forward
+    - net.ipv6.conf.all.forwarding
+  when: server_tailscale_advertise_exit_node | bool
+
+# `tailscale set` changes only the named preference, preserving enrollment,
+# DNS, routes, and other state established outside Ansible.  Tailscale's admin
+# console must still approve an enabled exit node before clients can select it.
+- name: Set Tailscale exit-node advertisement
+  ansible.builtin.command:
+    argv:
+      - tailscale
+      - set
+      - "--advertise-exit-node={{ server_tailscale_advertise_exit_node | bool | lower }}"
+  when:
+    - server_tailscale_status.rc == 0
+    - (server_tailscale_status.stdout | from_json).BackendState == 'Running'
+  changed_when: false
+
 # Serve publishes only inside the tailnet.  It is not Tailscale Funnel, so no
 # public internet endpoint is created.  The ScreenGuard service stays bound to
 # the LAN address and is reached by Tailscale's local reverse proxy.

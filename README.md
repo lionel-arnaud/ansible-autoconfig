@@ -449,12 +449,9 @@ storage), and Watchtower (fights the role's deliberate ownership of image pulls)
     - [x] leave aumenuilya alone because it was set up another way
     - [ ] add advertising/monetization to these three sites?
 - [ ] secure server
-  - [ ] implement tailscale — **delayed on purpose.** It is a private overlay:
-        every device (you and family) must install the app and authenticate
-        before reaching a hosted service, which is the wrong trade-off for the
-        public family-facing sites already handled well by Caddy auth +
-        fail2ban. Its real value is your own remote admin access, so it is a
-        later nice-to-have, not a security upgrade over what exists.
+  - [x] manage Tailscale for private remote administration and Pi-hole DNS.
+        `serverannah` advertises itself as an exit node; it must be approved in
+        the Tailscale admin console before tailnet clients can select it.
   - [x] implement caddy auth for homepage and bentopdf and fail2ban jail after
         several failed attemps.
 - [x] update server automatically
@@ -1199,6 +1196,20 @@ Pi-hole policy import now reads from:
 - `files/pihole/policy/allowlist_exact.txt`
 
 Raw backups are not meant to be the long-term source of truth.
+
+### Tailscale Exit Node
+
+`serverannah` runs Tailscale and advertises an exit node when
+`server_tailscale_advertise_exit_node` is enabled. Ansible enables the required
+IPv4/IPv6 forwarding and advertises the node, but deliberately does not manage
+Tailscale enrollment, tailnet ACLs, or the admin-console approval. Approve the
+node in the Tailscale admin console, then choose `serverannah` as the exit node
+on a signed-in client.
+
+Pi-hole is already published only on Serverannah's LAN and Tailscale addresses;
+to use filtering remotely without routing all traffic through the exit node,
+configure that Tailscale address as the tailnet DNS resolver in the Tailscale
+admin console. Tailnet ACLs must allow the relevant clients to reach it.
 
 ### Parental Interphone
 

@@ -34,6 +34,10 @@ server_lan_cidrs:
   - 192.168.1.0/24
 server_lan_only_published_ports: []
 server_tailscale_enabled: false
+# An exit node routes a tailnet client's default traffic through this host.  The
+# node still has to be approved in the Tailscale admin console; enrollment and
+# tailnet policy credentials intentionally remain outside Ansible.
+server_tailscale_advertise_exit_node: false
 # Serve uses Tailscale's HTTPS proxy, not Funnel: the dashboard is visible only
 # to authenticated devices in the owner's tailnet.
 # Port 443 is already owned by the public reverse proxy.  A dedicated tailnet

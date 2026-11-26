@@ -217,6 +217,11 @@ server_screenguard_enabled: true
 # This is an additional private access path.  LAN SSH/password access remains
 # independently available and unchanged.
 server_tailscale_enabled: true
+# Let authenticated tailnet clients route their internet traffic through
+# Serverannah.  Pi-hole already listens on its Tailscale address (below); after
+# approving this node in the Tailscale admin console, clients select it as their
+# exit node and use the tailnet DNS configuration to receive Pi-hole filtering.
+server_tailscale_advertise_exit_node: true
 pihole_policy_import_enabled: true
 # The restrictive Pi-hole profile applies only to Kidsbook's static DHCP lease.
 # The role removes Pi-hole's implicit Default-group link before assigning rules.
