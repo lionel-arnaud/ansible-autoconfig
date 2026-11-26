@@ -54,6 +54,7 @@
       - service
       - unset
       - remote
+  register: server_opencode_remote_disable
   when: server_opencode_remote_enabled.stdout | trim == \"true\"
   become: true
   become_user: "{{ server_opencode_user }}"
@@ -148,7 +149,7 @@
   ansible.builtin.systemd:
     name: opencode-web.service
     enabled: true
-    state: "{{ 'restarted' if (server_opencode_v2_install.changed | default(false)) else 'started' }}"
+    state: "{{ 'restarted' if (server_opencode_v2_install.changed | default(false)) or (server_opencode_remote_disable.changed | default(false)) else 'started' }}"
     scope: user
   become: true
   become_user: "{{ server_opencode_user }}"
