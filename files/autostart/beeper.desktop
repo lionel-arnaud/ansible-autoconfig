@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
-Exec=/opt/beeper/beeper --no-sandbox
+Exec=beeper --no-sandbox
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
 Name[en_US]=Beeper
 Name=Beeper
-Comment[en_US]=launch beeper from opt/beeper as installed through AM
-Comment=launch beeper from opt/beeper as installed through AM
+Comment[en_US]=Launch Beeper
+Comment=Launch Beeper
