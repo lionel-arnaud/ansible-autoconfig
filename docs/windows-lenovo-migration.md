@@ -18,10 +18,10 @@ been verified and an independent backup exists.
   local disks and whether OneDrive is syncing or storing cloud-only files.
 - Agree on a backup destination, available capacity, encryption and recovery
   process. Test a restore. Profile and mail backups contain sensitive data.
-- Review the installed apps with her; the inventory is a starting point,
-  not an installation list. Drivers and HP-specific tools should not be
-  blindly copied to Lenovo. Install Zoom and other chosen apps from trusted
-  publishers, with explicit package IDs and versions where appropriate.
+- Use the [application migration inventory](windows-lenovo-applications.md)
+  as the starting point for reproducing her applications. Drivers and
+  HP-laptop-specific tools should not be blindly copied to Lenovo; HP printer
+  tools may still be needed. Use trusted publishers and explicit package IDs.
 
 ## Thunderbird
 

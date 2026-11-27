@@ -132,6 +132,38 @@
   register: windows_health_report
   changed_when: false
 
-- name: Show Windows health and migration inventory
+- name: Show Windows health summary
+  vars:
+    report: "{{ windows_health_report.stdout | from_json }}"
+    defender_summary: >-
+      {% if report.Defender is mapping %}
+      antivirus {{ report.Defender.AntivirusEnabled }},
+      real-time protection {{ report.Defender.RealTimeProtection }},
+      signatures {{ report.Defender.AntivirusSignatureAge }} day(s) old
+      {% else %}
+      Unavailable
+      {% endif %}
+  ansible.builtin.debug:
+    msg: |
+      WINDOWS HEALTH — {{ report.System.ComputerName }}
+      Collected: {{ report.CollectedAt }}
+      Computer: {{ report.System.Manufacturer }} {{ report.System.Model }}
+      OS: {{ report.System.OS }} (build {{ report.System.BuildNumber }})
+      Defender: {{ defender_summary | trim }}
+      Recent Defender detections returned: {{ report.DefenderDetections | length }}
+        This is not proof of current infection or complete remediation.
+      Fixed disks:
+      {% for disk in report.FixedDisks %}
+        {{ disk.Drive }} {{ disk.Label }}: {{ disk.FreeGB }} GiB free of {{ disk.SizeGB }} GiB ({{ disk.FreePercent }}%)
+      {% endfor %}
+      Recent critical/error System events: {{ report.RecentCriticalEvents | length }} (maximum {{ windows_health_max_events }})
+      Recent updates returned: {{ report.RecentUpdates | length }} (maximum {{ windows_health_max_updates }})
+      Desktop applications inventoried: {{ report.InstalledApplications | length }}
+      Winget: {{ report.Winget.Version if report.Winget.Available else 'Unavailable' }}
+      For full sensitive details, rerun with -e windows_health_show_details=true.
+      Empty lists may also indicate a collection error; this is not a full security assessment.
+
+- name: Show complete Windows health and migration inventory
   ansible.builtin.debug:
     msg: "{{ windows_health_report.stdout | from_json | to_nice_json }}"
+  when: windows_health_show_details | bool

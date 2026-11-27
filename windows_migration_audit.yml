@@ -39,3 +39,28 @@
     - name: Display migration readiness
       ansible.builtin.debug:
         msg: "{{ migration_audit.stdout | from_json }}"
+
+    - name: Inventory Store applications and printers
+      ansible.windows.win_shell:
+        cmd: |
+          $ErrorActionPreference = 'Stop'
+          $storeApps = @(Get-AppxPackage |
+            Where-Object { -not $_.IsFramework -and -not $_.NonRemovable } |
+            Select-Object Name, Version |
+            Sort-Object Name)
+          $printers = @(Get-CimInstance Win32_Printer |
+            Select-Object Name, DriverName, PortName, Default |
+            Sort-Object Name)
+          [pscustomobject]@{
+            User = $env:USERNAME
+            StoreApplications = $storeApps
+            Printers = $printers
+            Note = 'Current-user Store packages; review system components and printer needs before installing.'
+          } | ConvertTo-Json -Depth 4
+      register: migration_apps
+      changed_when: false
+      check_mode: false
+
+    - name: Display Store applications and printers
+      ansible.builtin.debug:
+        msg: "{{ migration_apps.stdout | from_json }}"

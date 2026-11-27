@@ -217,9 +217,16 @@ used for SSH sessions and does not expose SSH beyond its existing listener.
 Run it from Savannarchome:
 
 ```bash
+umask 077
 ANSIBLE_LOG_PATH=/tmp/opencode/ansible-windows-health.log \
   ansible-playbook windows_health.yml
 ```
+
+The play prints a concise health summary. Add `-e
+windows_health_show_details=true` for the complete application inventory and
+event details; the full report can contain sensitive information. The umask
+protects newly created logs, but does not change permissions on an existing
+log; use `chmod 600` on existing reports as needed.
 
 For read-only Thunderbird and Chrome profile-location discovery, run
 `ansible-playbook windows_migration_audit.yml` with the same log override.

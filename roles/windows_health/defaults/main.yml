@@ -5,3 +5,5 @@
 windows_health_max_events: 20
 windows_health_event_lookback_days: 7
 windows_health_max_updates: 20
+# Keep the normal output readable; opt in to the complete sensitive inventory.
+windows_health_show_details: false
