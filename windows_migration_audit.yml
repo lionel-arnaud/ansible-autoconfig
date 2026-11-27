@@ -1,0 +1,41 @@
+---
+# Read-only discovery on the old Windows PC; no profile contents are copied.
+- name: Inspect profile locations for the Windows migration
+  hosts: mothers_windows
+  gather_facts: false
+  tasks:
+    - name: Check Thunderbird and Chrome profile locations
+      ansible.windows.win_shell:
+        cmd: |
+          $ErrorActionPreference = 'Stop'
+          $thunderbird = Join-Path $env:APPDATA 'Thunderbird'
+          $chrome = Join-Path $env:LOCALAPPDATA 'Google\Chrome\User Data'
+          $profiles = @()
+          if (Test-Path -LiteralPath $chrome) {
+            $profiles = @(Get-ChildItem -LiteralPath $chrome -Directory |
+              Where-Object { $_.Name -eq 'Default' -or $_.Name -match '^Profile \d+$' } |
+              ForEach-Object {
+                [pscustomobject]@{
+                  Directory = $_.Name
+                  BookmarksPresent = Test-Path -LiteralPath (Join-Path $_.FullName 'Bookmarks')
+                  SessionDirectoryPresent = Test-Path -LiteralPath (Join-Path $_.FullName 'Sessions')
+                }
+              })
+          }
+          [pscustomobject]@{
+            User = $env:USERNAME
+            ThunderbirdDirectory = $thunderbird
+            ThunderbirdDirectoryPresent = Test-Path -LiteralPath $thunderbird
+            ThunderbirdProfilesIniPresent = Test-Path -LiteralPath (Join-Path $thunderbird 'profiles.ini')
+            ChromeUserDataDirectory = $chrome
+            ChromeUserDataPresent = Test-Path -LiteralPath $chrome
+            ChromeProfiles = $profiles
+            Note = 'This checks locations only, not profile integrity, sync, or successful migration.'
+          } | ConvertTo-Json -Depth 4
+      register: migration_audit
+      changed_when: false
+      check_mode: false
+
+    - name: Display migration readiness
+      ansible.builtin.debug:
+        msg: "{{ migration_audit.stdout | from_json }}"

@@ -221,6 +221,11 @@ ANSIBLE_LOG_PATH=/tmp/opencode/ansible-windows-health.log \
   ansible-playbook windows_health.yml
 ```
 
+For read-only Thunderbird and Chrome profile-location discovery, run
+`ansible-playbook windows_migration_audit.yml` with the same log override.
+See [the Lenovo migration checklist](docs/windows-lenovo-migration.md) before
+copying profiles or installing software on the replacement PC.
+
 Install the declared control-node collections first when needed:
 
 ```bash
