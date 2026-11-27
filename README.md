@@ -207,6 +207,13 @@ Defender health and detections, fixed-disk capacity, recent critical System
 events, recent updates, the Winget version, and the installed desktop-application
 inventory needed to plan the replacement PC.
 
+The target's Windows OpenSSH Server must use Windows PowerShell as its
+`DefaultShell` (`HKLM\SOFTWARE\OpenSSH`, set to
+`C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`). This is required
+for Ansible's PowerShell `-EncodedCommand` transport; the Windows default
+`cmd.exe` shell corrupts that argument. This setting changes only the shell
+used for SSH sessions and does not expose SSH beyond its existing listener.
+
 Run it from Savannarchome:
 
 ```bash
