@@ -69,6 +69,12 @@
       tags:
         - workstation_nightlight
 
+    - name: Monitor Isabe Windows SSH availability
+      ansible.builtin.import_tasks: isabe_windows_status.yml
+      when: workstation_isabe_windows_status_enabled | bool
+      tags:
+        - workstation_isabe_windows_status
+
     - name: Enable workstation user services
       ansible.builtin.import_tasks: systemd_user.yml
       when: workstation_systemd_user_services | default([]) | length > 0

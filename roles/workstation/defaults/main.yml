@@ -93,6 +93,15 @@ workstation_espanso_aur_package: espanso-wayland
 # host_vars to select which services are active on a given workstation.
 workstation_systemd_user_services: []
 
+# Check an off-LAN Windows host from the desktop user's systemd manager.  The
+# runner persists the previous result and only raises a desktop notification
+# when the host becomes reachable, avoiding a notification every 15 minutes.
+workstation_isabe_windows_status_enabled: false
+workstation_isabe_windows_status_host: "100.80.190.1"
+workstation_isabe_windows_status_user: isabe
+workstation_isabe_windows_status_ssh_key: "{{ workstation_home }}/.ssh/isabe-windows"
+workstation_isabe_windows_status_interval: 15m
+
 # Use wlsunset to follow the daily astronomical sunrise and sunset rather than
 # a fixed wall-clock schedule. It is off by default because exact solar times
 # require an explicit location.

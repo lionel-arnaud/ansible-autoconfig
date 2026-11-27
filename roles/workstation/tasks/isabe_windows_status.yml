@@ -1,0 +1,101 @@
+---
+- name: Ensure Isabe Windows status directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0700"
+  loop:
+    - "{{ workstation_home }}/.local/bin"
+    - "{{ workstation_home }}/.local/state/autoconfig-isabe-windows-status"
+    - "{{ workstation_home }}/.config/systemd/user"
+
+- name: Install Isabe Windows status runner
+  ansible.builtin.copy:
+    dest: "{{ workstation_home }}/.local/bin/autoconfig-isabe-windows-status"
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0700"
+    content: |
+      #!/usr/bin/env bash
+      set -u -o pipefail
+
+      state_dir="$HOME/.local/state/autoconfig-isabe-windows-status"
+      state_file="$state_dir/state"
+      lock_file="$state_dir/lock"
+      mkdir -p "$state_dir"
+
+      exec 9>"$lock_file"
+      if ! flock -n 9; then
+        echo "An Isabe Windows status check is already running; exiting."
+        exit 0
+      fi
+
+      previous=unknown
+      [[ -f "$state_file" ]] && previous=$(<"$state_file")
+
+      if ssh -o BatchMode=yes -o ConnectTimeout=15 -o IdentitiesOnly=yes \
+          -i "{{ workstation_isabe_windows_status_ssh_key }}" \
+          "{{ workstation_isabe_windows_status_user }}@{{ workstation_isabe_windows_status_host }}" \
+          powershell.exe -NoProfile -Command exit; then
+        current=online
+      else
+        current=offline
+      fi
+
+      printf '%s\n' "$current" > "${state_file}.tmp"
+      mv "${state_file}.tmp" "$state_file"
+      echo "Isabe Windows status: $current (previously $previous)."
+
+      if [[ "$current" == online && "$previous" != online ]]; then
+        notify-send --app-name="Isabe Windows status" \
+          "Isabe Windows is online" \
+          "SSH to {{ workstation_isabe_windows_status_host }} is available."
+      fi
+
+- name: Install Isabe Windows status service
+  ansible.builtin.copy:
+    dest: "{{ workstation_home }}/.config/systemd/user/autoconfig-isabe-windows-status.service"
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Check Isabe Windows SSH availability
+
+      [Service]
+      Type=oneshot
+      ExecStart=%h/.local/bin/autoconfig-isabe-windows-status
+      TimeoutStartSec=25
+
+- name: Install Isabe Windows status timer
+  ansible.builtin.copy:
+    dest: "{{ workstation_home }}/.config/systemd/user/autoconfig-isabe-windows-status.timer"
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Check Isabe Windows SSH availability every {{ workstation_isabe_windows_status_interval }}
+
+      [Timer]
+      OnUnitActiveSec={{ workstation_isabe_windows_status_interval }}
+      Persistent=true
+      Unit=autoconfig-isabe-windows-status.service
+
+      [Install]
+      WantedBy=timers.target
+
+- name: Enable and start Isabe Windows status timer
+  ansible.builtin.systemd:
+    name: autoconfig-isabe-windows-status.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' ~ workstation_user) }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ lookup('pipe', 'id -u ' ~ workstation_user) }}/bus"

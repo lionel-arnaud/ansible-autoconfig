@@ -19,6 +19,7 @@ workstation_cli_enabled: true
 workstation_dotfiles_enabled: true
 workstation_espanso_enabled: true
 workstation_keyd_enabled: true
+workstation_isabe_windows_status_enabled: true
 # Paris, France. wlsunset derives daily local sunrise/sunset from these
 # coordinates and controls only the display's color temperature.
 workstation_astronomical_nightlight_enabled: true
