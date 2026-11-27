@@ -66,8 +66,11 @@ manifest after the final Thunderbird-closed copy; a successful resumed
 transfer is not proof that a file did not change between sessions.
 
 ClamAV was installed on the workstation, but `clamav-freshclam.service` was
-disabled when checked. Before the actual scan, update and verify its signature
-database using the supported local configuration. Scan the staged files
+disabled when checked. The workstation configuration now opts into the
+distribution-supported `clamav-freshclam` service; apply the normal Ansible
+run and confirm the service and database freshness before the actual scan.
+Update and verify its signature database using the supported local
+configuration. Scan the staged files
 without automatic deletion, retain a private log, and review detections,
 unreadable files, archive and scan-size limits before deciding what to restore.
 ClamAV cannot guarantee that files are safe; encrypted archives and some

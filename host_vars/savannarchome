@@ -16,6 +16,7 @@ base_dotfiles_enabled: true
 base_lazydocker_enabled: true
 workstation_enabled: true
 workstation_cli_enabled: true
+base_clamav_freshclam_enabled: true
 workstation_dotfiles_enabled: true
 workstation_espanso_enabled: true
 workstation_keyd_enabled: true

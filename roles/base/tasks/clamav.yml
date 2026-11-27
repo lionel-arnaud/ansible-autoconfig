@@ -1,0 +1,6 @@
+---
+- name: Enable and start the ClamAV signature updater
+  ansible.builtin.systemd_service:
+    name: clamav-freshclam.service
+    enabled: true
+    state: started

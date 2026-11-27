@@ -5,6 +5,13 @@
 - name: Install the common package set
   ansible.builtin.import_tasks: common_packages.yml
 
+- name: Keep ClamAV signatures current
+  ansible.builtin.import_tasks: clamav.yml
+  when: base_clamav_freshclam_enabled | bool
+  tags:
+    - base
+    - clamav
+
 - name: Update installed system Flatpaks
   ansible.builtin.import_tasks: flatpak.yml
   when: base_flatpak_system_updates_enabled | bool
