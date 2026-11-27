@@ -9,6 +9,11 @@
     "background_compaction": true,
     "schedules": true
   },
+  "agents": {
+    "compaction": {
+      "model": "openai/gpt-5.6-luna-fast"
+    }
+  },
   "compaction": {
     "buffer": "75%"
   },
