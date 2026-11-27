@@ -22,3 +22,8 @@ repos:
     rev: v26.4.0
     hooks:
       - id: ansible-lint
+        # The isolated hook otherwise has ansible-core but no Windows
+        # collection, causing an automatic Galaxy download during each run.
+        # The community Ansible distribution supplies the standard collections.
+        additional_dependencies:
+          - ansible
