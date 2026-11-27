@@ -55,7 +55,7 @@
       - unset
       - remote
   register: server_opencode_remote_disable
-  when: server_opencode_remote_enabled.stdout | trim == \"true\"
+  when: server_opencode_remote_enabled.stdout | trim == "true"
   become: true
   become_user: "{{ server_opencode_user }}"
 
