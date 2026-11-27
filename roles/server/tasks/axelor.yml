@@ -1,0 +1,99 @@
+---
+- name: Create Axelor directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ axelor_root_dir }}", mode: "0755"}
+    - {path: "{{ axelor_data_dir }}", owner: "1000", group: "1000", mode: "0750"}
+    - {path: "{{ axelor_db_data_dir }}", owner: "999", group: "999", mode: "0700"}
+    - {path: "{{ axelor_secret_dir }}", mode: "0700"}
+
+- name: Generate persistent Axelor secrets
+  ansible.builtin.shell: |
+    umask 077
+    python3 -c 'import secrets; print(secrets.token_hex(32))' > {{ item | quote }}
+  args:
+    executable: /bin/bash
+    creates: "{{ item }}"
+  loop:
+    - "{{ axelor_secret_dir }}/axelor-db-password"
+    - "{{ axelor_secret_dir }}/axelor-encryption-password"
+  no_log: true
+
+- name: Read Axelor secrets
+  ansible.builtin.slurp:
+    src: "{{ item }}"
+  loop:
+    - "{{ axelor_secret_dir }}/axelor-db-password"
+    - "{{ axelor_secret_dir }}/axelor-encryption-password"
+  register: axelor_secrets
+  no_log: true
+
+- name: Ensure Axelor networks exist
+  community.docker.docker_network:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - axelor-private
+    - "{{ server_reverse_proxy_network_name }}"
+
+- name: Pull Axelor images
+  community.docker.docker_image:
+    name: "{{ item }}"
+    source: pull
+    force_source: true
+  loop:
+    - "{{ axelor_db_image }}"
+    - "{{ axelor_image }}"
+  register: axelor_images
+
+- name: Run Axelor PostgreSQL
+  community.docker.docker_container:
+    name: axelor-db
+    image: "{{ axelor_db_image }}"
+    state: started
+    recreate: "{{ axelor_images.results[0].changed }}"
+    restart_policy: unless-stopped
+    networks:
+      - name: axelor-private
+    volumes:
+      - "{{ axelor_db_data_dir }}:/var/lib/postgresql/data"
+    env:
+      POSTGRES_DB: axelor
+      POSTGRES_USER: axelor
+      POSTGRES_PASSWORD: "{{ axelor_secrets.results[0].content | b64decode | trim }}"
+  no_log: true
+
+- name: Wait for Axelor PostgreSQL
+  ansible.builtin.command: docker exec axelor-db pg_isready -U axelor -d axelor
+  register: axelor_db_ready
+  changed_when: false
+  retries: 30
+  delay: 2
+  until: axelor_db_ready.rc == 0
+
+- name: Run Axelor Open Suite
+  community.docker.docker_container:
+    name: axelor
+    image: "{{ axelor_image }}"
+    state: started
+    recreate: "{{ axelor_images.results[1].changed }}"
+    restart_policy: unless-stopped
+    networks:
+      - name: axelor-private
+      - name: "{{ server_reverse_proxy_network_name }}"
+    volumes:
+      - "{{ axelor_data_dir }}:/data"
+    env:
+      PGHOST: axelor-db
+      PGUSER: axelor
+      PGPASSWORD: "{{ axelor_secrets.results[0].content | b64decode | trim }}"
+      PGDATABASE: axelor
+      ENCRYPTION_PASSWORD: "{{ axelor_secrets.results[1].content | b64decode | trim }}"
+      APP_MODE: prod
+      JAVA_XMX: "{{ axelor_java_xmx }}"
+  no_log: true

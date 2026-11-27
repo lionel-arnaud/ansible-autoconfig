@@ -173,6 +173,14 @@ docuseal_network_name: autoconfig-services
 docuseal_root_dir: /opt/docuseal
 docuseal_data_dir: "{{ docuseal_root_dir }}/data"
 docuseal_db_data_dir: "{{ docuseal_root_dir }}/postgres"
+server_axelor_enabled: false
+axelor_image: axelor/aos-ce:9.0
+axelor_db_image: postgres:16
+axelor_root_dir: /opt/axelor
+axelor_data_dir: "{{ axelor_root_dir }}/data"
+axelor_db_data_dir: "{{ axelor_root_dir }}/postgres"
+axelor_secret_dir: /etc/ansible/secrets
+axelor_java_xmx: 4096m
 docuseal_secret_dir: /etc/ansible/secrets
 docuseal_db_password_file: "{{ docuseal_secret_dir }}/docuseal-db-password"
 docuseal_hostname: sign.dinnizer.com
@@ -692,6 +700,7 @@ backup_exclude_paths:
   - "{{ aumenuilya_db_data_dir }}"
   - "{{ dinnizer_db_data_dir }}"
   - "{{ docuseal_db_data_dir }}"
+  - "{{ axelor_db_data_dir }}"
   - "{{ server_reverse_proxy_data_dir }}/{{ server_reverse_proxy_access_log | basename }}"
 # Host-specific exclusions extend, rather than replace, the consistency
 # exclusions above. This avoids accidentally backing up live databases or the

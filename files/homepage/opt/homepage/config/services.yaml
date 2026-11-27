@@ -53,6 +53,14 @@
         siteMonitor: http://toki-suli/
 
 - Family Services:
+    - Axelor:
+        icon: mdi-calculator
+        href: https://compta.dinnizer.com/
+        description: Accounting trial (shared login)
+        server: local-docker
+        container: axelor
+        showStats: true
+        siteMonitor: http://axelor:8080/health
     - Trader:
         icon: mdi-chart-line
         href: https://trader.dinnizer.com/

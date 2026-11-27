@@ -206,6 +206,13 @@
     - server
     - docuseal
 
+- name: Deploy Axelor Open Suite
+  ansible.builtin.import_tasks: axelor.yml
+  when: server_axelor_enabled | default(false)
+  tags:
+    - server
+    - axelor
+
 - name: Deploy the game timer
   ansible.builtin.import_tasks: game_timer.yml
   when: server_game_timer_enabled | default(false)

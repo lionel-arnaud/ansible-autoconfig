@@ -105,6 +105,7 @@ backup_paths:
   - /opt/parental-broadcast
   - /opt/excalidraw
   - /opt/docuseal
+  - /opt/axelor
   - /opt/uptime-kuma
   - /opt/authelia
   # ScreenGuard schedules, pairing tokens, usage history, and dashboard secrets.
@@ -155,6 +156,12 @@ backup_database_dumps:
     database: docuseal
     user: docuseal
     password_file: /etc/ansible/secrets/docuseal-db-password
+  - name: axelor
+    engine: postgres
+    container: axelor-db
+    database: axelor
+    user: axelor
+    password_file: /etc/ansible/secrets/axelor-db-password
 server_homepage_enabled: true
 server_umami_enabled: true
 umami_websites:
@@ -202,6 +209,7 @@ homepage_published_ports:
   - "192.168.1.100:3000:3000"
 server_bentopdf_enabled: true
 server_docuseal_enabled: true
+server_axelor_enabled: true
 server_game_timer_enabled: true
 server_parental_broadcast_enabled: true
 server_toki_suli_enabled: true
@@ -364,6 +372,10 @@ server_reverse_proxy_sites:
     upstream: docuseal:3000
     # Do not add Caddy basic_auth / Authelia here. Recipients sign through
     # DocuSeal's own one-time document links and must not need a household login.
+  - hostname: compta.dinnizer.com
+    upstream: axelor:8080
+    basic_auth: true
+    basic_auth_password_file: "{{ server_reverse_proxy_secret_dir }}/caddy-shared-password"
   - hostname: frigate.dinnizer.com
     upstream: https://frigate:8971
     upstream_tls_insecure_skip_verify: true
