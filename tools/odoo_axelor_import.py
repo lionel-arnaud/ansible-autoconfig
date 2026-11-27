@@ -148,7 +148,7 @@ def main() -> int:
     ids: dict[str, dict[str, int]] = {
         "company": {}, "partner": {}, "account": {}, "journal": {},
         "move": {}, "line": {}, "account-type": {}, "journal-type": {},
-        "year": {}, "period": {},
+        "year": {}, "period": {}, "sequence": {},
     }
 
     def put(bucket, model, source_id, data):
@@ -210,14 +210,25 @@ def main() -> int:
             "statusSelect": 1 if row["active"] == "t" else 0,
             "validAccountTypeSet": [{"id": other_account_type}],
         })
-    migration_journal = put("journal", "com.axelor.apps.account.db.Journal", "migration", {
+    move_sequence = put("sequence", "com.axelor.apps.base.db.Sequence", "move", {
+        "name": "Odoo imported moves", "company": {"id": company_id},
+        "codeSelect": "move", "sequenceTypeSelect": "NUMBERS",
+        "prefixe": "ODOO-", "padding": 4, "toBeAdded": 1,
+        "yearlyResetOk": False, "monthlyResetOk": False,
+    })
+    if not move_sequence:
+        move_sequence = ax.find_import(
+            "com.axelor.apps.base.db.Sequence", "odoo-sequence-move"
+        )["id"]
+    migration_journal = put("journal", "com.axelor.apps.account.db.Journal", "migration-v2", {
         "code": "ODOO", "name": "Odoo imported entries", "company": {"id": company_id},
         "journalType": {"id": other_journal_type}, "statusSelect": 1,
         "validAccountTypeSet": [{"id": other_account_type}],
+        "sequence": {"id": move_sequence},
     })
     if not migration_journal:
         migration_journal = ax.find_import(
-            "com.axelor.apps.account.db.Journal", "odoo-journal-migration"
+            "com.axelor.apps.account.db.Journal", "odoo-journal-migration-v2"
         )["id"]
 
     years = sorted({iso_date(r["date"])[:4] for r in tables["account_move"] if r["date"]})
